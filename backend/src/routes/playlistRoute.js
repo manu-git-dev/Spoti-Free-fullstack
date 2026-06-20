@@ -1,11 +1,170 @@
+import express from "express";
+import db from "../../db.js";
+const router = express.Router();
+
 // affiche les playlist d'un utilisateur
+router.get("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const [playlists] = await db.query(
+      "SELECT `name` FROM `playlists` WHERE id_user = ?",
+      [id],
+    );
+    if (playlists.length === 0) {
+      return res.status(404).json({
+        message: "Aucune playlist.",
+      });
+    } else {
+      return res.status(200).json(playlists);
+    }
+  } catch (error) {
+    console.error(error);
 
-// modifier le nom d'une playlist utilisateur
-
-// ajouter une musique à une playlist
-
-// supprimer une playlist
-
-
+    return res.status(500).json({
+      message: "Erreur lors de la recherche des playlists.",
+    });
+  }
+});
 
 // affiche les musiques d'une playlist d'un utilisateur
+router.get("/musics/:idPlaylist/:idUser", async (req, res) => {
+  try {
+    const idUser = req.params.idUser;
+    const idPlaylist = req.params.idPlaylist;
+    const [musicFromPlaylist] = await db.query(
+      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,`duration`,`name` FROM `musics` INNER JOIN `playlists_musics` ON musics.id_music=playlists_musics.id_music INNER JOIN `playlists` ON playlists.id_playlist=playlists_musics.id_playlist WHERE playlists_musics.id_playlist = ? AND playlists.id_user = ?",
+      [idPlaylist, idUser],
+    );
+    if (musicFromPlaylist.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Pas de musiques dans cette playlist.",
+      });
+    } else {
+      return res.status(200).json(musicFromPlaylist);
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la recherche des musiques likées.",
+    });
+  }
+});
+
+// modifier le nom d'une playlist utilisateur
+router.put("/renommer/:idUser/:idPlaylist", async (req, res) => {
+  try {
+    const idUser = req.params.idUser;
+    const idPlaylist = req.params.idPlaylist;
+    const name = req.body.name;
+    const [playlists] = await db.query(
+      "UPDATE `playlists` SET `name` = ? WHERE id_user = ? AND id_playlist = ?",
+      [name, idUser, idPlaylist],
+    );
+    if (playlists.length === 0) {
+      return res.status(404).json({
+        message: "Aucune playlist.",
+      });
+    } else {
+      return res.status(200).json({
+        message: "Votre playlist à bien été renommée.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la modification du nom de la playlist.",
+    });
+  }
+});
+
+// ajouter une musique à une playlist
+router.post("/ajouter/:idPlaylist/:idMusic", async (req, res) => {
+  try {
+    const idPlaylist = req.params.idPlaylist;
+    const idMusic = req.params.idMusic;
+    const [testSaisie1] = await db.query(
+      "SELECT `id_playlist` FROM `playlists` WHERE id_playlist = ?",
+      [idPlaylist],
+    );
+    const [testSaisie2] = await db.query(
+      "SELECT `id_music` FROM `musics` WHERE id_music = ?",
+      [idMusic],
+    );
+    if (testSaisie1.length === 0) {
+      return res.status(404).json({
+        message: "La playlist est introuvable",
+      });
+    } else if (testSaisie2.length === 0) {
+      return res.status(404).json({
+        message: "La musique est introuvable",
+      });
+    } else {
+      const [insertMusic] = await db.query(
+        "INSERT INTO `playlists_musics` (`id_playlist`, `id_music`) VALUES (?, ?)",
+        [idPlaylist, idMusic],
+      );
+      return res.status(201).json({
+        message: "Musique ajoutée à la playlist avec succès.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de l'ajout de la musique dans la playlist.",
+    });
+  }
+});
+// retirer une musique d'une playlist
+router.delete("/retirer/:idPlaylist/:idMusic", async (req, res) => {
+  try {
+    const idPlaylist = req.params.idPlaylist;
+    const idMusic = req.params.idMusic;
+    const [playlist] = await db.query("DELETE FROM playlists_musics WHERE id_playlist = ? AND id_music = ?", [
+      idPlaylist,idMusic
+    ]);
+    if (playlist.affectedRows === 0) {
+      return res.status(404).json({
+        message: "La playlist est introuvable.",
+      });
+    } else {
+      return res.status(200).json({
+        message: "La musique à bien été retirée de la playlist.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors du retrair de la musique.",
+    });
+  }
+});
+// supprimer une playlist
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const [playlist] = await db.query("DELETE FROM playlists WHERE id_playlist = ?", [
+      id,
+    ]);
+    if (playlist.affectedRows === 0) {
+      return res.status(404).json({
+        message: "La playlist est introuvable.",
+      });
+    } else {
+      return res.status(200).json({
+        message: "La playlist à bien été supprimée.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la suppression de la musique.",
+    });
+  }
+});
+
+export default router;

@@ -32,6 +32,44 @@ router.get("/likes/:id", async (req, res) => {
     });
   }
 });
+// Ajouter une musique au like
+router.post("/like/:idUser/:idMusic", async (req, res) => {
+  try {
+    const idUser = req.params.idUser;
+    const idMusic = req.params.idMusic;
+    const [testSaisie1] = await db.query(
+      "SELECT `id_user` FROM `users` WHERE id_user = ?",
+      [idUser],
+    );
+    const [testSaisie2] = await db.query(
+      "SELECT `id_music` FROM `musics` WHERE id_music = ?",
+      [idMusic],
+    );
+    if (testSaisie1.length === 0) {
+      return res.status(404).json({
+        message: "L'utilisateur'est introuvable",
+      });
+    } else if (testSaisie2.length === 0) {
+      return res.status(404).json({
+        message: "La musique est introuvable",
+      });
+    } else {
+      const [insertMusicLike] = await db.query(
+        "INSERT INTO `likes` (`id_user`, `id_music`) VALUES (?, ?)",
+        [idUser, idMusic],
+      );
+      return res.status(201).json({
+        message: "Musique ajoutée aux likes avec succès.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de l'ajout de la musique dans la playlist.",
+    });
+  }
+});
 
 // retirer une musique liké
 router.delete("/unlikes/:idUser/:idMusic", async (req, res) => {
