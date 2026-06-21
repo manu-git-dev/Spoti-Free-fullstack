@@ -8,6 +8,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
 app.use("/api/musics", musicRoutes); // route défini pour musics
 app.use("/api/users", userRoutes);
