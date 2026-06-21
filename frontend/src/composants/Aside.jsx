@@ -1,7 +1,7 @@
 import { Folder, Heart, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export default function Aside() {
+export default function Aside({user}) {
   return (
     <aside className="row-start-2 row-span-2 bg-zinc-800 rounded-2xl p-2 flex flex-col justify-between">
       <nav className="flex flex-col ">
@@ -9,11 +9,11 @@ export default function Aside() {
           <Home className="fill-blue-600 mr-2 h-8 w-8" />
           Accueil
         </Link>
-        <Link to={"/connexion"} className="flex text-3xl p-2 items-center mt-4">
+        <Link to={user === null ? "/connexion" : "/favoris" } className="flex text-3xl p-2 items-center mt-4">
           <Heart className="fill-red-600 mr-2 h-8 w-8" />
           Favoris
         </Link>
-        <Link to={"/connexion"} className="flex text-3xl p-2 items-center mt-4">
+        <Link to={user === null ? "/connexion" : "/playlists" } className="flex text-3xl p-2 items-center mt-4">
           <Folder className="fill-yellow-300 mr-2 h-8 w-8" />
           Playlists
         </Link>

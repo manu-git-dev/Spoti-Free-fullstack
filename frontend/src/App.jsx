@@ -8,6 +8,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Apropos from "./pages/Apropos";
 import Contact from "./pages/Contact";
+import Playlists from "./pages/Playlists";
+import Favoris from "./pages/Favoris";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
@@ -50,7 +52,7 @@ function App() {
       <section className="row-start-2 col-start-2 col-span-1 flex items-center bg-zinc-800 rounded-4xl px-4 justify-around">
         <MediaPlayer music={currentMusic} currentIndex={currentIndex} />
       </section>
-      <Aside />
+      <Aside user={user}/>
       <main className="col-start-2 row-start-3 bg-zinc-900 rounded-2xl h-full overflow-hidden">
         <Routes>
           <Route
@@ -73,6 +75,8 @@ function App() {
           <Route path="/inscription" element={<Register />} />
           <Route path="/a-propos" element={<Apropos />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/playlists" element={<Playlists/>} />
+          <Route path="/favoris" element={<Favoris/>} />
         </Routes>
       </main>
     </section>
