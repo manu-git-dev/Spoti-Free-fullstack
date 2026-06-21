@@ -14,7 +14,7 @@ export default function MediaPlayer({ music, currentIndex }) {
   const [volume, setVolume] = useState(50);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const API_URL = "http://localhost:8000";
+  const API_URL = "http://localhost:3000/";
 
   const audioRef = useRef(null);
 
@@ -40,7 +40,7 @@ export default function MediaPlayer({ music, currentIndex }) {
 
   return (
     <>
-      <audio src={`${API_URL}${music.audio}`} ref={audioRef}></audio>
+      <audio src={`${API_URL}${music.src_audio}`} ref={audioRef}></audio>
       <button className="cursor-pointer hover:scale-110" onClick={handlePlay}>
         {isPlaying ? (
           <Pause className="w-10 h-10 fill-blue-600" />
