@@ -1,25 +1,31 @@
 import express from "express";
 import db from "../../db.js";
 import bcrypt from "bcryptjs";
-import nodemon from "nodemon";
 const router = express.Router();
 import jwt from "jsonwebtoken";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 //affiche tous les utilisateur
-router.get("/", async (req, res) => {
-  const [users] = await db.query(
-    "SELECT `pseudo`,`first_name`,`last_name`,`email`,`created_at` FROM users",
-  );
-  res.json(users);
+router.get("/", authMiddleware, async (req, res) => {
+  const idUser = req.user.id_user;
+  if (idUser !== 10) {
+    return res.status(404).json({
+      message: "Accées refusée.",
+    });
+  } else {
+    const [users] = await db.query(
+      "SELECT `pseudo`,`first_name`,`last_name`,`email`,`created_at` FROM users",
+    );
+    res.json(users);
+  }
 });
 //affiche les musiques likés d'un utilisateur ROUTE SECURISÉE
-router.get("/likes",authMiddleware, async (req, res) => {
+router.get("/likes", authMiddleware, async (req, res) => {
   try {
-    const id = req.user.id_user;
+    const idUser = req.user.id_user;
     const [likes] = await db.query(
       "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,`duration` FROM `musics` INNER JOIN `likes` ON (musics.id_music=likes.id_music) WHERE id_user = ?",
-      [id],
+      [idUser],
     );
     if (likes.length === 0) {
       return res.status(404).json({
@@ -36,24 +42,16 @@ router.get("/likes",authMiddleware, async (req, res) => {
     });
   }
 });
-// Ajouter une musique au like
-router.post("/like/:idUser/:idMusic", async (req, res) => {
+// Ajouter une musique au like ROUTE SECURISÉE
+router.post("/like/:idMusic", authMiddleware, async (req, res) => {
   try {
-    const idUser = req.params.idUser;
+    const idUser = req.user.id_user;
     const idMusic = req.params.idMusic;
-    const [testSaisie1] = await db.query(
-      "SELECT `id_user` FROM `users` WHERE id_user = ?",
-      [idUser],
-    );
     const [testSaisie2] = await db.query(
       "SELECT `id_music` FROM `musics` WHERE id_music = ?",
       [idMusic],
     );
-    if (testSaisie1.length === 0) {
-      return res.status(404).json({
-        message: "L'utilisateur'est introuvable",
-      });
-    } else if (testSaisie2.length === 0) {
+    if (testSaisie2.length === 0) {
       return res.status(404).json({
         message: "La musique est introuvable",
       });
@@ -76,9 +74,9 @@ router.post("/like/:idUser/:idMusic", async (req, res) => {
 });
 
 // retirer une musique liké
-router.delete("/unlikes/:idUser/:idMusic", async (req, res) => {
+router.delete("/unlikes/:idMusic", authMiddleware, async (req, res) => {
   try {
-    const idUser = req.params.idUser;
+    const idUser = req.user.id_user;
     const idMusic = req.params.idMusic;
     const [unlikeMusique] = await db.query(
       "DELETE FROM `likes` WHERE id_user = ? AND id_music = ?",
@@ -198,12 +196,5 @@ router.post("/connexion", async (req, res) => {
     });
   }
 });
-
-    // "message": "Connexion réussie.",
-    // "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c2VyIjo0LCJlbWFpbCI6InRlc3RAYWpvdXQuZnIiLCJpYXQiOjE3ODIwMzE0MzQsImV4cCI6MTc4MjAzODYzNH0.YIJ-PePlXbmxdcZk5_KTwRRKFzLsrXL3uwBKoi-yCdM",
-    // "user": {
-    //     "id_user": 4,
-    //     "email": "test@ajout.fr",
-    //     "pseudo": "test-ajout"
 
 export default router;
