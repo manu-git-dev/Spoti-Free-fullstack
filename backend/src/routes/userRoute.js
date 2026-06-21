@@ -5,7 +5,7 @@ const router = express.Router();
 import jwt from "jsonwebtoken";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
-//affiche tous les utilisateur
+//affiche tous les utilisateur ROUTE SECURISÉE
 router.get("/", authMiddleware, async (req, res) => {
   const idUser = req.user.id_user;
   if (idUser !== 10) {
