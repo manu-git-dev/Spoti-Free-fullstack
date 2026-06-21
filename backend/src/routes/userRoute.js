@@ -24,7 +24,7 @@ router.get("/likes", authMiddleware, async (req, res) => {
   try {
     const idUser = req.user.id_user;
     const [likes] = await db.query(
-      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,`duration` FROM `musics` INNER JOIN `likes` ON (musics.id_music=likes.id_music) WHERE id_user = ?",
+      "SELECT * FROM `musics` INNER JOIN `likes` ON (musics.id_music=likes.id_music) WHERE id_user = ?",
       [idUser],
     );
     if (likes.length === 0) {
