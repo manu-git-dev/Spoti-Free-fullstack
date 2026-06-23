@@ -196,4 +196,30 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// ajouter une playlist ROUTE SECURISÉE
+router.post(
+  "/ajouter",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const idUser = req.user.id_user
+      const nomPlaylist = req.body.nom;
+
+        const [insertMusic] = await db.query(
+          "INSERT INTO `playlists` (`id_playlist`, `name`, `id_user`) VALUES (NULL, ?, ?)",
+          [nomPlaylist, idUser],
+        );
+        return res.status(201).json({
+          message: "Playlist ajoutée avec succès.",
+        });
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        message: "Erreur lors de la création la playlist.",
+      });
+    }
+    
+    });
+
 export default router;

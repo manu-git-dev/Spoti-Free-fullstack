@@ -1,6 +1,6 @@
 import ButtonLike from "./ButtonLike";
 
-export default function Card({ musique, onSelectMusique,user }) {
+export default function Card({ musique, onSelectMusique,user, setMusiqueslike}) {
   const API_URL = "http://localhost:3000/";
   const handleClick = () => {
     onSelectMusique(musique);
@@ -19,7 +19,7 @@ export default function Card({ musique, onSelectMusique,user }) {
         <h2 className="text-center h-1/6 ">{musique.title}</h2>
         <p className="text-center h-1/6 ">{musique.artist.toUpperCase()}</p>
       </div>
-      <ButtonLike idMusic = {musique.id_music} />
+      <ButtonLike idMusic = {musique.id_music} setMusiqueslike={setMusiqueslike} />
     </article>
   );
 }
