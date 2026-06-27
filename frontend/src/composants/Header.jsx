@@ -11,16 +11,6 @@ export default function Header({ user, setUser, token, setToken,setMessageDeconn
           </h1>
         </Link>
       </div>
-      <div>
-        <input
-          type="text"
-          name="recherche"
-          id=""
-          placeholder="Recherchez un titre ou un artiste"
-          className="input rounded-2xl w-3xl h-12 placeholder:text-xl text-white"
-        />
-      </div>
-
       {user === null ? (
         <div>
           <Link to={"/inscription"}>
