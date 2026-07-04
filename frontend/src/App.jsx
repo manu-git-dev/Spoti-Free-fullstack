@@ -10,12 +10,16 @@ import Apropos from "./pages/Apropos";
 import Contact from "./pages/Contact";
 import Playlists from "./pages/Playlists";
 import Favoris from "./pages/Favoris";
+import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [messageDeconnexion, setMessageDeconnexion] = useState("");
   const [valueInput, setValueInput] = useState("");
+  const [currentIndex,setCurrentIndex] = useState("");
+  const [maxIndex,setMaxIndex] = useState("");
+  const [musiquesLikee, setMusiquesLikee] = useState([]);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -44,10 +48,16 @@ function App() {
   );
 
   musiquesFiltre = musiquesFiltre.sort((a,b) => a.title.localeCompare(b.title))  
-  
-  const currentIndex = musiquesFiltre.findIndex(
-    (musique) => musique.id === currentMusic?.id,
-  );
+
+  useEffect (() => {
+  setCurrentIndex(musiquesFiltre.findIndex(
+    (musique) => musique.id_music === currentMusic?.id_music,
+  ));
+},[currentMusic]);
+
+  useEffect (() => {
+  setMaxIndex(musiquesFiltre.length -1);
+},[musiquesFiltre]);
 
   return (
     <section className="box-border h-screen grid grid-cols-[250px_1fr] grid-rows-[100px_90px_1fr] p-2 bg-black gap-2">
@@ -60,7 +70,7 @@ function App() {
           setMessageDeconnexion={setMessageDeconnexion}
         />
       </header>
-        <MediaPlayer music={currentMusic} currentIndex={currentIndex} />
+        <MediaPlayer music={currentMusic} currentIndex={currentIndex} musiquesFiltre={musiquesFiltre} setCurrentMusic={setCurrentMusic} setCurrentIndex={setCurrentIndex} maxIndex={maxIndex}/>
       <Aside user={user} />
       <main className="col-start-2 row-start-3 bg-zinc-900 rounded-2xl h-full overflow-hidden">
         <Routes>
@@ -71,7 +81,7 @@ function App() {
                 musiques={musiquesFiltre}
                 user={user}
                 messageDeconnexion={messageDeconnexion}
-                onSelectMusique={setCurrentMusic}
+                setCurrentMusic={setCurrentMusic}
                 setValueInput={setValueInput}
                 valueInput={valueInput}
               />
@@ -92,7 +102,8 @@ function App() {
           <Route path="/a-propos" element={<Apropos />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/playlists" element={<Playlists />} />
-          <Route path="/favoris" element={<Favoris />} />
+          <Route path="/playlists/:idPlaylist" element={<MusicsInPlaylist setCurrentMusic={setCurrentMusic} setMusiquesLikee={setMusiquesLikee}/>} />
+          <Route path="/favoris" element={<Favoris musiquesLikee={musiquesLikee} setMusiquesLikee={setMusiquesLikee} setCurrentMusic={setCurrentMusic}/>} />
         </Routes>
       </main>
     </section>

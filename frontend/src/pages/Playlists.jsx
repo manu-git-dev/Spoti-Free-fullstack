@@ -1,8 +1,10 @@
+import { Link } from "react-router-dom";
 import ButtonAddPlaylist from "../composants/ButtonAddPlaylist";
 import { useState, useEffect } from "react";
+import Playlist from "../composants/Playlist";
 export default function Playlists() {
   const [playlists, setPlaylists] = useState([]);
-
+  
   useEffect(() => {
     const url = `http://localhost:3000/api/playlists`;
     const token = localStorage.getItem("token");
@@ -23,16 +25,20 @@ export default function Playlists() {
       .catch((error) => console.error(error));
   }, []);
 
+
+
   return (
     <>
-      <ButtonAddPlaylist setPlaylists={setPlaylists}/>
+      <ButtonAddPlaylist setPlaylists={setPlaylists} />
       <h1>Vos playlists : </h1>
       <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
         {playlists.length === 0 ? (
           <div>Aucune musiques de likées</div>
         ) : (
           playlists.map((playlist) => (
-            <h1>{playlist.name}</h1>
+            <Link to={`/playlists/${playlist.id_playlist}`}>
+                <Playlist id={playlist.id} nom={playlist.name}/>
+            </Link>
           ))
         )}
       </section>

@@ -3,7 +3,7 @@ import { useState,useRef } from "react";
 
 export default function Home({
   musiques,
-  onSelectMusique,
+  setCurrentMusic,
   onClickIndex,
   user,
   messageDeconnexion,
@@ -48,7 +48,7 @@ export default function Home({
         />
       </div>
       <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
-        <ListesCard musiques={musiques} onSelectMusique={onSelectMusique} />
+        <ListesCard musiques={musiques} setCurrentMusic={setCurrentMusic} />
       </section>
     </section>
   );

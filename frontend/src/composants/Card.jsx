@@ -1,16 +1,16 @@
 import ButtonLike from "./ButtonLike";
 
-export default function Card({ musique, onSelectMusique,user, setMusiqueslike}) {
+export default function Card({ musique, setCurrentMusic, setMusiqueslike}) {
   const API_URL = "http://localhost:3000/";
   const handleClick = () => {
-    onSelectMusique(musique);
+    setCurrentMusic(musique);
   };
   return (
     <article
       className="border rounded-2xl border-blue-500 flex flex-col cursor-pointer hover:shadow-2xl justify-center"
-      
+      onClick={handleClick}
     >
-      <div onClick={handleClick}>
+      <div >
         <img
           src={`${API_URL}${musique.src_image}`}
           alt={`Pochette album ${musique.title}`}

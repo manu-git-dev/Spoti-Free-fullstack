@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Card from "../composants/Card";
-export default function Favoris() {
-  const [musiquesLikee, setMusiquesLikee] = useState([]);
+export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}) {
 
   useEffect(() => {
     const url = `http://localhost:3000/api/users/likes`;
@@ -35,6 +34,7 @@ export default function Favoris() {
               key={musique.id_music}
               musique={musique}
               setMusiqueslike={setMusiquesLikee}
+              setCurrentMusic={setCurrentMusic}
             />
           ))
         )}
