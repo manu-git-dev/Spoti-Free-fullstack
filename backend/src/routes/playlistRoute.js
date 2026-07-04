@@ -8,7 +8,7 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const idUser = req.user.id_user;
     const [playlists] = await db.query(
-      "SELECT `name` FROM `playlists` WHERE id_user = ?",
+      "SELECT `id_playlist`,`name` FROM `playlists` WHERE id_user = ?",
       [idUser],
     );
     if (playlists.length === 0) {
@@ -33,7 +33,7 @@ router.get("/musics/:idPlaylist", authMiddleware, async (req, res) => {
     const idUser = req.user.id_user;
     const idPlaylist = req.params.idPlaylist;
     const [musicFromPlaylist] = await db.query(
-      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,`duration`,`name` FROM `musics` INNER JOIN `playlists_musics` ON musics.id_music=playlists_musics.id_music INNER JOIN `playlists` ON playlists.id_playlist=playlists_musics.id_playlist WHERE playlists_musics.id_playlist = ? AND playlists.id_user = ?",
+      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,musics.id_music,`name` FROM `musics` INNER JOIN `playlists_musics` ON musics.id_music=playlists_musics.id_music INNER JOIN `playlists` ON playlists.id_playlist=playlists_musics.id_playlist WHERE playlists_musics.id_playlist = ? AND playlists.id_user = ?",
       [idPlaylist, idUser],
     );
     if (musicFromPlaylist.length === 0) {

@@ -9,8 +9,14 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 
-export default function MediaPlayer({ music, currentIndex }) {
-  // je dispose de la music cliquée dans music;
+export default function MediaPlayer({
+  music,
+  currentIndex,
+  musiquesFiltre,
+  setCurrentMusic,
+  setCurrentIndex,
+  maxIndex,
+}) {
   const [volume, setVolume] = useState(50);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -47,8 +53,34 @@ export default function MediaPlayer({ music, currentIndex }) {
     }
   };
   const handleNext = () => {
-    console.log(currentIndex);
+    let nextIndex = currentIndex + 1;
+    if (nextIndex > maxIndex) {
+      nextIndex = 0;
+      let nextMusic = musiquesFiltre[nextIndex];
+      setCurrentMusic(nextMusic);
+      setCurrentIndex(nextIndex);
+    } else {
+      let nextMusic = musiquesFiltre[nextIndex];
+      setCurrentMusic(nextMusic);
+      setCurrentIndex(nextIndex);
+    }
   };
+
+  const handlePrevious = () => {
+    let previousIndex = currentIndex - 1;
+
+    if (previousIndex < 0) {
+      previousIndex = maxIndex;
+      let previousMusic = musiquesFiltre[previousIndex];
+      setCurrentMusic(previousMusic);
+      setCurrentIndex(previousIndex);
+    } else {
+      let previousMusic = musiquesFiltre[previousIndex];
+      setCurrentMusic(previousMusic);
+      setCurrentIndex(previousIndex);
+    }
+  };
+
   if (!music) {
     return <p>Aucune musique sélectionnée</p>;
   }
@@ -58,11 +90,14 @@ export default function MediaPlayer({ music, currentIndex }) {
       <audio
         src={`${API_URL}${music.src_audio}`}
         ref={audioRef}
-        volume = {volume / 100}
+        volume={volume / 100}
         onLoadedMetadata={() => {
           setDuration(audioRef.current.duration);
+          audioRef.current.play();
+          setIsPlaying(true);
         }}
         onTimeUpdate={() => setTimeUpdate(audioRef.current.currentTime)}
+        onEnded={handleNext}
       ></audio>
       <button className="cursor-pointer hover:scale-110" onClick={handlePlay}>
         {isPlaying ? (
@@ -71,7 +106,10 @@ export default function MediaPlayer({ music, currentIndex }) {
           <Play className="w-10 h-10 fill-blue-600" />
         )}
       </button>
-      <button className="cursor-pointer hover:scale-110 ">
+      <button
+        className="cursor-pointer hover:scale-110 "
+        onClick={handlePrevious}
+      >
         <CircleArrowLeft className="w-10 h-10 fill-blue-600" />
       </button>
       <button className="cursor-pointer hover:scale-110">
