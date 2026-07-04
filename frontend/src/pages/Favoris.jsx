@@ -2,26 +2,6 @@ import { useState, useEffect } from "react";
 import Card from "../composants/Card";
 export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}) {
 
-  useEffect(() => {
-    const url = `http://localhost:3000/api/users/likes`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setMusiquesLikee(data);
-        } else {
-          setMusiquesLikee([]);
-        }
-      })
-      .catch((error) => console.error(error));
-  }, []);
-
   return (
     <>
       <h1>Vos musiques likées : </h1>
@@ -33,8 +13,9 @@ export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}
             <Card
               key={musique.id_music}
               musique={musique}
-              setMusiqueslike={setMusiquesLikee}
+              setMusiquesLikee={setMusiquesLikee}
               setCurrentMusic={setCurrentMusic}
+              musiquesLikee={musiquesLikee}
             />
           ))
         )}

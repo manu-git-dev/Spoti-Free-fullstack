@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import Card from "../composants/Card";
-export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee}) {
+export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musiquesLikee}) {
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
   const {idPlaylist} = useParams();
 
@@ -36,8 +36,11 @@ export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee}) {
                         <Card
                           key={playlistMusic.id_music}
                           musique={playlistMusic}
-                          setMusiqueslike={setMusiquesLikee}
+                          setMusiquesLikee={setMusiquesLikee}
                           setCurrentMusic={setCurrentMusic}
+                          idPlaylist = {idPlaylist}
+                          setMusicsPlaylist = {setMusicsPlaylist}
+                          musiquesLikee={musiquesLikee}
                         />
           ))
         )}

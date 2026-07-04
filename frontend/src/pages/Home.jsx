@@ -1,5 +1,5 @@
 import ListesCard from "../composants/ListesCard";
-import { useState,useRef } from "react";
+import { useState, useRef } from "react";
 
 export default function Home({
   musiques,
@@ -8,10 +8,10 @@ export default function Home({
   user,
   messageDeconnexion,
   setValueInput,
-  valueInput
+  valueInput,
+  musiquesLikee,
+  setMusiquesLikee,
 }) {
-
-
   return (
     <section className="h-full overflow-hidden">
       {" "}
@@ -48,7 +48,12 @@ export default function Home({
         />
       </div>
       <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
-        <ListesCard musiques={musiques} setCurrentMusic={setCurrentMusic} />
+        <ListesCard
+          musiques={musiques}
+          setCurrentMusic={setCurrentMusic}
+          musiquesLikee={musiquesLikee}
+          setMusiquesLikee={setMusiquesLikee}
+        />
       </section>
     </section>
   );

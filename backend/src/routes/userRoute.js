@@ -68,7 +68,7 @@ router.post("/like/:idMusic", authMiddleware, async (req, res) => {
     console.error(error);
 
     return res.status(500).json({
-      message: "Erreur lors de l'ajout de la musique dans la playlist.",
+      message: "Erreur lors de l'ajout du like.",
     });
   }
 });
@@ -171,7 +171,7 @@ router.post("/connexion", async (req, res) => {
         const token = jwt.sign(
           { id_user: user.id_user, email: user.email },
           process.env.JWT_SECRET,
-          { expiresIn: "2h" },
+          { expiresIn: "24h" },
         );
         return res.status(200).json({
           message: "Connexion réussie.",
