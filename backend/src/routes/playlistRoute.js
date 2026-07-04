@@ -102,6 +102,11 @@ router.post(
         "SELECT `id_music` FROM `musics` WHERE id_music = ?",
         [idMusic],
       );
+
+      const [testSaisie3] = await db.query(
+        "SELECT * FROM `playlists_musics` WHERE id_playlist = ? AND id_music = ?",
+        [idPlaylist, idMusic],
+      );
       if (testSaisie1.length === 0) {
         return res.status(404).json({
           message: "La playlist est introuvable",
@@ -109,6 +114,10 @@ router.post(
       } else if (testSaisie2.length === 0) {
         return res.status(404).json({
           message: "La musique est introuvable",
+        });
+      } else if (testSaisie3.length > 0) {
+        return res.status(404).json({
+          message: "La musique est déjà dans la playlist",
         });
       } else {
         const [insertMusic] = await db.query(
@@ -197,29 +206,27 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
 });
 
 // ajouter une playlist ROUTE SECURISÉE
-router.post(
-  "/ajouter",
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const idUser = req.user.id_user
-      const nomPlaylist = req.body.nom;
+router.post("/ajouter", authMiddleware, async (req, res) => {
+  try {
+    const idUser = req.user.id_user;
+    const nomPlaylist = req.body.nom;
 
-        const [insertMusic] = await db.query(
-          "INSERT INTO `playlists` (`id_playlist`, `name`, `id_user`) VALUES (NULL, ?, ?)",
-          [nomPlaylist, idUser],
-        );
-        return res.status(201).json({
-          message: "Playlist ajoutée avec succès.",
-        });
-    } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        message: "Erreur lors de la création la playlist.",
-      });
-    }
-    
+    const [insertMusic] = await db.query(
+      "INSERT INTO `playlists` (`id_playlist`, `name`, `id_user`) VALUES (NULL, ?, ?)",
+      [nomPlaylist, idUser],
+    );
+    return res.status(201).json({
+      id_playlist: insertMusic.insertId,
+      name: nomPlaylist,
+      message: "Playlist ajoutée avec succès.",
     });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la création la playlist.",
+    });
+  }
+});
 
 export default router;
