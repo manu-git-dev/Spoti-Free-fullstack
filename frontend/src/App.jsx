@@ -17,8 +17,8 @@ function App() {
   const [currentMusic, setCurrentMusic] = useState(null);
   const [messageDeconnexion, setMessageDeconnexion] = useState("");
   const [valueInput, setValueInput] = useState("");
-  const [currentIndex,setCurrentIndex] = useState("");
-  const [maxIndex,setMaxIndex] = useState("");
+  const [currentIndex, setCurrentIndex] = useState("");
+  const [maxIndex, setMaxIndex] = useState(0);
   const [musiquesLikee, setMusiquesLikee] = useState([]);
 
   const [user, setUser] = useState(() => {
@@ -30,8 +30,6 @@ function App() {
     return localStorage.getItem("token");
   });
 
-
-
   useEffect(() => {
     fetch("http://localhost:3000/api/musics")
       .then((response) => response.json())
@@ -40,24 +38,47 @@ function App() {
       })
       .catch((error) => console.error(error));
   }, []);
+  useEffect(() => {
+    const url = `http://localhost:3000/api/users/likes`;
+    const token = localStorage.getItem("token");
+    fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMusiquesLikee(data);
+        } else {
+          setMusiquesLikee([]);
+        }
+      })
+      .catch((error) => console.error(error));
+  }, []);
 
- let musiquesFiltre = musiques.filter(
+  let musiquesFiltre = musiques.filter(
     (musique) =>
       musique.title.toLowerCase().includes(valueInput.toLowerCase()) ||
       musique.artist.toLowerCase().includes(valueInput.toLowerCase()),
   );
 
-  musiquesFiltre = musiquesFiltre.sort((a,b) => a.title.localeCompare(b.title))  
+  musiquesFiltre = musiquesFiltre.sort((a, b) =>
+    a.title.localeCompare(b.title),
+  );
 
-  useEffect (() => {
-  setCurrentIndex(musiquesFiltre.findIndex(
-    (musique) => musique.id_music === currentMusic?.id_music,
-  ));
-},[currentMusic]);
+  useEffect(() => {
+    setCurrentIndex(
+      musiquesFiltre.findIndex(
+        (musique) => musique.id_music === currentMusic?.id_music,
+      ),
+    );
+  }, [currentMusic]);
 
-  useEffect (() => {
-  setMaxIndex(musiquesFiltre.length -1);
-},[musiquesFiltre]);
+  useEffect(() => {
+    setMaxIndex(musiquesFiltre.length - 1);
+  }, [musiquesFiltre]);
 
   return (
     <section className="box-border h-screen grid grid-cols-[250px_1fr] grid-rows-[100px_90px_1fr] p-2 bg-black gap-2">
@@ -70,7 +91,14 @@ function App() {
           setMessageDeconnexion={setMessageDeconnexion}
         />
       </header>
-        <MediaPlayer music={currentMusic} currentIndex={currentIndex} musiquesFiltre={musiquesFiltre} setCurrentMusic={setCurrentMusic} setCurrentIndex={setCurrentIndex} maxIndex={maxIndex}/>
+      <MediaPlayer
+        music={currentMusic}
+        currentIndex={currentIndex}
+        musiquesFiltre={musiquesFiltre}
+        setCurrentMusic={setCurrentMusic}
+        setCurrentIndex={setCurrentIndex}
+        maxIndex={maxIndex}
+      />
       <Aside user={user} />
       <main className="col-start-2 row-start-3 bg-zinc-900 rounded-2xl h-full overflow-hidden">
         <Routes>
@@ -84,6 +112,9 @@ function App() {
                 setCurrentMusic={setCurrentMusic}
                 setValueInput={setValueInput}
                 valueInput={valueInput}
+                musiquesLikee = {musiquesLikee}
+                setMusiquesLikee={setMusiquesLikee}
+
               />
             }
           />
@@ -101,9 +132,27 @@ function App() {
           <Route path="/inscription" element={<Register />} />
           <Route path="/a-propos" element={<Apropos />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/playlists" element={<Playlists />} />
-          <Route path="/playlists/:idPlaylist" element={<MusicsInPlaylist setCurrentMusic={setCurrentMusic} setMusiquesLikee={setMusiquesLikee}/>} />
-          <Route path="/favoris" element={<Favoris musiquesLikee={musiquesLikee} setMusiquesLikee={setMusiquesLikee} setCurrentMusic={setCurrentMusic}/>} />
+          <Route path="/playlists" element={<Playlists  />} />
+          <Route
+            path="/playlists/:idPlaylist"
+            element={
+              <MusicsInPlaylist
+                setCurrentMusic={setCurrentMusic}
+                setMusiquesLikee={setMusiquesLikee}
+                musiquesLikee = {musiquesLikee}
+              />
+            }
+          />
+          <Route
+            path="/favoris"
+            element={
+              <Favoris
+                musiquesLikee={musiquesLikee}
+                setMusiquesLikee={setMusiquesLikee}
+                setCurrentMusic={setCurrentMusic}
+              />
+            }
+          />
         </Routes>
       </main>
     </section>

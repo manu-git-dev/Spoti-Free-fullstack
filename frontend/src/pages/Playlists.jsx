@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Playlist from "../composants/Playlist";
 export default function Playlists() {
   const [playlists, setPlaylists] = useState([]);
-  
+
   useEffect(() => {
     const url = `http://localhost:3000/api/playlists`;
     const token = localStorage.getItem("token");
@@ -25,8 +25,6 @@ export default function Playlists() {
       .catch((error) => console.error(error));
   }, []);
 
-
-
   return (
     <>
       <ButtonAddPlaylist setPlaylists={setPlaylists} />
@@ -36,9 +34,11 @@ export default function Playlists() {
           <div>Aucune musiques de likées</div>
         ) : (
           playlists.map((playlist) => (
-            <Link to={`/playlists/${playlist.id_playlist}`}>
-                <Playlist id={playlist.id} nom={playlist.name}/>
-            </Link>
+            <Playlist
+              id={playlist.id_playlist}
+              nom={playlist.name}
+              setPlaylists={setPlaylists}
+            />
           ))
         )}
       </section>

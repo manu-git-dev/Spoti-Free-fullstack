@@ -22,7 +22,7 @@ export default function Aside({user}) {
       <Link to={"/a-propos"} className="mx-2">
         A propos
       </Link>
-      <Link to={"contact"} className="mx-2 ">
+      <Link to={"/contact"} className="mx-2 ">
         Contact
       </Link>
       </nav>

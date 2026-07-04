@@ -1,16 +1,22 @@
+import AddMusicPlaylist from "./AddMusicPlaylist";
 import ButtonLike from "./ButtonLike";
+import RemoveMusicPlaylist from "./RemoveMusicPlaylist";
 
-export default function Card({ musique, setCurrentMusic, setMusiqueslike}) {
+export default function Card({
+  musique,
+  setCurrentMusic,
+  setMusiquesLikee,
+  idPlaylist,
+  setMusicsPlaylist,
+  musiquesLikee,
+}) {
   const API_URL = "http://localhost:3000/";
   const handleClick = () => {
     setCurrentMusic(musique);
   };
   return (
-    <article
-      className="border rounded-2xl border-blue-500 flex flex-col cursor-pointer hover:shadow-2xl justify-center"
-      onClick={handleClick}
-    >
-      <div >
+    <article className="border rounded-2xl border-blue-500 flex flex-col cursor-pointer hover:shadow-2xl justify-center">
+      <div onClick={handleClick}>
         <img
           src={`${API_URL}${musique.src_image}`}
           alt={`Pochette album ${musique.title}`}
@@ -19,7 +25,20 @@ export default function Card({ musique, setCurrentMusic, setMusiqueslike}) {
         <h2 className="text-center h-1/6 ">{musique.title}</h2>
         <p className="text-center h-1/6 ">{musique.artist.toUpperCase()}</p>
       </div>
-      <ButtonLike idMusic = {musique.id_music} setMusiqueslike={setMusiqueslike} />
+      <ButtonLike
+        idMusic={musique.id_music}
+        setMusiquesLikee={setMusiquesLikee}
+        musiquesLikee={musiquesLikee}
+        musique={musique}
+      />
+      {!idPlaylist && <AddMusicPlaylist idMusic={musique.id_music} />}
+      {idPlaylist && (
+        <RemoveMusicPlaylist
+          idMusic={musique.id_music}
+          idPlaylist={idPlaylist}
+          setMusicsPlaylist={setMusicsPlaylist}
+        />
+      )}
     </article>
   );
 }
