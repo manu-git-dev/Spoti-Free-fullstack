@@ -16,6 +16,7 @@ export default function MediaPlayer({
   setCurrentMusic,
   setCurrentIndex,
   maxIndex,
+  className = "",
 }) {
   const [volume, setVolume] = useState(50);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -82,11 +83,13 @@ export default function MediaPlayer({
   };
 
   if (!music) {
-    return <p>Aucune musique sélectionnée</p>;
+    return <p className={className}>Aucune musique sélectionnée</p>;
   }
 
   return (
-    <section className="row-start-2 col-start-2 col-span-1 flex items-center bg-zinc-800 rounded-4xl px-4 justify-around">
+    <section
+      className={`items-center bg-zinc-800 rounded-4xl px-4 justify-around ${className}`}
+    >
       <audio
         src={`${API_URL}${music.src_audio}`}
         ref={audioRef}

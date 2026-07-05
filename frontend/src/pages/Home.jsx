@@ -1,22 +1,19 @@
 import ListesCard from "../composants/ListesCard";
-import { useState, useRef } from "react";
 
 export default function Home({
   musiques,
   setCurrentMusic,
-  onClickIndex,
   user,
   messageDeconnexion,
-  setValueInput,
-  valueInput,
   musiquesLikee,
   setMusiquesLikee,
 }) {
+  const topCinq = musiques.slice(0, 5);
+
   return (
-    <section className="h-full overflow-hidden">
-      {" "}
+    <section className="h-full overflow-y-auto p-4 md:p-8">
       {messageDeconnexion ? (
-        <div role="alert" className="alert alert-success">
+        <div role="alert" className="alert alert-success mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 shrink-0 stroke-current"
@@ -33,28 +30,22 @@ export default function Home({
           <span>{messageDeconnexion}</span>
         </div>
       ) : null}
-      <div className="flex">
-        <p className="flex m-4 text-2xl">
-          {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
-        </p>
-        <input
-          type="text"
-          value={valueInput}
-          name="recherche"
-          id=""
-          onChange={(e) => setValueInput(e.target.value)}
-          placeholder="Recherchez un titre ou un artiste"
-          className="input rounded-2xl w-3xl h-12  my-4 ml-10 placeholder:text-xl text-white"
-        />
-      </div>
-      <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
+
+      <p className="text-2xl font-serif mb-6">
+        {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
+      </p>
+
+      <h2 className="text-lg font-semibold mb-4">
+        Top 5 des titres les plus écoutés
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <ListesCard
-          musiques={musiques}
+          musiques={topCinq}
           setCurrentMusic={setCurrentMusic}
           musiquesLikee={musiquesLikee}
           setMusiquesLikee={setMusiquesLikee}
         />
-      </section>
+      </div>
     </section>
   );
 }

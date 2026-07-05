@@ -1,9 +1,12 @@
 import Aside from "./composants/Aside";
 import Header from "./composants/Header";
+import HeaderMobile from "./composants/HeaderMobile";
+import BottomNav from "./composants/BottomNav";
 import { useEffect, useState } from "react";
 import MediaPlayer from "./composants/MediaPlayer";
 import { Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home";
+import Bibliotheque from "./pages/Bibliotheque";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Apropos from "./pages/Apropos";
@@ -81,8 +84,12 @@ function App() {
   }, [musiquesFiltre]);
 
   return (
-    <section className="box-border h-screen grid grid-cols-[250px_1fr] grid-rows-[100px_90px_1fr] p-2 bg-black gap-2">
-      <header className="col-span-2 flex justify-between bg-zinc-900 rounded-2xl p-2 items-center">
+    <section className="box-border h-screen flex flex-col md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr_88px] ">
+      <div className="md:hidden">
+        <HeaderMobile />
+      </div>
+
+      {/* <header className="hidden md:flex md:col-span-2 justify-between bg-zinc-900 rounded-2xl p-2 items-center">
         <Header
           user={user}
           setUser={setUser}
@@ -90,8 +97,9 @@ function App() {
           setToken={setToken}
           setMessageDeconnexion={setMessageDeconnexion}
         />
-      </header>
+      </header> */}
       <MediaPlayer
+        className="hidden md:flex md:row-start-2 md:col-span-2"
         music={currentMusic}
         currentIndex={currentIndex}
         musiquesFiltre={musiquesFiltre}
@@ -99,22 +107,35 @@ function App() {
         setCurrentIndex={setCurrentIndex}
         maxIndex={maxIndex}
       />
-      <Aside user={user} />
-      <main className="col-start-2 row-start-3 bg-zinc-900 rounded-2xl h-full overflow-hidden">
+      <Aside
+        className="hidden md:flex md:row-start-1 md:col-start-1"
+        user={user}
+      />
+      <main className="flex-1 min-h-0 md:col-start-2 md:row-start-1 bg-zinc-900 rounded-2xl overflow-hidden">
         <Routes>
           <Route
             path="/"
             element={
               <Home
-                musiques={musiquesFiltre}
+                musiques={musiques}
                 user={user}
                 messageDeconnexion={messageDeconnexion}
                 setCurrentMusic={setCurrentMusic}
+                musiquesLikee={musiquesLikee}
+                setMusiquesLikee={setMusiquesLikee}
+              />
+            }
+          />
+          <Route
+            path="/bibliotheque"
+            element={
+              <Bibliotheque
+                musiques={musiquesFiltre}
+                setCurrentMusic={setCurrentMusic}
                 setValueInput={setValueInput}
                 valueInput={valueInput}
-                musiquesLikee = {musiquesLikee}
+                musiquesLikee={musiquesLikee}
                 setMusiquesLikee={setMusiquesLikee}
-
               />
             }
           />
@@ -155,6 +176,9 @@ function App() {
           />
         </Routes>
       </main>
+      <div className="md:hidden">
+        <BottomNav user={user} />
+      </div>
     </section>
   );
 }
