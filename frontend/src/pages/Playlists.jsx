@@ -31,7 +31,7 @@ export default function Playlists() {
       <h1>Vos playlists : </h1>
       <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
         {playlists.length === 0 ? (
-          <div>Aucune musiques de likées</div>
+          <div>Aucune playlist pour le moment</div>
         ) : (
           playlists.map((playlist) => (
             <Playlist

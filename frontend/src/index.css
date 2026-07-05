@@ -1,5 +1,84 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@plugin "daisyui/theme" {
+  name: "midnightbloom";
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
 
+  --color-base-100: oklch(0.23 0.01 264.29);
+  --color-base-200: oklch(0.32 0.01 223.67);
+  --color-base-300: oklch(0.39 0 0);
+  --color-base-content: oklch(0.92 0 0);
 
+  --color-primary: oklch(0.57 0.2 283.08);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.34 0.18 301.68);
+  --color-secondary-content: oklch(0.92 0 0);
+  --color-accent: oklch(0.67 0.14 261.34);
+  --color-accent-content: oklch(0.92 0 0);
+  --color-neutral: oklch(0.32 0.01 223.67);
+  --color-neutral-content: oklch(0.92 0 0);
+
+  /* inventés (pas dans tweakcn) */
+  --color-info: oklch(0.7 0.15 235);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.72 0.19 149);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.82 0.17 85);
+  --color-warning-content: oklch(0.25 0 0);
+
+  --color-error: oklch(0.64 0.21 25.33);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
+  --border: 1px;
+}
+
+@plugin "daisyui/theme" {
+  name: "midnightbloom-light";
+  color-scheme: light;
+
+  --color-base-100: oklch(0.98 0 0);
+  --color-base-200: oklch(1 0 0);
+  --color-base-300: oklch(0.82 0.02 91.62);
+  --color-base-content: oklch(0.32 0 0);
+
+  --color-primary: oklch(0.57 0.2 283.08);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.82 0.07 249.35);
+  --color-secondary-content: oklch(0.32 0 0);
+  --color-accent: oklch(0.65 0.06 117.43);
+  --color-accent-content: oklch(1 0 0);
+  --color-neutral: oklch(0.32 0 0);
+  --color-neutral-content: oklch(0.98 0 0);
+
+  /* inventés (pas dans tweakcn) */
+  --color-info: oklch(0.65 0.15 235);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.72 0.19 149);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.82 0.17 85);
+  --color-warning-content: oklch(0.32 0 0);
+
+  --color-error: oklch(0.64 0.21 25.33);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
+  --border: 1px;
+}
+
+@theme {
+  --font-sans: "Montserrat", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "Source Code Pro", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}

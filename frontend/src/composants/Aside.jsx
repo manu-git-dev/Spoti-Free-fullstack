@@ -1,30 +1,53 @@
-import { Folder, Heart, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Folder, Heart, Home, Library, Plus, Info, Mail } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
-export default function Aside({user}) {
+export default function Aside({ user, className = "" }) {
   return (
-    <aside className="row-start-2 row-span-2 bg-zinc-800 rounded-2xl p-2 flex flex-col justify-between">
+    <aside className={`flex-col bg-base-200  p-6 gap-7 ${className}`}>
+      <NavLink to="/" className="text-2xl font-serif font-bold text-primary">
+        Spoti-Free
+      </NavLink>
       <nav className="flex flex-col ">
-        <Link to={"/"} className="flex text-3xl p-2 items-center mt-4">
-          <Home className="fill-blue-600 mr-2 h-8 w-8" />
+        <NavLink
+          to={"/"}
+          className="flex text-xl text-base-content/70 p-2 items-center mt-4"
+        >
+          <Home className="mr-2" />
           Accueil
-        </Link>
-        <Link to={user === null ? "/connexion" : "/favoris" } className="flex text-3xl p-2 items-center mt-4">
-          <Heart className="fill-red-600 mr-2 h-8 w-8" />
+        </NavLink>
+        <NavLink
+          to={user === null ? "/connexion" : "/bibliotheque"}
+          className="flex text-xl text-base-content/70 p-2 items-center mt-4"
+        >
+          <Library className=" mr-2" />
+          Bibliothèque
+        </NavLink>
+        <NavLink
+          to={user === null ? "/connexion" : "/favoris"}
+          className="flex text-xl p-2 items-center mt-4 text-base-content/70"
+        >
+          <Heart className=" mr-2" />
           Favoris
-        </Link>
-        <Link to={user === null ? "/connexion" : "/playlists" } className="flex text-3xl p-2 items-center mt-4">
-          <Folder className="fill-yellow-300 mr-2 h-8 w-8" />
-          Playlists
-        </Link>
+        </NavLink>
       </nav>
-      <nav className="">
-      <Link to={"/a-propos"} className="mx-2">
-        A propos
-      </Link>
-      <Link to={"/contact"} className="mx-2 ">
-        Contact
-      </Link>
+      <div className="h-px w-full bg-base-300" />
+      <div className="text-base-content/70 flex">
+        <NavLink
+          to={user === null ? "/connexion" : "/playlists"}
+          className="text-xl text-base-content/70"
+        >
+          Mes playlists
+        </NavLink>
+        <Plus className="ml-auto " />
+      </div>
+      <div className="h-px w-full bg-base-300" />
+      <nav className="flex flex-col gap-7">
+        <NavLink to={"/a-propos"} className="mx-2 text-base-content/70 flex">
+          <Info className="mr-2"/> A propos
+        </NavLink>
+        <NavLink to={"/contact"} className="mx-2 text-base-content/70 flex">
+          <Mail className="mr-2"/>Contact
+        </NavLink>
       </nav>
     </aside>
   );
