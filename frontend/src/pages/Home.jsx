@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Deconnexion from "../composants/Deconnexion";
-import ListesCard from "../composants/ListesCard";
+import TrackRow from "../composants/TrackRow";
 
 export default function Home({
   musiques,
@@ -37,7 +37,7 @@ export default function Home({
         </div>
       ) : null}
       {user === null ? (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-end gap-4 w-full">
           <Link to={"/inscription"} className="link mx-2">
             S'inscrire
           </Link>
@@ -62,13 +62,17 @@ export default function Home({
       <h2 className="text-lg font-semibold mb-4">
         Top 5 des titres les plus écoutés
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <ListesCard
-          musiques={topCinq}
-          setCurrentMusic={setCurrentMusic}
-          musiquesLikee={musiquesLikee}
-          setMusiquesLikee={setMusiquesLikee}
-        />
+      <div className="flex flex-col gap-1">
+        {topCinq.map((musique, index) => (
+          <TrackRow
+            key={musique.id_music}
+            musique={musique}
+            index={index}
+            setCurrentMusic={setCurrentMusic}
+            musiquesLikee={musiquesLikee}
+            setMusiquesLikee={setMusiquesLikee}
+          />
+        ))}
       </div>
     </section>
   );

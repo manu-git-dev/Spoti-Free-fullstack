@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Heart } from "lucide-react";
 export default function ButtonLike({
   idMusic,
   setMusiquesLikee,
@@ -113,12 +114,20 @@ export default function ButtonLike({
       ) : null}
 
       {estLike ? (
-        <button className="btn btn-error m-4" onClick={handleUnlike}>
-          UNLIKE
+        <button
+          className="btn btn-circle btn-ghost btn-sm"
+          onClick={handleUnlike}
+          aria-label="Retirer des favoris"
+        >
+          <Heart className="w-4 h-4 fill-accent text-accent" />
         </button>
       ) : (
-        <button className="btn btn-success m-4" onClick={handleLike}>
-          LIKE
+        <button
+          className="btn btn-circle btn-ghost btn-sm"
+          onClick={handleLike}
+          aria-label="Ajouter aux favoris"
+        >
+          <Heart className="w-4 h-4" />
         </button>
       )}
     </>

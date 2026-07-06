@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react";
-import Card from "../composants/Card";
+import TrackRow from "../composants/TrackRow";
 export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}) {
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
       <h1 className="text-2xl font-serif mb-6">Vos musiques likées</h1>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="flex flex-col gap-1">
         {musiquesLikee.length === 0 ? (
-          <div className="text-base-content/70 col-span-2 md:col-span-5">
+          <p className="text-base-content/70">
             Aucune musique likée pour le moment
-          </div>
+          </p>
         ) : (
-          musiquesLikee.map((musique) => (
-            <Card
+          musiquesLikee.map((musique, index) => (
+            <TrackRow
               key={musique.id_music}
               musique={musique}
+              index={index}
               setMusiquesLikee={setMusiquesLikee}
               setCurrentMusic={setCurrentMusic}
               musiquesLikee={musiquesLikee}

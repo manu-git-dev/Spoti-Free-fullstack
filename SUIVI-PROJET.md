@@ -50,6 +50,46 @@ Reste ouvert (mineur, non bloquant) :
 - Mini-player mobile : pas de precedent/suivant/volume/seek, juste play/pause (scope
   volontairement reduit par rapport a la barre desktop).
 
+## Passe 2 du 2026-07-06 - lecteur desktop, header, cards/listes conformes a la maquette - faite
+
+Suite a un retour apres la 1ere passe : le lecteur desktop, l'alignement du header, et les
+"cards" ne ressemblaient pas a la maquette. En comparant aux captures
+`docs/maquette/desktop-*.png`, l'ecart etait plus large qu'un habillage CSS : **Home (Top 5)
+et Favoris/le contenu d'une playlist sont en realite des LISTES** (rang, vignette,
+titre/artiste, icones cœur/plus), pas une grille de cards - seule **Bibliotheque reste une
+grille**, avec un style de card different (fond uni `bg-base-200`, plus de bordure bleue,
+image carree encadree, juste icones en bas).
+
+- Fait : `Card.jsx` restyle (grille, utilise uniquement par `Bibliotheque.jsx` desormais) -
+  fond `bg-base-200`, plus de bordure bleue, image carree, titre/artiste discrets, icones
+  cœur/plus alignees a droite en bas (plus de gros boutons texte colores).
+- Fait : `ButtonLike.jsx`/`AddMusicPlaylist.jsx`/`RemoveMusicPlaylist.jsx` - boutons texte
+  remplaces par des icones (`Heart`/`Plus`/`Trash2`, lucide-react), meme logique/fetch/state
+  qu'avant, seule la presentation change.
+- Fait : nouveau composant `composants/TrackRow.jsx` - ligne de liste (rang, vignette,
+  titre/artiste, cœur/plus) pour les contextes "liste" (Home Top 5, Favoris, contenu d'une
+  playlist). Pas de colonne "ecoutes"/"duree" comme sur la maquette : aucune des deux
+  donnees n'existe reellement cote backend (`duration` referencee dans `musicRoute.js`
+  mais colonne absente de la table `musics` en base - route deja cassee, hors scope) - pas
+  de donnee fantaisiste affichee a la place.
+- Fait : `Home.jsx`/`Favoris.jsx`/`MusicsInPlaylist.jsx` reconnectes sur `TrackRow` (liste
+  `flex flex-col`) au lieu de la grille `Card`/`ListesCard`. `Bibliotheque.jsx` inchange
+  (reste une grille, herite du nouveau style de `Card.jsx`). `Playlists.jsx` (grille de
+  tuiles de playlists, pas de pistes) laisse tel quel - aucune maquette n'existe pour cet
+  ecran.
+- Fait : `Home.jsx` - boutons Connexion/Inscription (temporaires) colles a droite
+  (`justify-end w-full`).
+- Fait : `MediaPlayer.jsx` - barre desktop entierement reconstruite sur 2 rangees fidele a
+  la maquette (vignette+titre/artiste a gauche, precedent/lecture(bouton rond)/suivant au
+  centre, icone volume+slider a droite, rangee temps/seek en dessous). Reutilise
+  integralement `handlePlay`/`handleNext`/`handlePrevious`/`audioRef` deja partages avec le
+  mini-player mobile - aucun changement de logique.
+- Verifie avec Playwright (compte de test cree puis supprime) : navigation SPA reelle
+  (clics sur les liens de la sidebar, pas de rechargement de page) confirmee sans
+  interruption de lecture (meme `<audio>`, `isPlaying` conserve) ; precedent/suivant
+  testes (`Around the World` -> `Bad Guy` -> `Believer` -> retour `Bad Guy`) ; capture des
+  nouveaux styles Bibliotheque/Home/Favoris/lecteur comparee a la maquette.
+
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
 - Pas de page Profil : l'onglet "Profil" pointe pour l'instant vers `/connexion` en

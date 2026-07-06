@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import Card from "../composants/Card";
+import TrackRow from "../composants/TrackRow";
 export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musiquesLikee}) {
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
   const {idPlaylist} = useParams();
@@ -28,22 +28,23 @@ export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musi
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
       <h1 className="text-2xl font-serif mb-6">Contenu de votre playlist</h1>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="flex flex-col gap-1">
         {musicsPlaylist.length === 0 ? (
-          <div className="text-base-content/70 col-span-2 md:col-span-5">
+          <p className="text-base-content/70">
             Aucune musique dans cette playlist
-          </div>
+          </p>
         ) : (
-          musicsPlaylist.map((playlistMusic) => (
-                        <Card
-                          key={playlistMusic.id_music}
-                          musique={playlistMusic}
-                          setMusiquesLikee={setMusiquesLikee}
-                          setCurrentMusic={setCurrentMusic}
-                          idPlaylist = {idPlaylist}
-                          setMusicsPlaylist = {setMusicsPlaylist}
-                          musiquesLikee={musiquesLikee}
-                        />
+          musicsPlaylist.map((playlistMusic, index) => (
+            <TrackRow
+              key={playlistMusic.id_music}
+              musique={playlistMusic}
+              index={index}
+              setMusiquesLikee={setMusiquesLikee}
+              setCurrentMusic={setCurrentMusic}
+              idPlaylist={idPlaylist}
+              setMusicsPlaylist={setMusicsPlaylist}
+              musiquesLikee={musiquesLikee}
+            />
           ))
         )}
       </div>

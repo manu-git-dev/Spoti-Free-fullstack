@@ -2,8 +2,9 @@ import AddMusicPlaylist from "./AddMusicPlaylist";
 import ButtonLike from "./ButtonLike";
 import RemoveMusicPlaylist from "./RemoveMusicPlaylist";
 
-export default function Card({
+export default function TrackRow({
   musique,
+  index,
   setCurrentMusic,
   setMusiquesLikee,
   idPlaylist,
@@ -15,19 +16,27 @@ export default function Card({
     setCurrentMusic(musique);
   };
   return (
-    <article className="bg-base-200 rounded-2xl p-3 flex flex-col cursor-pointer hover:shadow-xl">
-      <div onClick={handleClick}>
+    <div className="flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-base-200">
+      <span className="w-6 text-center text-base-content/50 font-serif">
+        {index + 1}
+      </span>
+      <div
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+        onClick={handleClick}
+      >
         <img
           src={`${API_URL}${musique.src_image}`}
           alt={`Pochette album ${musique.title}`}
-          className="w-full aspect-square object-cover rounded-xl"
+          className="w-12 h-12 rounded-lg object-cover"
         />
-        <h2 className="font-semibold truncate mt-2">{musique.title}</h2>
-        <p className="text-xs text-base-content/60 uppercase truncate">
-          {musique.artist}
-        </p>
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{musique.title}</p>
+          <p className="truncate text-sm text-base-content/60">
+            {musique.artist}
+          </p>
+        </div>
       </div>
-      <div className="flex items-center justify-end gap-2 mt-2">
+      <div className="flex items-center gap-1">
         <ButtonLike
           idMusic={musique.id_music}
           setMusiquesLikee={setMusiquesLikee}
@@ -43,6 +52,6 @@ export default function Card({
           />
         )}
       </div>
-    </article>
+    </div>
   );
 }
