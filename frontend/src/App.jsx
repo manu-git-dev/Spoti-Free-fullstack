@@ -141,6 +141,7 @@ function App() {
                 token={token}
                 setToken={setToken}
                 setMessageDeconnexion={setMessageDeconnexion}
+                currentMusic={currentMusic}
               />
             }
           />
@@ -155,6 +156,7 @@ function App() {
                 musiquesLikee={musiquesLikee}
                 setMusiquesLikee={setMusiquesLikee}
                 user={user}
+                currentMusic={currentMusic}
               />
             }
           />
@@ -191,6 +193,7 @@ function App() {
                   setMusiquesLikee={setMusiquesLikee}
                   musiquesLikee={musiquesLikee}
                   user={user}
+                  currentMusic={currentMusic}
                 />
               </ProtectedRoute>
             }
@@ -205,6 +208,7 @@ function App() {
                   setMusiquesLikee={setMusiquesLikee}
                   setCurrentMusic={setCurrentMusic}
                   user={user}
+                  currentMusic={currentMusic}
                 />
               </ProtectedRoute>
             }

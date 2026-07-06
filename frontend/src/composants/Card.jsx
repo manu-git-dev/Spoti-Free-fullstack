@@ -10,13 +10,19 @@ export default function Card({
   setMusicsPlaylist,
   musiquesLikee,
   user,
+  currentMusic,
 }) {
   const API_URL = "http://localhost:3000/";
+  const isPlaying = currentMusic?.id_music === musique.id_music;
   const handleClick = () => {
     setCurrentMusic(musique);
   };
   return (
-    <article className="bg-base-200 rounded-2xl p-3 flex flex-col cursor-pointer hover:shadow-xl">
+    <article
+      className={`bg-base-200 rounded-2xl p-3 flex flex-col cursor-pointer hover:shadow-xl transition-shadow ${
+        isPlaying ? "ring-2 ring-primary" : ""
+      }`}
+    >
       <div onClick={handleClick}>
         <img
           src={`${API_URL}${musique.src_image}`}
