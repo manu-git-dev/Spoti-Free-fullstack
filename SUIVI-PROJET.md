@@ -6,57 +6,58 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ## Phase actuelle (au 2026-07-06)
 
-Refonte visuelle mobile-first en cours. Fonctionnalites (playlists, likes, Apropos/Contact)
-et routes protegees deja faites - voir commits `df8f4ee` et anterieurs.
+Refonte visuelle mobile-first : **passe complete site-wide faite le 2026-07-06**
+(responsive sur toutes les pages + alignement maquette Login/Register/Aside/mini-player).
+Fonctionnalites (playlists, likes, Apropos/Contact) et routes protegees deja faites -
+voir commits `df8f4ee` et anterieurs.
 
-## Restyle de `Aside.jsx` (sidebar desktop) - en pause
+## Passe responsive + maquette du 2026-07-06 - faite
 
-- Fait : nav Accueil/Bibliotheque/Favoris avec etat actif (`rounded-[10px]` +
-  `bg-accent/15 text-accent` quand actif), conforme a la maquette Pencil.
-- Fait : liste de playlists dynamique remontee dans `App.jsx` (`playlists`/`setPlaylists`,
-  memes principe que `musiquesLikee`/`currentMusic`) et passee a `Aside` + `Playlists.jsx`
-  (commit `df8f4ee`).
-- **Bug connu, pas encore corrige** : sur la ligne "Mes playlists", le fond actif ne
-  couvre que le texte, pas l'icone `+` a cote (le `<NavLink>` n'enveloppe que le texte,
-  le `+` est un element frere en dehors). Piste retenue : calculer l'etat actif un niveau
-  au-dessus (`useMatch("/playlists")` de react-router) et appliquer le style au `<div>`
-  parent qui contient texte + `+`, plutot qu'au `NavLink` seul.
+- Fait : `Favoris.jsx`/`Playlists.jsx`/`MusicsInPlaylist.jsx` - wrapper `p-4 md:p-8`,
+  grille `grid-cols-2 md:grid-cols-5`, titres `text-2xl font-serif`, etats vides avec
+  `col-span-2 md:col-span-5` (alignes sur le pattern deja en place dans `Home.jsx`/
+  `Bibliotheque.jsx`). Plus aucun overflow horizontal verifie a 390px sur ces 3 pages.
+- Fait : `Contact.jsx` - padding mobile (`p-4 md:p-12`) et ligne Nom/Mail qui s'empile
+  sur mobile (`flex-col md:flex-row`, `w-full md:w-1/2`).
+- Fait : `Home.jsx` - boutons temporaires Connexion/Inscription alignes sur la maquette
+  ("S'inscrire" en lien texte, "Connexion" en pilule violette `rounded-full`).
+- Fait : bug `Aside.jsx` "Mes playlists" corrige - `useMatch("/playlists")` porte
+  maintenant l'etat actif sur le `<div>` parent (texte + icone `+` inclus dans le
+  meme fond `bg-accent/15`), au lieu du `NavLink` seul. Verifie visuellement (capture
+  desktop), autres items de nav non-regresses.
+- Fait : `Login.jsx`/`Register.jsx` - refonte visuelle complete alignee sur la maquette
+  (cercle degrade + titre serif + sous-titre, champs a icone via le pattern daisyUI v5
+  `label.input` + `lucide-react`, largeur responsive `w-full max-w-sm` a la place des
+  `w-xl` fixes qui debordaient sur mobile, bouton pilule `btn-primary rounded-full`,
+  lien croise Connexion <-> Inscription). Lien "Mot de passe oublie ?" affiche mais mort
+  (pas de backend de reset) - assume. Register a maintenant un champ confirmation de mot
+  de passe (verif cote front avant submit, testee : message d'erreur si les deux ne
+  correspondent pas). `Aside`/`BottomNav`/`MediaPlayer` restent affiches partout comme
+  decide precedemment (pas de panneau gauche gradient, pas de plein-ecran).
+- Fait : mini-player mobile dans `MediaPlayer.jsx` - barre compacte (vignette + titre/
+  artiste + bouton play/pause) affichee au-dessus de la `BottomNav` en mobile, en
+  reutilisant le meme `<audio>`/state/handlers que la barre complete desktop (un seul
+  bloc composant, deux blocs JSX freres bascules par `md:hidden`/`hidden md:flex`).
+  Verifie avec Playwright : un seul noeud `<audio>` a tout moment (mobile et desktop),
+  toggle play/pause fonctionnel, barre complete desktop non regressee.
+- Verification faite via un script Playwright (dev servers locaux + compte de test
+  cree puis supprime de la base) : 7 routes sans overflow a 390px, flow inscription/
+  connexion reel teste de bout en bout, Favoris/Playlists verifies en session authentifiee.
 
-## En cours : pages Connexion / Inscription / Contact (pas besoin de backend/DB pour les styler)
-
-Decisions prises :
-- `Aside`/`BottomNav`/`MediaPlayer` restent affiches partout, y compris sur
-  `/connexion` et `/inscription` (pas de plein-ecran type maquette, pas de restructuration
-  du routing dans `App.jsx`). Le panneau gauche gradient (logo + accroche) et le rond
-  gradient mobile de la maquette sont donc abandonnes : ces pages reprennent uniquement le
-  contenu du formulaire (titre serif, sous-titre, champs a icones, bouton pill, lien
-  croise), recentre dans le `<main>` existant.
-- Inscription garde 3 champs identite separes (`pseudo`/`prenom`/`nom`) au lieu du champ
-  unique "Nom" de la maquette (pas de refonte du modele de donnees aujourd'hui), + ajout
-  d'un champ confirmation de mot de passe (verif cote front uniquement).
-
-Etat de `Contact.jsx` (version desktop) :
-- Fait : mise en page a 2 colonnes (texte + infos a gauche, carte formulaire a droite),
-  Nom/Mail cote a cote, Sujet, Message, bouton "Envoyer le message" + icone `Send`.
-- **Bug a corriger** : les inputs Nom et Mail n'ont pas d'attribut `name` -> `formData.get("nom")`
-  et `formData.get("mail")` renvoient `null` au submit (seul `message` a `name="message"`).
-- **A trancher** : `required` retire de Nom/Mail (volontaire ou oubli ?) ; colonne gauche
-  remplacee par du texte/liens bruts (email perso, GitHub, LinkedIn) au lieu des 3 lignes
-  a icones-en-rond-colore de la maquette - a decider si on garde ce traitement visuel plus
-  sobre ou si on rajoute les icones.
-- Pas encore fait : version mobile de Contact (le `grid grid-cols-2` du conteneur externe
-  n'a pas de fallback responsive, `Login.jsx`/`Register.jsx` pas encore touchees du tout).
+Reste ouvert (mineur, non bloquant) :
+- Colonne gauche de `Contact.jsx` en texte/liens bruts plutot que les icones-en-rond-
+  colore de la maquette - choix visuel assume, pas re-tranche.
+- Mini-player mobile : pas de precedent/suivant/volume/seek, juste play/pause (scope
+  volontairement reduit par rapport a la barre desktop).
 
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
-- Pas de mini-player mobile : `MediaPlayer` est encore desktop-only (`hidden md:contents`),
-  rien ne s'affiche sur mobile pendant qu'un titre joue.
 - Pas de page Profil : l'onglet "Profil" pointe pour l'instant vers `/connexion` en
   placeholder.
 - Boutons connexion/inscription/deconnexion places temporairement dans `Home.jsx`
-  (juste pour tester `ProtectedRoute` manuellement) - la vraie destination est `Aside.jsx`
-  (desktop) et le menu burger de `HeaderMobile.jsx` (mobile), une fois une vraie zone
-  Profil concue.
+  (juste pour tester `ProtectedRoute` manuellement, desormais stylees comme la maquette
+  mais toujours pas au bon endroit) - la vraie destination est `Aside.jsx` (desktop) et
+  le menu burger de `HeaderMobile.jsx` (mobile), une fois une vraie zone Profil concue.
 - Classes couleur encore en dur (`bg-black`, `bg-zinc-800`, `bg-zinc-900`...) dans le
   shell `App.jsx`, pas encore migrees vers les tokens du theme (`base-100/200/300`).
 - Top 5 de `Home.jsx` : simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes (aucune

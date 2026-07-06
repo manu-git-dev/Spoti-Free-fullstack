@@ -575,3 +575,51 @@ function ConfirmDialog({ onConfirm }) {
 `dialogRef.current` pointe toujours vers l'élément DOM propre à cette instance précise de `ConfirmDialog`, peu importe combien de fois le composant est utilisé sur la page — contrairement à un `id`, qui est un espace de noms global partagé par toute la page.
 
 ---
+
+## 2026-07-06 — Spoti-Free
+
+### 22. État de chargement pendant un `fetch` : désactiver le bouton + spinner, via `finally`
+
+**Contexte** : `Contact.jsx`, `handleSubmit` — je voulais désactiver le bouton "Envoyer" et afficher un spinner pendant l'envoi du formulaire, pour empêcher un double-clic et donner un retour visuel que ça travaille.
+
+**Le problème à éviter** : le `try`/`catch` de `handleSubmit` a plusieurs sorties possibles — succès (`reponse.ok`), erreur renvoyée par le serveur (`if (!reponse.ok)`), ou erreur réseau (`catch`). Remettre l'état de chargement à `false` en dupliquant `setIsSending(false)` dans chacune de ces 3 branches fonctionne, mais c'est fragile : si j'ajoute une 4e branche plus tard, ou si j'oublie une des trois, le bouton reste désactivé pour toujours.
+
+**La solution — `finally`** : un bloc `finally` après un `try`/`catch` s'exécute **toujours**, quelle que soit l'issue du `try` (retour normal, `return` anticipé dans un `if`, ou exception attrapée par le `catch`). C'est l'endroit parfait pour du "nettoyage" qui doit se produire dans tous les cas, écrit une seule fois :
+
+```js
+async function handleSubmit(event) {
+  event.preventDefault();
+  setIsSending(true);
+  try {
+    // ... requête fetch, plusieurs branches de retour possibles
+  } catch (erreur) {
+    // ... gestion de l'erreur réseau
+  } finally {
+    setIsSending(false); // s'exécute dans TOUS les cas, une seule fois
+  }
+}
+```
+
+Le state `isSending` sert ensuite à deux choses dans le JSX du bouton : `disabled={isSending}` (React désactive le bouton tant que c'est vrai) et un rendu conditionnel (`{isSending ? <span className="loading loading-spinner loading-md"></span> : null}`) pour afficher le spinner fourni par daisyUI plutôt que d'en fabriquer un en CSS à la main.
+
+---
+
+### 23. `target="_blank"` sans `rel="noopener noreferrer"` : une faille de sécurité, pas un détail optionnel
+
+**Contexte** : `Contact.jsx`, les liens Github/LinkedIn — je voulais qu'ils s'ouvrent dans un nouvel onglet plutôt que de remplacer la page courante.
+
+**`target="_blank"`** : dit au navigateur d'ouvrir le lien dans un nouvel onglet/fenêtre au lieu de naviguer sur la page actuelle.
+
+**Pourquoi `rel="noopener noreferrer"` est indispensable dès qu'on met `target="_blank"`** (pas une option cosmétique) :
+- Sans `noopener`, la page ouverte dans le nouvel onglet garde un accès JS à `window.opener`, c'est-à-dire à ma page d'origine — elle pourrait la rediriger vers un site de phishing pendant que je regarde l'autre onglet (attaque connue sous le nom de "tabnabbing"). `noopener` coupe ce lien.
+- `noreferrer` évite en plus d'envoyer l'URL de ma page dans les headers de la requête faite vers le site externe.
+
+```jsx
+<a href="https://github.com/mon-compte" target="_blank" rel="noopener noreferrer">
+  Lien Github
+</a>
+```
+
+Règle simple à retenir : **jamais `target="_blank"` seul** — toujours accompagné de `rel="noopener noreferrer"`.
+
+---

@@ -6,12 +6,16 @@ export default function Playlists({playlists,setPlaylists}) {
 
 
   return (
-    <>
-      <ButtonAddPlaylist setPlaylists={setPlaylists} playlists={playlists} children="Ajouter une playlist"/>
-      <h1>Vos playlists : </h1>
-      <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
+    <section className="h-full overflow-y-auto p-4 md:p-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <h1 className="text-2xl font-serif">Vos playlists</h1>
+        <ButtonAddPlaylist setPlaylists={setPlaylists} playlists={playlists} children="Ajouter une playlist"/>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {playlists.length === 0 ? (
-          <div>Aucune playlist pour le moment</div>
+          <div className="text-base-content/70 col-span-2 md:col-span-5">
+            Aucune playlist pour le moment
+          </div>
         ) : (
           playlists.map((playlist) => (
             <Playlist
@@ -21,7 +25,7 @@ export default function Playlists({playlists,setPlaylists}) {
             />
           ))
         )}
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

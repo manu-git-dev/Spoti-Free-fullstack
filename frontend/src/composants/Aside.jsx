@@ -1,5 +1,5 @@
 import { Folder, Heart, Home, Library, Plus, Info, Mail } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
 
 export default function Aside({
@@ -8,6 +8,7 @@ export default function Aside({
   playlists,
   setPlaylists,
 }) {
+  const isPlaylistsActive = useMatch("/playlists");
   return (
     <aside className={`flex-col bg-base-200  p-6 gap-7 ${className}`}>
       <NavLink to="/" className="text-2xl font-serif font-bold text-primary ">
@@ -49,19 +50,16 @@ export default function Aside({
         </NavLink>
       </nav>
       <div className="h-px w-full bg-base-300" />
-      <div className=" flex">
-        <NavLink
-          to={"/playlists"}
-          className={({ isActive }) =>
-            `text-xl  rounded-[10px]  ${
-              isActive ? "bg-accent/15 text-accent" : "text-base-content/70"
-            }`
-          }
-        >
+      <div
+        className={`flex items-center rounded-[10px] ${
+          isPlaylistsActive ? "bg-accent/15 text-accent" : "text-base-content/70"
+        }`}
+      >
+        <NavLink to={"/playlists"} className="text-xl p-2">
           Mes playlists
         </NavLink>
         <ButtonAddPlaylist playlists={playlists} setPlaylists={setPlaylists} children={<Plus className="ml-auto " />}/>
-        
+
       </div>
       {playlists.map((playlist) => (
         <NavLink key={playlist.id_playlist} to={`/playlists/${playlist.id_playlist}`}>

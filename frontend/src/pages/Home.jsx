@@ -37,12 +37,12 @@ export default function Home({
         </div>
       ) : null}
       {user === null ? (
-        <div>
-          <Link to={"/inscription"}>
-            <button className="btn btn-success mx-2">INSCRIPTION</button>
+        <div className="flex items-center gap-4">
+          <Link to={"/inscription"} className="link mx-2">
+            S'inscrire
           </Link>
           <Link to={"/connexion"}>
-            <button className="btn btn-primary">CONNEXION</button>
+            <button className="btn btn-primary rounded-full px-6">Connexion</button>
           </Link>
         </div>
       ) : (

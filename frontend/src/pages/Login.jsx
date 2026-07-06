@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, Music } from "lucide-react";
 
 export default function Login({ user, setUser, token, setToken }) {
   const [message, setMessage] = useState("");
@@ -72,37 +73,61 @@ export default function Login({ user, setUser, token, setToken }) {
           <span>{message}</span>
         </div>
       ) : null}
-      <section className="h-full flex flex-col justify-center items-center">
-        <h1 className="text-6xl my-8">PAGE CONNEXION</h1>
+      <section className="h-full flex flex-col justify-center items-center p-4">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
+          <Music className="text-primary-content w-7 h-7" />
+        </div>
+        <h1 className="text-4xl font-serif">Connexion</h1>
+        <p className="text-base-content/70 text-center mb-6">
+          Content de te revoir ! Connecte-toi pour retrouver ta musique.
+        </p>
         <form
           action=""
-          className="flex flex-col gap-4 "
+          className="flex flex-col gap-4 w-full max-w-sm"
           onSubmit={handleSubmit}
         >
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-3xl">Adresse mail</legend>
-            <input
-              type="email"
-              name="email"
-              className="input w-xl h-16 text-2xl"
-              placeholder="Veuillez saisir votre adresse mail"
-              required
-            />
+            <legend className="fieldset-legend">Adresse mail</legend>
+            <label className="input w-full">
+              <Mail className="opacity-50 w-4 h-4" />
+              <input
+                type="email"
+                name="email"
+                className="grow"
+                placeholder="ton@email.fr"
+                required
+              />
+            </label>
           </fieldset>
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-3xl">Mot de passe :</legend>
-            <input
-              type="password"
-              className="input w-xl h-16 text-2xl"
-              placeholder="Veuillez saisir votre mot de passe"
-              name="password"
-              required
-            />
+            <legend className="fieldset-legend">Mot de passe</legend>
+            <label className="input w-full">
+              <Lock className="opacity-50 w-4 h-4" />
+              <input
+                type="password"
+                className="grow"
+                placeholder="Ton mot de passe"
+                name="password"
+                required
+              />
+            </label>
           </fieldset>
-          <button className="btn btn-primary mt-12 h-24 text-3xl" type="submit">
-            CONNEXION
+          <Link to="#" className="link link-primary text-sm self-end">
+            Mot de passe oublié ?
+          </Link>
+          <button
+            className="btn btn-primary rounded-full w-full mt-4"
+            type="submit"
+          >
+            Connexion
           </button>
         </form>
+        <p className="text-sm text-base-content/70 mt-4">
+          Pas encore de compte ?{" "}
+          <Link to="/inscription" className="link link-primary">
+            S'inscrire
+          </Link>
+        </p>
       </section>
     </>
   );

@@ -3,11 +3,13 @@ import Card from "../composants/Card";
 export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}) {
 
   return (
-    <>
-      <h1>Vos musiques likées : </h1>
-      <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
+    <section className="h-full overflow-y-auto p-4 md:p-8">
+      <h1 className="text-2xl font-serif mb-6">Vos musiques likées</h1>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {musiquesLikee.length === 0 ? (
-          <div>Aucune musiques de likées</div>
+          <div className="text-base-content/70 col-span-2 md:col-span-5">
+            Aucune musique likée pour le moment
+          </div>
         ) : (
           musiquesLikee.map((musique) => (
             <Card
@@ -19,7 +21,7 @@ export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}
             />
           ))
         )}
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

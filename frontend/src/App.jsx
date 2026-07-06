@@ -119,15 +119,6 @@ function App() {
           setMessageDeconnexion={setMessageDeconnexion}
         />
       </header> */}
-      <MediaPlayer
-        className="hidden md:flex md:row-start-2 md:col-span-2"
-        music={currentMusic}
-        currentIndex={currentIndex}
-        musiquesFiltre={musiquesFiltre}
-        setCurrentMusic={setCurrentMusic}
-        setCurrentIndex={setCurrentIndex}
-        maxIndex={maxIndex}
-      />
       <Aside
         className="hidden md:flex md:row-start-1 md:col-start-1"
         user={user}
@@ -217,6 +208,15 @@ function App() {
           />
         </Routes>
       </main>
+      <MediaPlayer
+        className="w-full md:row-start-2 md:col-span-2"
+        music={currentMusic}
+        currentIndex={currentIndex}
+        musiquesFiltre={musiquesFiltre}
+        setCurrentMusic={setCurrentMusic}
+        setCurrentIndex={setCurrentIndex}
+        maxIndex={maxIndex}
+      />
       <div className="md:hidden">
         <BottomNav user={user} />
       </div>
