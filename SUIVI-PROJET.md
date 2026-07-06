@@ -56,6 +56,10 @@ et routes protegees deja faites - voir commits `df8f4ee` et anterieurs.
 
 ## Maquette Pencil
 
-Fichier source : `~/Documents/Maquette-Spoti-Free.pen` (hors Git, local a cette machine).
-Ecrans deja maquettes : Home (mobile/desktop), Bibliotheque (mobile/desktop). Prochains
-candidats pas encore maquettes : Playlists, Favoris, Profil.
+Fichier source : `~/Documents/Maquette-Spoti-Free.pen` (hors Git, local a cette machine,
+necessite l'app Pencil pour etre edite). Export statique (PNG/JPEG) disponible dans
+`docs/maquette/`, consultable sans Pencil et sur n'importe quelle machine - a regenerer
+depuis le fichier source si la maquette evolue.
+
+Ecrans maquettes (mobile + desktop pour chacun) : Home, Bibliotheque, Favoris, A propos,
+Contact, Connexion, Inscription. Pas encore maquette : Playlists, Profil.
