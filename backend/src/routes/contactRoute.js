@@ -6,10 +6,11 @@ router.post("/", async (req, res) => {
   try {
     const nom = req.body.nom;
     const email = req.body.email;
+    const sujet = req.body.sujet;
     const message = req.body.message;
 
     // 1. validation (comme pour l'inscription : si un champ manque -> 400)
-    if (!nom || !email || !message) {
+    if (!nom || !email || !message || !sujet) {
       return res.status(400).json({
         message: "Tous les champs sont obligatoires.",
       });
@@ -28,13 +29,13 @@ router.post("/", async (req, res) => {
       from: process.env.MAIL_USER,
       to: process.env.MAIL_TO,
       replyTo: email,
-      subject: `Nouveau message de ${nom} via Spoti-Free`,
+      subject: `${sujet} // de  ${nom} `,
       text: message,
     });
 
     // 4. réponse 200 avec un message de succès
     return res.status(200).json({
-      message: "Message envoyé avec succès.",
+      message: "Message envoyé avec succès. Merci pour ton message.",
     });
   } catch (error) {
     // réponse 500

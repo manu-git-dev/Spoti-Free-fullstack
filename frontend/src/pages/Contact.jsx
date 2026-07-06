@@ -3,14 +3,17 @@ import { Send } from "lucide-react";
 export default function Contact() {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   async function handleSubmit(event) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+    setIsSending(true);
 
     const contact = {
       nom: formData.get("nom"),
-      email: formData.get("mail"),
+      email: formData.get("email"),
+      sujet: formData.get("sujet"),
       message: formData.get("message"),
     };
 
@@ -36,7 +39,7 @@ export default function Contact() {
       setMessage(resultat.message);
       setTimeout(() => {
         setMessage("");
-      }, 1500);
+      }, 5000);
     } catch (erreur) {
       setTypeMessage("error");
       setMessage("Impossible de contacter le serveur.");
@@ -44,10 +47,12 @@ export default function Contact() {
         setMessage("");
       }, 1500);
       console.error(erreur.message);
+    } finally {
+      setIsSending(false);
     }
   }
   return (
-    <section className="grid grid-cols-2 h-full p-12">
+    <section className="flex flex-col md:grid md:grid-cols-2 md:h-full p-4 md:p-12">
       <section className="flex flex-col md:col-start-1">
         <h1 className="font-serif md:text-3xl my-4">Contact</h1>
         <h2 className="font-serif md:text-2xl my-4">Une question ?</h2>
@@ -56,27 +61,45 @@ export default function Contact() {
           fonctionnalité ou juste un petit mot, je lis tout.
         </p>
         <p className="my-4">manuel.mattana.dev@gmail.com</p>
-        <a className="my-4" href="#">
-          Lien Github
+        <a
+          className="my-4"
+          href="https://www.github.com/manu-git-dev"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Lien vers mon Github
         </a>
-        <a className="my-4" href="#">
-          Lien LinkeDin
+        <a
+          className="my-4"
+          href="https://www.linkedin.com/in/manuel-mattana/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Lien vers mon Linkedin
         </a>
       </section>
       <section className="bg-base-200 rounded-2xl p-8 h-fit self-center">
-        <form
-          action=""
-          className="flex flex-col"
-          onSubmit={handleSubmit}
-        >
-          <div className="flex my-4 w-full">
-            <fieldset className="fieldset w-1/2">
+        <form action="" className="flex flex-col" onSubmit={handleSubmit}>
+          <div className="flex flex-col md:flex-row gap-4 my-4 w-full">
+            <fieldset className="fieldset w-full md:w-1/2">
               <legend className="fieldset-legend text-xl">Nom</legend>
-              <input type="text" className="input" placeholder="Ton nom" />
+              <input
+                type="text"
+                className="input"
+                placeholder="Ton nom"
+                name="nom"
+                required
+              />
             </fieldset>
-            <fieldset className="fieldset w-1/2">
+            <fieldset className="fieldset w-full md:w-1/2">
               <legend className="fieldset-legend text-xl">Mail</legend>
-              <input type="text" className="input" placeholder="ton@email.fr" />
+              <input
+                type="email"
+                className="input"
+                placeholder="ton@email.fr"
+                name="email"
+                required
+              />
             </fieldset>
           </div>
           <fieldset className="fieldset my-4">
@@ -85,6 +108,8 @@ export default function Contact() {
               type="text"
               className="input"
               placeholder="De quoi veux-tu parler ?"
+              name="sujet"
+              required
             />
           </fieldset>
           <fieldset className="fieldset my-4">
@@ -96,9 +121,12 @@ export default function Contact() {
               required
             ></textarea>
           </fieldset>
-          <button className="btn btn-primary my-4 ">
+          <button className="btn btn-primary my-4 " disabled={isSending}>
             Envoyer le message
             <Send />
+            {isSending ? (
+              <span className="loading loading-spinner loading-md"></span>
+            ) : null}
           </button>
         </form>{" "}
         {message ? (

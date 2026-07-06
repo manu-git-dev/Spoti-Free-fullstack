@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, User, Music } from "lucide-react";
 
 export default function Register() {
   const [message, setMessage] = useState("");
@@ -10,6 +11,12 @@ export default function Register() {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+
+    if (formData.get("password") !== formData.get("confirmPassword")) {
+      setTypeMessage("error");
+      setMessage("Les mots de passe ne correspondent pas.");
+      return;
+    }
 
     const user = {
       pseudo: formData.get("pseudo"),
@@ -70,61 +77,104 @@ export default function Register() {
           <span>{message}</span>
         </div>
       ) : null}
-      <section className="h-full flex flex-col justify-center items-center">
+      <section className="h-full flex flex-col justify-center items-center p-4">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
+          <Music className="text-primary-content w-7 h-7" />
+        </div>
+        <h1 className="text-4xl font-serif">Inscription</h1>
+        <p className="text-base-content/70 text-center mb-6">
+          Crée ton compte gratuitement et commence à écouter.
+        </p>
         <form
           action=""
-          className="flex flex-col gap-2 "
+          className="flex flex-col gap-2 w-full max-w-sm"
           onSubmit={handleSubmit}
         >
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-xl">Pseudo :</legend>
-            <input
-              name="pseudo"
-              type="text"
-              className="input w-xl h-12 text-xl"
-              placeholder="Veuillez saisir votre pseudo"
-            />
+            <legend className="fieldset-legend">Pseudo</legend>
+            <label className="input w-full">
+              <User className="opacity-50 w-4 h-4" />
+              <input
+                name="pseudo"
+                type="text"
+                className="grow"
+                placeholder="Ton pseudo"
+              />
+            </label>
           </fieldset>
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-xl">Prénom :</legend>
-            <input
-              name="prenom"
-              type="text"
-              className="input w-xl h-12 text-xl"
-              placeholder="Veuillez saisir votre prénom"
-            />
+            <legend className="fieldset-legend">Prénom</legend>
+            <label className="input w-full">
+              <User className="opacity-50 w-4 h-4" />
+              <input
+                name="prenom"
+                type="text"
+                className="grow"
+                placeholder="Ton prénom"
+              />
+            </label>
           </fieldset>
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-xl">Nom :</legend>
-            <input
-              name="nom"
-              type="text"
-              className="input w-xl h-12 text-xl"
-              placeholder="Veuillez saisir votre nom"
-            />
+            <legend className="fieldset-legend">Nom</legend>
+            <label className="input w-full">
+              <User className="opacity-50 w-4 h-4" />
+              <input
+                name="nom"
+                type="text"
+                className="grow"
+                placeholder="Ton nom"
+              />
+            </label>
           </fieldset>
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-xl">Email :</legend>
-            <input
-              name="email"
-              type="email"
-              className="input w-xl h-12 text-xl"
-              placeholder="Veuillez saisir votre adresse mail"
-            />
+            <legend className="fieldset-legend">Email</legend>
+            <label className="input w-full">
+              <Mail className="opacity-50 w-4 h-4" />
+              <input
+                name="email"
+                type="email"
+                className="grow"
+                placeholder="ton@email.fr"
+              />
+            </label>
           </fieldset>
           <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend text-xl">Mot de passe :</legend>
-            <input
-              name="password"
-              type="password"
-              className="input w-xl h-12 text-xl"
-              placeholder="Veuillez saisir votre mot de passe"
-            />
+            <legend className="fieldset-legend">Mot de passe</legend>
+            <label className="input w-full">
+              <Lock className="opacity-50 w-4 h-4" />
+              <input
+                name="password"
+                type="password"
+                className="grow"
+                placeholder="Ton mot de passe"
+              />
+            </label>
           </fieldset>
-          <button className="btn btn-success mt-4 h-16 text-2xl" type="submit">
-            INSCRIPTION
+          <fieldset className="fieldset w-full">
+            <legend className="fieldset-legend">Confirmation du mot de passe</legend>
+            <label className="input w-full">
+              <Lock className="opacity-50 w-4 h-4" />
+              <input
+                name="confirmPassword"
+                type="password"
+                className="grow"
+                placeholder="Confirme ton mot de passe"
+              />
+            </label>
+          </fieldset>
+          <button
+            className="btn btn-primary rounded-full w-full mt-4"
+            type="submit"
+          >
+            Inscription
           </button>
         </form>
+        <p className="text-sm text-base-content/70 mt-4">
+          Déjà un compte ?{" "}
+          <Link to="/connexion" className="link link-primary">
+            Connexion
+          </Link>
+        </p>
       </section>
     </>
   );

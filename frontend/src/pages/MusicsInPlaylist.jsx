@@ -26,11 +26,13 @@ export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musi
   }, []);
 
   return (
-    <>
-      <h1>Contenue de votre playlist  : </h1>
-      <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
+    <section className="h-full overflow-y-auto p-4 md:p-8">
+      <h1 className="text-2xl font-serif mb-6">Contenu de votre playlist</h1>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {musicsPlaylist.length === 0 ? (
-          <div>Aucune musiques dans cette playlist</div>
+          <div className="text-base-content/70 col-span-2 md:col-span-5">
+            Aucune musique dans cette playlist
+          </div>
         ) : (
           musicsPlaylist.map((playlistMusic) => (
                         <Card
@@ -44,7 +46,7 @@ export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musi
                         />
           ))
         )}
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
