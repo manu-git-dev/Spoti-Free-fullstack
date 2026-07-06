@@ -22,7 +22,7 @@ export default function Bibliotheque({
           className="input input-bordered rounded-2xl w-full md:w-96 placeholder:text-base-content/50"
         />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-6rem)]">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-6rem)] p-1">
         <ListesCard
           musiques={musiques}
           setCurrentMusic={setCurrentMusic}
