@@ -6,12 +6,12 @@ export default function BottomNav({ user }) {
     { to: "/", label: "Accueil", icon: Home, end: true },
     { to: "/bibliotheque", label: "Biblio", icon: Library },
     {
-      to: user === null ? "/connexion" : "/playlists",
+      to: "/playlists",
       label: "Playlists",
       icon: ListMusic,
     },
     {
-      to: user === null ? "/connexion" : "/favoris",
+      to: "/favoris",
       label: "Favoris",
       icon: Heart,
     },

@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import Deconnexion from "../composants/Deconnexion";
 import ListesCard from "../composants/ListesCard";
 
 export default function Home({
@@ -7,6 +9,10 @@ export default function Home({
   messageDeconnexion,
   musiquesLikee,
   setMusiquesLikee,
+  setUser,
+  token,
+  setToken,
+  setMessageDeconnexion,
 }) {
   const topCinq = musiques.slice(0, 5);
 
@@ -30,6 +36,24 @@ export default function Home({
           <span>{messageDeconnexion}</span>
         </div>
       ) : null}
+      {user === null ? (
+        <div>
+          <Link to={"/inscription"}>
+            <button className="btn btn-success mx-2">INSCRIPTION</button>
+          </Link>
+          <Link to={"/connexion"}>
+            <button className="btn btn-primary">CONNEXION</button>
+          </Link>
+        </div>
+      ) : (
+        <Deconnexion
+          user={user}
+          setUser={setUser}
+          token={token}
+          setToken={setToken}
+          setMessageDeconnexion={setMessageDeconnexion}
+        />
+      )}
 
       <p className="text-2xl font-serif mb-6">
         {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
