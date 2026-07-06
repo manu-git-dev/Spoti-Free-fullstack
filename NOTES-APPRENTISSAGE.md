@@ -623,3 +623,39 @@ Le state `isSending` sert ensuite à deux choses dans le JSX du bouton : `disabl
 Règle simple à retenir : **jamais `target="_blank"` seul** — toujours accompagné de `rel="noopener noreferrer"`.
 
 ---
+
+### 24. `overflow-hidden` sur un parent + page enfant sans `overflow-y-auto` = contenu qui déborde sans pouvoir défiler
+
+**Contexte** : `Contact.jsx` était impossible à faire défiler sur mobile/tablette — le bouton "Envoyer" restait inatteignable en bas de page, alors que la même structure marchait sur `Apropos.jsx`, `Favoris.jsx`, etc.
+
+**Le problème** : dans `App.jsx`, le `<main>` qui contient toutes les pages a `overflow-hidden` — c'est voulu, ça sert à empêcher la page entière (sidebar, header, lecteur) de défiler d'un bloc. Mais `overflow-hidden` ne fait pas que masquer le débordement, il **coupe aussi la possibilité de scroller** cet élément. Résultat : c'est à chaque page, individuellement, de définir sa propre zone de scroll interne. Toutes les autres pages du projet le faisaient déjà :
+
+```jsx
+<section className="h-full overflow-y-auto p-4 md:p-8">
+  {/* contenu de la page, peut être plus haut que l'écran */}
+</section>
+```
+
+`Contact.jsx` avait seulement `lg:h-full` (une hauteur définie uniquement à partir de 1024px) et aucun `overflow-y-auto`. En dessous de `lg`, la section n'avait donc ni hauteur bornée ni scroll propre : le contenu qui dépassait était simplement rogné par le `overflow-hidden` du parent, sans aucun moyen d'y accéder.
+
+**La règle à retenir** : `overflow-hidden` sur un conteneur signifie "le scroll se gère à l'intérieur, pas ici" — dès qu'on ajoute une page/section dans ce conteneur, il faut systématiquement lui donner `h-full overflow-y-auto` (à toutes les largeurs d'écran où elle peut être plus haute que l'espace disponible), sinon le contenu excédentaire devient invisible et injoignable.
+
+---
+
+### 25. `align-self`/`justify-self` sur un enfant flex qui contient des enfants en largeur `%`
+
+**Contexte** : dans `Contact.jsx`, le bloc formulaire (`<section className="bg-base-200 ... self-center">`) se retrouvait anormalement étroit sur mobile et tablette, alors que ses champs internes étaient tous en `w-full`.
+
+**Le problème** : le parent est en `flex-col`. Par défaut, un enfant flex s'étire pour prendre toute la largeur disponible (`align-items: stretch`, appliqué à l'axe secondaire — ici horizontal, puisque l'axe principal `flex-col` est vertical). `self-center` désactive volontairement cet étirement pour **cet enfant précis**, et lui dit à la place : "prends seulement la largeur nécessaire à ton contenu."
+
+Le piège : cet enfant contenait lui-même des champs en `w-full` (largeur en `%` relative au parent). Or un enfant en pourcentage ne peut pas servir de référence pour calculer la largeur "nécessaire" de son propre parent — c'est une dépendance circulaire que le navigateur résout en ignorant ces enfants-là pour le calcul, et en se basant sur d'autres éléments (texte, bouton) qui ne dictent pas la largeur voulue. Résultat : une boîte plus étroite que prévu, sans rapport évident avec le CSS écrit.
+
+**La solution** : ne jamais utiliser `self-center` (ou `justify-self` côté grid) sur un conteneur qui doit s'étirer pleine largeur ET contenir des enfants en `%`. Ici, la vraie intention était de centrer verticalement le bloc *seulement* dans le layout en grille 2 colonnes du desktop (`lg:`) — pas de changer sa largeur sur mobile :
+
+```jsx
+<section className="bg-base-200 rounded-2xl p-8 h-fit w-full lg:self-center">
+```
+
+`w-full` explicite règle le cas par défaut, et `lg:self-center` ne s'applique qu'à partir du breakpoint où le centrage a réellement du sens.
+
+---
