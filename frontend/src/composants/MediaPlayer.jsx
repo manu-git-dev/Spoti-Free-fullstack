@@ -1,10 +1,8 @@
 import {
-  CircleArrowLeft,
-  CircleArrowRight,
-  Heart,
   Pause,
   Play,
-  Volume1,
+  SkipBack,
+  SkipForward,
   Volume2,
 } from "lucide-react";
 import { useState, useRef } from "react";
@@ -125,75 +123,78 @@ export default function MediaPlayer({
       </div>
 
       {/* Bloc desktop : barre de contrôle complète */}
-      <div className="hidden md:flex items-center w-full bg-zinc-800 rounded-4xl px-4 justify-around">
-        <button className="cursor-pointer hover:scale-110" onClick={handlePlay}>
-          {isPlaying ? (
-            <Pause className="w-10 h-10 fill-blue-600" />
-          ) : (
-            <Play className="w-10 h-10 fill-blue-600" />
-          )}
-        </button>
-        <button
-          className="cursor-pointer hover:scale-110 "
-          onClick={handlePrevious}
-        >
-          <CircleArrowLeft className="w-10 h-10 fill-blue-600" />
-        </button>
-        <button className="cursor-pointer hover:scale-110">
-          <CircleArrowRight
-            className="w-10 h-10 fill-blue-600"
-            onClick={handleNext}
-          />
-        </button>
-        <button className="cursor-pointer hover:scale-110">
-          <Volume1
-            className="w-10 h-10 fill-blue-600"
-            onClick={() => {
-              const newVolume = Math.max(0, volume - 5);
-              setVolume(newVolume);
-              audioRef.current.volume = newVolume / 100;
+      <div className="hidden md:flex md:flex-col w-full bg-zinc-800 rounded-2xl px-6 py-3 gap-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 w-64 min-w-0">
+            <img
+              src={`${API_URL}${music.src_image}`}
+              alt={`Pochette album ${music.title}`}
+              className="w-12 h-12 rounded-lg object-cover"
+            />
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{music.title}</p>
+              <p className="truncate text-sm text-base-content/60">
+                {music.artist}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <button className="cursor-pointer hover:scale-110" onClick={handlePrevious}>
+              <SkipBack className="w-5 h-5 fill-current" />
+            </button>
+            <button
+              className="btn btn-circle btn-primary"
+              onClick={handlePlay}
+            >
+              {isPlaying ? (
+                <Pause className="w-5 h-5 fill-current" />
+              ) : (
+                <Play className="w-5 h-5 fill-current" />
+              )}
+            </button>
+            <button className="cursor-pointer hover:scale-110" onClick={handleNext}>
+              <SkipForward className="w-5 h-5 fill-current" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 w-64 justify-end">
+            <Volume2 className="w-5 h-5 opacity-70" />
+            <input
+              type="range"
+              min={0}
+              max="100"
+              value={volume}
+              className="range range-primary range-xs w-24"
+              onChange={(e) => {
+                const newVolume = Number(e.target.value);
+                setVolume(newVolume);
+                audioRef.current.volume = newVolume / 100;
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 px-2">
+          <span className="text-xs text-base-content/60">
+            {affichageCurrentTime}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={timeUpdate || 0}
+            className="range range-primary range-xs flex-1"
+            onChange={(e) => {
+              const newTime = Number(e.target.value);
+              setTimeUpdate(newTime);
+              audioRef.current.currentTime = newTime;
             }}
           />
-        </button>
-        <input
-          type="range"
-          min={0}
-          max="100"
-          value={volume}
-          className="range range-primary"
-          onChange={(e) => {
-            const newVolume = Number(e.target.value);
-            setVolume(newVolume);
-            audioRef.current.volume = newVolume / 100;
-          }}
-        />
-        <button
-          className="cursor-pointer hover:scale-110"
-          onClick={() => {
-            const newVolume = Math.min(100, volume + 5);
-            setVolume(newVolume);
-            audioRef.current.volume = newVolume / 100;
-          }}
-        >
-          <Volume2 className="w-10 h-10 fill-blue-600" />
-        </button>
-        <h2 className="text-3xl mx-4">{music.title}</h2>
-        <p className="text-2xl mx-4">{music.artist}</p>
-        <p>
-          {affichageCurrentTime} / {affichageDuration}
-        </p>
-        <input
-          type="range"
-          min={0}
-          max={duration || 0}
-          value={timeUpdate || 0}
-          className="range range-primary"
-          onChange={(e) => {
-            const newTime = Number(e.target.value);
-            setTimeUpdate(newTime);
-            audioRef.current.currentTime = newTime;
-          }}
-        />
+          <span className="text-xs text-base-content/60">
+            {affichageDuration}
+          </span>
+        </div>
       </div>
     </section>
   );

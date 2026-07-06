@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Plus } from "lucide-react";
 export default function AddMusicPlaylist({ idMusic }) {
   const [playlists, setPlaylists] = useState([]);
   const selectRef = useRef(null);
@@ -89,12 +90,13 @@ export default function AddMusicPlaylist({ idMusic }) {
       ) : null}{" "}
       {/* Open the modal using document.getElementById('ID').showModal() method */}
       <button
-        className="btn"
+        className="btn btn-circle btn-ghost btn-sm"
         onClick={() =>
           document.getElementById(`my_modal_${idMusic}`).showModal()
         }
+        aria-label="Ajouter à une playlist"
       >
-        Ajouter à une playlist
+        <Plus className="w-4 h-4" />
       </button>
       <dialog id={`my_modal_${idMusic}`} className="modal">
         <div className="modal-box">

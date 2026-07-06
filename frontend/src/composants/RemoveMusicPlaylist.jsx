@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 export default function RemoveMusicPlaylist({
   idMusic,
   idPlaylist,
@@ -70,8 +71,12 @@ export default function RemoveMusicPlaylist({
           <span>{message}</span>
         </div>
       ) : null}
-      <button className="btn btn-error" onClick={handleClick}>
-        Retirer la musique de la playlist
+      <button
+        className="btn btn-circle btn-ghost btn-sm"
+        onClick={handleClick}
+        aria-label="Retirer de la playlist"
+      >
+        <Trash2 className="w-4 h-4" />
       </button>
     </>
   );
