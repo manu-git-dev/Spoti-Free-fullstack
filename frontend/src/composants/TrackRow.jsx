@@ -11,13 +11,19 @@ export default function TrackRow({
   setMusicsPlaylist,
   musiquesLikee,
   user,
+  currentMusic,
 }) {
   const API_URL = "http://localhost:3000/";
+  const isPlaying = currentMusic?.id_music === musique.id_music;
   const handleClick = () => {
     setCurrentMusic(musique);
   };
   return (
-    <div className="flex items-center gap-4 px-2 py-2 rounded-xl hover:bg-base-200">
+    <div
+      className={`flex items-center gap-4 px-2 py-2 rounded-xl border-l-2 hover:bg-base-200 transition-colors ${
+        isPlaying ? "border-primary bg-primary/10" : "border-transparent"
+      }`}
+    >
       <span className="w-6 text-center text-base-content/50 font-serif">
         {index + 1}
       </span>

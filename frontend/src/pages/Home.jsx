@@ -13,6 +13,7 @@ export default function Home({
   token,
   setToken,
   setMessageDeconnexion,
+  currentMusic,
 }) {
   const topCinq = musiques.slice(0, 5);
 
@@ -72,6 +73,7 @@ export default function Home({
             musiquesLikee={musiquesLikee}
             setMusiquesLikee={setMusiquesLikee}
             user={user}
+            currentMusic={currentMusic}
           />
         ))}
       </div>
