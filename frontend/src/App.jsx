@@ -14,6 +14,7 @@ import Contact from "./pages/Contact";
 import Playlists from "./pages/Playlists";
 import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
+import ProtectedRoute from "./composants/ProtectedRoute";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
@@ -23,6 +24,7 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState("");
   const [maxIndex, setMaxIndex] = useState(0);
   const [musiquesLikee, setMusiquesLikee] = useState([]);
+  const [playlists, setPlaylists] = useState([]);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -56,6 +58,25 @@ function App() {
           setMusiquesLikee(data);
         } else {
           setMusiquesLikee([]);
+        }
+      })
+      .catch((error) => console.error(error));
+  }, []);
+  useEffect(() => {
+    const url = `http://localhost:3000/api/playlists`;
+    const token = localStorage.getItem("token");
+    fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPlaylists(data);
+        } else {
+          setPlaylists([]);
         }
       })
       .catch((error) => console.error(error));
@@ -110,6 +131,8 @@ function App() {
       <Aside
         className="hidden md:flex md:row-start-1 md:col-start-1"
         user={user}
+        playlists={playlists}
+        setPlaylists={setPlaylists}
       />
       <main className="flex-1 min-h-0 md:col-start-2 md:row-start-1 bg-zinc-900 rounded-2xl overflow-hidden">
         <Routes>
@@ -123,6 +146,10 @@ function App() {
                 setCurrentMusic={setCurrentMusic}
                 musiquesLikee={musiquesLikee}
                 setMusiquesLikee={setMusiquesLikee}
+                setUser={setUser}
+                token={token}
+                setToken={setToken}
+                setMessageDeconnexion={setMessageDeconnexion}
               />
             }
           />
@@ -153,25 +180,39 @@ function App() {
           <Route path="/inscription" element={<Register />} />
           <Route path="/a-propos" element={<Apropos />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/playlists" element={<Playlists  />} />
+
+          <Route
+            path="/playlists"
+            element={
+              <ProtectedRoute user={user}>
+                <Playlists playlists={playlists} setPlaylists={setPlaylists}/>
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/playlists/:idPlaylist"
             element={
-              <MusicsInPlaylist
-                setCurrentMusic={setCurrentMusic}
-                setMusiquesLikee={setMusiquesLikee}
-                musiquesLikee = {musiquesLikee}
-              />
+              <ProtectedRoute user={user}>
+                <MusicsInPlaylist
+                  setCurrentMusic={setCurrentMusic}
+                  setMusiquesLikee={setMusiquesLikee}
+                  musiquesLikee={musiquesLikee}
+                />
+              </ProtectedRoute>
             }
           />
+
           <Route
             path="/favoris"
             element={
-              <Favoris
-                musiquesLikee={musiquesLikee}
-                setMusiquesLikee={setMusiquesLikee}
-                setCurrentMusic={setCurrentMusic}
-              />
+              <ProtectedRoute user={user}>
+                <Favoris
+                  musiquesLikee={musiquesLikee}
+                  setMusiquesLikee={setMusiquesLikee}
+                  setCurrentMusic={setCurrentMusic}
+                />
+              </ProtectedRoute>
             }
           />
         </Routes>

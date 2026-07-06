@@ -1,7 +1,9 @@
-import { useState } from "react";
-export default function ButtonAddPlaylist({ setPlaylists,playlists }) {
+import { useState,useRef } from "react";
+export default function ButtonAddPlaylist({ setPlaylists,playlists,children = "" }) {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
+
+  const modalRef = useRef(null);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -55,9 +57,9 @@ export default function ButtonAddPlaylist({ setPlaylists,playlists }) {
     <>
       <button
         className="btn"
-        onClick={() => document.getElementById("my_modal_1").showModal()}
+        onClick={() => modalRef.current.showModal()}
       >
-        Créer une playlist
+        {children}
       </button>{" "}
       {message ? (
         <div
@@ -80,7 +82,7 @@ export default function ButtonAddPlaylist({ setPlaylists,playlists }) {
           <span>{message}</span>
         </div>
       ) : null}
-      <dialog id="my_modal_1" className="modal">
+      <dialog ref={modalRef} className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">Créer une playlist</h3>
           <form action="" onSubmit={handleSubmit}>

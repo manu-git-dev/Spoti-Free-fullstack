@@ -2,32 +2,12 @@ import { Link } from "react-router-dom";
 import ButtonAddPlaylist from "../composants/ButtonAddPlaylist";
 import { useState, useEffect } from "react";
 import Playlist from "../composants/Playlist";
-export default function Playlists() {
-  const [playlists, setPlaylists] = useState([]);
+export default function Playlists({playlists,setPlaylists}) {
 
-  useEffect(() => {
-    const url = `http://localhost:3000/api/playlists`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPlaylists(data);
-        } else {
-          setPlaylists([]);
-        }
-      })
-      .catch((error) => console.error(error));
-  }, []);
 
   return (
     <>
-      <ButtonAddPlaylist setPlaylists={setPlaylists} playlists={playlists}/>
+      <ButtonAddPlaylist setPlaylists={setPlaylists} playlists={playlists} children="Ajouter une playlist"/>
       <h1>Vos playlists : </h1>
       <section className="grid grid-cols-5 gap-4 overflow-y-auto h-[calc(100%-4rem)]">
         {playlists.length === 0 ? (
