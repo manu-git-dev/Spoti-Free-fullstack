@@ -9,20 +9,43 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 Refonte visuelle mobile-first en cours. Fonctionnalites (playlists, likes, Apropos/Contact)
 et routes protegees deja faites - voir commits `df8f4ee` et anterieurs.
 
-## En cours : restyle de `Aside.jsx` (sidebar desktop)
+## Restyle de `Aside.jsx` (sidebar desktop) - en pause
 
 - Fait : nav Accueil/Bibliotheque/Favoris avec etat actif (`rounded-[10px]` +
   `bg-accent/15 text-accent` quand actif), conforme a la maquette Pencil.
+- Fait : liste de playlists dynamique remontee dans `App.jsx` (`playlists`/`setPlaylists`,
+  memes principe que `musiquesLikee`/`currentMusic`) et passee a `Aside` + `Playlists.jsx`
+  (commit `df8f4ee`).
 - **Bug connu, pas encore corrige** : sur la ligne "Mes playlists", le fond actif ne
   couvre que le texte, pas l'icone `+` a cote (le `<NavLink>` n'enveloppe que le texte,
   le `+` est un element frere en dehors). Piste retenue : calculer l'etat actif un niveau
   au-dessus (`useMatch("/playlists")` de react-router) et appliquer le style au `<div>`
   parent qui contient texte + `+`, plutot qu'au `NavLink` seul.
-- **Decision pas encore prise** : d'ou vient la liste de playlists affichee dans `Aside`
-  (toujours monte) ? Soit on remonte `playlists`/`setPlaylists` dans `App.jsx` (comme
-  `musiquesLikee`/`currentMusic`) et on les passe a `Aside` + `Playlists.jsx`, soit `Aside`
-  fait son propre fetch independant (risque : desync si un fetch se met a jour sans
-  l'autre, meme genre de bug que la note d'apprentissage #7).
+
+## En cours : pages Connexion / Inscription / Contact (pas besoin de backend/DB pour les styler)
+
+Decisions prises :
+- `Aside`/`BottomNav`/`MediaPlayer` restent affiches partout, y compris sur
+  `/connexion` et `/inscription` (pas de plein-ecran type maquette, pas de restructuration
+  du routing dans `App.jsx`). Le panneau gauche gradient (logo + accroche) et le rond
+  gradient mobile de la maquette sont donc abandonnes : ces pages reprennent uniquement le
+  contenu du formulaire (titre serif, sous-titre, champs a icones, bouton pill, lien
+  croise), recentre dans le `<main>` existant.
+- Inscription garde 3 champs identite separes (`pseudo`/`prenom`/`nom`) au lieu du champ
+  unique "Nom" de la maquette (pas de refonte du modele de donnees aujourd'hui), + ajout
+  d'un champ confirmation de mot de passe (verif cote front uniquement).
+
+Etat de `Contact.jsx` (version desktop) :
+- Fait : mise en page a 2 colonnes (texte + infos a gauche, carte formulaire a droite),
+  Nom/Mail cote a cote, Sujet, Message, bouton "Envoyer le message" + icone `Send`.
+- **Bug a corriger** : les inputs Nom et Mail n'ont pas d'attribut `name` -> `formData.get("nom")`
+  et `formData.get("mail")` renvoient `null` au submit (seul `message` a `name="message"`).
+- **A trancher** : `required` retire de Nom/Mail (volontaire ou oubli ?) ; colonne gauche
+  remplacee par du texte/liens bruts (email perso, GitHub, LinkedIn) au lieu des 3 lignes
+  a icones-en-rond-colore de la maquette - a decider si on garde ce traitement visuel plus
+  sobre ou si on rajoute les icones.
+- Pas encore fait : version mobile de Contact (le `grid grid-cols-2` du conteneur externe
+  n'a pas de fallback responsive, `Login.jsx`/`Register.jsx` pas encore touchees du tout).
 
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
