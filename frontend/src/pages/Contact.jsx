@@ -52,8 +52,8 @@ export default function Contact() {
     }
   }
   return (
-    <section className="flex flex-col md:grid md:grid-cols-2 md:h-full p-4 md:p-12">
-      <section className="flex flex-col md:col-start-1">
+    <section className="flex flex-col lg:grid lg:grid-cols-2 lg:h-full p-4 md:p-12">
+      <section className="flex flex-col lg:col-start-1">
         <h1 className="font-serif md:text-3xl my-4">Contact</h1>
         <h2 className="font-serif md:text-2xl my-4">Une question ?</h2>
         <p className="text-base-content/70 md:text-xl my-4">
