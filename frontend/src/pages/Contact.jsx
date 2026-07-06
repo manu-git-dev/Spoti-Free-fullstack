@@ -52,7 +52,7 @@ export default function Contact() {
     }
   }
   return (
-    <section className="flex flex-col lg:grid lg:grid-cols-2 lg:h-full p-4 md:p-12">
+    <section className="flex flex-col lg:grid lg:grid-cols-2 h-full overflow-y-auto p-4 md:p-8">
       <section className="flex flex-col lg:col-start-1">
         <h1 className="font-serif md:text-3xl my-4">Contact</h1>
         <h2 className="font-serif md:text-2xl my-4">Une question ?</h2>
@@ -78,7 +78,7 @@ export default function Contact() {
           Lien vers mon Linkedin
         </a>
       </section>
-      <section className="bg-base-200 rounded-2xl p-8 h-fit self-center">
+      <section className="bg-base-200 rounded-2xl p-8 h-fit w-full lg:self-center">
         <form action="" className="flex flex-col" onSubmit={handleSubmit}>
           <div className="flex flex-col md:flex-row gap-4 my-4 w-full">
             <fieldset className="fieldset w-full md:w-1/2">
