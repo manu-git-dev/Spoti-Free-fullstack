@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import TrackRow from "../composants/TrackRow";
-export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musiquesLikee}) {
+export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musiquesLikee, user}) {
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
   const {idPlaylist} = useParams();
 
@@ -44,6 +44,7 @@ export default function MusicsInPlaylist({setCurrentMusic,setMusiquesLikee, musi
               idPlaylist={idPlaylist}
               setMusicsPlaylist={setMusicsPlaylist}
               musiquesLikee={musiquesLikee}
+              user={user}
             />
           ))
         )}

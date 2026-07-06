@@ -58,7 +58,9 @@ export default function Aside({
         <NavLink to={"/playlists"} className="text-xl p-2">
           Mes playlists
         </NavLink>
-        <ButtonAddPlaylist playlists={playlists} setPlaylists={setPlaylists} children={<Plus className="ml-auto " />}/>
+        {user && (
+          <ButtonAddPlaylist playlists={playlists} setPlaylists={setPlaylists} children={<Plus className="ml-auto " />}/>
+        )}
 
       </div>
       {playlists.map((playlist) => (
