@@ -10,6 +10,7 @@ export default function TrackRow({
   idPlaylist,
   setMusicsPlaylist,
   musiquesLikee,
+  user,
 }) {
   const API_URL = "http://localhost:3000/";
   const handleClick = () => {
@@ -36,22 +37,24 @@ export default function TrackRow({
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        <ButtonLike
-          idMusic={musique.id_music}
-          setMusiquesLikee={setMusiquesLikee}
-          musiquesLikee={musiquesLikee}
-          musique={musique}
-        />
-        {!idPlaylist && <AddMusicPlaylist idMusic={musique.id_music} />}
-        {idPlaylist && (
-          <RemoveMusicPlaylist
+      {user && (
+        <div className="flex items-center gap-1">
+          <ButtonLike
             idMusic={musique.id_music}
-            idPlaylist={idPlaylist}
-            setMusicsPlaylist={setMusicsPlaylist}
+            setMusiquesLikee={setMusiquesLikee}
+            musiquesLikee={musiquesLikee}
+            musique={musique}
           />
-        )}
-      </div>
+          {!idPlaylist && <AddMusicPlaylist idMusic={musique.id_music} />}
+          {idPlaylist && (
+            <RemoveMusicPlaylist
+              idMusic={musique.id_music}
+              idPlaylist={idPlaylist}
+              setMusicsPlaylist={setMusicsPlaylist}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

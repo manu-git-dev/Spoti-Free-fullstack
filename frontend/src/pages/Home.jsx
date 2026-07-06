@@ -71,6 +71,7 @@ export default function Home({
             setCurrentMusic={setCurrentMusic}
             musiquesLikee={musiquesLikee}
             setMusiquesLikee={setMusiquesLikee}
+            user={user}
           />
         ))}
       </div>

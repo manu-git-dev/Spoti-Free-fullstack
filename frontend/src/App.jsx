@@ -154,6 +154,7 @@ function App() {
                 valueInput={valueInput}
                 musiquesLikee={musiquesLikee}
                 setMusiquesLikee={setMusiquesLikee}
+                user={user}
               />
             }
           />
@@ -189,6 +190,7 @@ function App() {
                   setCurrentMusic={setCurrentMusic}
                   setMusiquesLikee={setMusiquesLikee}
                   musiquesLikee={musiquesLikee}
+                  user={user}
                 />
               </ProtectedRoute>
             }
@@ -202,6 +204,7 @@ function App() {
                   musiquesLikee={musiquesLikee}
                   setMusiquesLikee={setMusiquesLikee}
                   setCurrentMusic={setCurrentMusic}
+                  user={user}
                 />
               </ProtectedRoute>
             }

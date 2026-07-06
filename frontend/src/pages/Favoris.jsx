@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import TrackRow from "../composants/TrackRow";
-export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}) {
+export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee,user}) {
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
@@ -19,6 +19,7 @@ export default function Favoris({setCurrentMusic,musiquesLikee,setMusiquesLikee}
               setMusiquesLikee={setMusiquesLikee}
               setCurrentMusic={setCurrentMusic}
               musiquesLikee={musiquesLikee}
+              user={user}
             />
           ))
         )}

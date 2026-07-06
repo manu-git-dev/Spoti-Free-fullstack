@@ -7,6 +7,7 @@ export default function Bibliotheque({
   valueInput,
   musiquesLikee,
   setMusiquesLikee,
+  user,
 }) {
   return (
     <section className="h-full overflow-hidden p-4 md:p-6">
@@ -26,6 +27,7 @@ export default function Bibliotheque({
           setCurrentMusic={setCurrentMusic}
           musiquesLikee={musiquesLikee}
           setMusiquesLikee={setMusiquesLikee}
+          user={user}
         />
       </div>
     </section>
