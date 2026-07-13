@@ -14,9 +14,12 @@ export default function Profil({
   playlists,
 }) {
   const [infoUser, setInfoUser] = useState({});
-  if (token) {
+ 
   useEffect(() => {
     const url = `http://localhost:3000/api/users/profil`;
+    if (!token){
+        return;
+    }
     fetch(url, {
       method: "GET",
       headers: {
@@ -28,7 +31,7 @@ export default function Profil({
         setInfoUser(data);
       })
       .catch((error) => console.error(error));
-  }, []);}
+  }, [token]);
 if (user === null ){
     return (
       <section className="h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center justify-center gap-4 text-center">

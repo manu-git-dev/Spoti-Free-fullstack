@@ -689,3 +689,49 @@ new Date(article.publieLe).toLocaleDateString("fr-FR", {
 ```
 
 ---
+
+### 27. `useEffect` — pourquoi, quand il se relance, et pourquoi jamais l'appeler conditionnellement
+
+**Concept** (demande de cours, exemple générique) : une fonction composant React doit rester *pure* pendant le rendu — pas d'effet de bord (requête réseau, timer, abonnement, manipulation directe du DOM) exécuté directement dans son corps, sinon ça se déclencherait à chaque rendu de façon incontrôlée. `useEffect` sert à dire à React : *"une fois le rendu affiché à l'écran, exécute ce code"* — l'effet tourne donc après le rendu, pas pendant.
+
+```jsx
+function FicheProduit({ produitId }) {
+  const [produit, setProduit] = useState(null);
+
+  useEffect(() => {
+    if (!produitId) return; // garde-fou : rien à charger
+
+    fetch(`/api/produits/${produitId}`)
+      .then((res) => res.json())
+      .then((data) => setProduit(data));
+  }, [produitId]);
+
+  return <p>{produit?.nom}</p>;
+}
+```
+
+**Le tableau de dépendances contrôle QUAND l'effet se relance** :
+- pas de tableau → l'effet tourne après CHAQUE rendu (rarement voulu, risque de boucle) ;
+- `[]` → l'effet tourne une seule fois, juste après le premier rendu (le montage) ;
+- `[produitId]` → l'effet tourne au montage, ET à chaque fois que `produitId` change entre deux rendus. Avec `[]` à la place, le composant resterait bloqué sur les données du tout premier `produitId` chargé, même si la prop change ensuite — erreur fréquente.
+
+**Pourquoi le garde-fou (`if (!produitId) return;`) doit être DANS l'effet, jamais autour** (par exemple `if (produitId) { useEffect(...) }` est interdit) : React repère chaque hook par sa position dans l'ordre d'appel, qui doit être identique à chaque rendu. Si l'appel du hook devient conditionnel, cet ordre peut changer d'un rendu à l'autre et React perd le fil. La condition va donc toujours à l'intérieur de la fonction callback, jamais autour du hook lui-même.
+
+**Le nettoyage** (`return` d'une fonction dans l'effet) — utile dès qu'un effet s'abonne à quelque chose (event listener, timer, websocket) :
+
+```jsx
+useEffect(() => {
+  function handleResize() {
+    console.log(window.innerWidth);
+  }
+  window.addEventListener("resize", handleResize);
+
+  return () => {
+    window.removeEventListener("resize", handleResize);
+  };
+}, []);
+```
+
+Sans ce nettoyage, chaque réaffichage ou démontage du composant ajouterait un nouveau listener sans retirer l'ancien → fuite mémoire, comportements en double.
+
+---
