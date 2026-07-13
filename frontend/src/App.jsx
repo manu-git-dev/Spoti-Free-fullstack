@@ -163,7 +163,7 @@ function App() {
     // l'ecran — et l'`overflow-y-auto` de la liste ne s'activait jamais, faute de contrainte.
     <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_88px] md:gap-3 md:p-3">
       <div className="md:hidden">
-        <HeaderMobile />
+        <HeaderMobile user={user} />
       </div>
       <Aside
         className="hidden md:flex md:row-start-1 md:col-start-1"
