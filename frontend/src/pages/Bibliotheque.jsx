@@ -6,6 +6,7 @@ import TrackRow from "../composants/TrackRow";
 export default function Bibliotheque({
   musiques,
   setCurrentMusic,
+  setCurrentQueue,
   setValueInput,
   valueInput,
   musiquesLikee,
@@ -56,6 +57,7 @@ export default function Bibliotheque({
           <ListesCard
             musiques={musiques}
             setCurrentMusic={setCurrentMusic}
+            setCurrentQueue={setCurrentQueue}
             musiquesLikee={musiquesLikee}
             setMusiquesLikee={setMusiquesLikee}
             user={user}
@@ -70,6 +72,8 @@ export default function Bibliotheque({
             musique={musique}
             index={index}
             setCurrentMusic={setCurrentMusic}
+            setCurrentQueue={setCurrentQueue}
+            queue={musiques}
             musiquesLikee={musiquesLikee}
             setMusiquesLikee={setMusiquesLikee}
             user={user}

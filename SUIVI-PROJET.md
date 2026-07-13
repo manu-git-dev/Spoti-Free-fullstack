@@ -116,13 +116,35 @@ image carree encadree, juste icones en bas).
   stylise en pilule `bg-base-200` avec icones `List`/`LayoutGrid` (lucide-react), calque sur
   le style des tabs de `BottomNav`/`Aside`.
 
-Reste ouvert (voir aussi liste generale ci-dessous) :
-- Bug Rules of Hooks dans `Profil.jsx` (`if (token) { useEffect(...) }`, ligne ~17) - un
-  hook ne peut pas etre appele conditionnellement, a corriger (deplacer le test `token`
-  a l'interieur de l'effet plutot qu'autour).
-- Pas de lien "Profil" dans `Aside.jsx` (sidebar desktop) - seul point d'entree desktop
-  actuel : l'avatar dans `Home.jsx`. Prevu a la maquette (voir `docs/maquette/README.md`)
-  mais pas encore reporte dans le code.
+Les deux points "reste ouvert" de cette passe (bug Rules of Hooks dans `Profil.jsx`, lien
+Profil manquant dans `Aside.jsx`) ont ete corriges le jour meme, voir section suivante.
+
+## File de lecture contextuelle, invite sur Favoris/Playlists, duree des pistes - 2026-07-13
+
+- Fait : bug Rules of Hooks corrige dans `Profil.jsx` (le test sur `token` est deplace a
+  l'interieur du `useEffect`, dependance `[token]`).
+- Fait : lien "Profil" ajoute dans `Aside.jsx` (4e item du groupe de nav principal, sous
+  Favoris), conforme a la maquette.
+- Fait : **file de lecture contextuelle**. Avant, `MediaPlayer` naviguait toujours (next/
+  precedent) dans `musiquesFiltre` (bibliotheque complete triee alphabetiquement), peu
+  importe la liste depuis laquelle la lecture avait ete lancee - Top 5, Favoris, playlist
+  et Bibliotheque avaient donc toutes ce bug, pas seulement le Top 5. Nouvel etat
+  `currentQueue` dans `App.jsx` ; `TrackRow`/`Card` recoivent une prop `queue` (la liste a
+  laquelle ils appartiennent) et appellent `setCurrentQueue(queue)` en plus de
+  `setCurrentMusic` au clic. `MediaPlayer` navigue desormais dans cette queue plutot que
+  dans la bibliotheque complete.
+- Fait : `/favoris` et `/playlists` ne sont plus derriere `ProtectedRoute` - meme pattern
+  que `/profil` (voir passe precedente) : `Favoris.jsx`/`Playlists.jsx` gerent elles-memes
+  l'etat invite (message + liens Connexion/Inscription) si `user === null`. Corrige au
+  passage un bug de nav mobile : en etant deconnecte, cliquer sur Favoris/Playlists dans
+  la `BottomNav` redirigeait de force vers `/connexion`, donc aucun onglet ne s'affichait
+  actif (on n'etait plus reellement sur la page). `/playlists/:idPlaylist` reste protegee
+  (pas de playlists a voir pour un invite de toute facon).
+- Fait : colonne `duration` (INT, secondes) ajoutee a la table `musics`, backfillee avec
+  les vraies durees des fichiers mp3 (`backend/scripts/backfill-duration.js`, lib
+  `music-metadata`, pas de valeurs inventees). `GET /api/musics` la remonte automatiquement
+  (`SELECT *`). Affichee dans `TrackRow.jsx`, format `mm:ss` toujours sur 2 chiffres
+  (`01:43`).
 
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
@@ -145,6 +167,11 @@ Reste ouvert (voir aussi liste generale ci-dessous) :
   cliquables (`ButtonLike`/`AddMusicPlaylist`/`RemoveMusicPlaylist` dans `Card.jsx`,
   boutons renommer/supprimer dans `Playlist.jsx`) pour eviter la propagation du clic au
   parent.
+- `npm audit` (backend) signale 5 vulnerabilites (1 high, 4 critical) portees par
+  `express-generator` (deja present avant la passe du 2026-07-13, pas lie a l'ajout de
+  `music-metadata`) - `express-generator` est un outil de scaffolding CLI, pas utilise a
+  l'execution par `server.js` ; a nettoyer (retirer la dependance si vraiment inutilisee)
+  avant un vrai deploiement.
 
 ## Maquette Pencil
 

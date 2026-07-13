@@ -5,6 +5,7 @@ import TrackRow from "../composants/TrackRow";
 export default function Home({
   musiques,
   setCurrentMusic,
+  setCurrentQueue,
   user,
   messageDeconnexion,
   musiquesLikee,
@@ -77,6 +78,8 @@ export default function Home({
             musique={musique}
             index={index}
             setCurrentMusic={setCurrentMusic}
+            setCurrentQueue={setCurrentQueue}
+            queue={topCinq}
             musiquesLikee={musiquesLikee}
             setMusiquesLikee={setMusiquesLikee}
             user={user}
