@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, Music } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
   const [message, setMessage] = useState("");
@@ -57,32 +60,16 @@ export default function Register() {
     <>
       {" "}
       {message ? (
-        <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{message}</span>
-        </div>
+        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
       ) : null}
       <section className="h-full flex flex-col justify-center items-center p-4">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
-          <Music className="text-primary-content w-7 h-7" />
+          <Music className="text-primary-foreground w-7 h-7" />
         </div>
         <h1 className="text-4xl font-serif">Inscription</h1>
-        <p className="text-base-content/70 text-center mb-6">
+        <p className="text-muted-foreground text-center mb-6">
           Crée ton compte gratuitement et commence à écouter.
         </p>
         <form
@@ -90,88 +77,85 @@ export default function Register() {
           className="flex flex-col gap-2 w-full max-w-sm"
           onSubmit={handleSubmit}
         >
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Pseudo</legend>
-            <label className="input w-full">
-              <User className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Pseudo</legend>
+            <div className="relative">
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="pseudo"
                 type="text"
-                className="grow"
+                className="pl-8"
                 placeholder="Ton pseudo"
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Prénom</legend>
-            <label className="input w-full">
-              <User className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Prénom</legend>
+            <div className="relative">
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="prenom"
                 type="text"
-                className="grow"
+                className="pl-8"
                 placeholder="Ton prénom"
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Nom</legend>
-            <label className="input w-full">
-              <User className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Nom</legend>
+            <div className="relative">
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="nom"
                 type="text"
-                className="grow"
+                className="pl-8"
                 placeholder="Ton nom"
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Email</legend>
-            <label className="input w-full">
-              <Mail className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Email</legend>
+            <div className="relative">
+              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="email"
                 type="email"
-                className="grow"
+                className="pl-8"
                 placeholder="ton@email.fr"
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Mot de passe</legend>
-            <label className="input w-full">
-              <Lock className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Mot de passe</legend>
+            <div className="relative">
+              <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="password"
                 type="password"
-                className="grow"
+                className="pl-8"
                 placeholder="Ton mot de passe"
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Confirmation du mot de passe</legend>
-            <label className="input w-full">
-              <Lock className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Confirmation du mot de passe</legend>
+            <div className="relative">
+              <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 name="confirmPassword"
                 type="password"
-                className="grow"
+                className="pl-8"
                 placeholder="Confirme ton mot de passe"
               />
-            </label>
+            </div>
           </fieldset>
-          <button
-            className="btn btn-primary rounded-full w-full mt-4"
-            type="submit"
-          >
+          <Button className="rounded-full w-full mt-4" type="submit">
             Inscription
-          </button>
+          </Button>
         </form>
-        <p className="text-sm text-base-content/70 mt-4">
+        <p className="text-sm text-muted-foreground mt-4">
           Déjà un compte ?{" "}
-          <Link to="/connexion" className="link link-primary">
+          <Link to="/connexion" className="text-primary underline-offset-4 hover:underline">
             Connexion
           </Link>
         </p>

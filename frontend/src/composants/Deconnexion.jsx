@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Deconnexion({
   user,
@@ -23,12 +24,13 @@ export default function Deconnexion({
     navigate("/");
   }
   return (
-    <button
-      className="btn btn-outline btn-error rounded-full gap-2"
+    <Button
+      variant="ghost"
+      className="rounded-full gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
       onClick={handleDeconnexion}
     >
       <LogOut className="w-4 h-4" />
       Se déconnecter
-    </button>
+    </Button>
   );
 }

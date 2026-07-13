@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 export default function Apropos() {
   return (
@@ -13,7 +14,7 @@ export default function Apropos() {
           </h1>
         </div>
 
-        <p className="text-lg leading-relaxed text-base-content/80">
+        <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est <span className="text-primary font-bold">Manuel</span> 👋
           Je suis en reconversion professionnelle vers le développement web,
           formé au métier de Développeur Web et Web Mobile (DWWM). Après des
@@ -22,7 +23,7 @@ export default function Apropos() {
           mains dans le cambouis — c'est comme ça qu'est né Spoti-Free.
         </p>
 
-        <p className="text-lg leading-relaxed text-base-content/80">
+        <p className="text-lg leading-relaxed text-muted-foreground">
           Ce que j'aime dans le développement, c'est ce moment où un bug
           insaisissable finit par avoir un sens, où toutes les pièces
           s'emboîtent enfin. Spoti-Free m'a fait passer par toutes les
@@ -31,40 +32,40 @@ export default function Apropos() {
           dose de debug le soir après le travail.
         </p>
 
-        <div className="bg-base-200 rounded-2xl p-6">
+        <div className="bg-card rounded-2xl p-6">
           <h2 className="text-2xl font-serif mb-3 text-primary">
             Le projet Spoti-Free
           </h2>
-          <p className="mb-3 text-base-content/80">
+          <p className="mb-3 text-muted-foreground">
             Un clone de Spotify en full-stack, pensé comme un terrain de jeu
             pour appliquer et consolider mes compétences :
           </p>
-          <ul className="list-disc list-inside space-y-1 text-base-content/70">
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li>
-              <span className="font-semibold text-base-content">Frontend :</span> React, React
-              Router, Tailwind CSS, daisyUI
+              <span className="font-semibold text-foreground">Frontend :</span> React, React
+              Router, Tailwind CSS, shadcn/ui
             </li>
             <li>
-              <span className="font-semibold text-base-content">Backend :</span> Node.js,
+              <span className="font-semibold text-foreground">Backend :</span> Node.js,
               Express, authentification JWT
             </li>
             <li>
-              <span className="font-semibold text-base-content">Base de données :</span> MySQL
+              <span className="font-semibold text-foreground">Base de données :</span> MySQL
             </li>
           </ul>
         </div>
 
-        <p className="text-lg leading-relaxed text-base-content/80">
+        <p className="text-lg leading-relaxed text-muted-foreground">
           Aujourd'hui, je suis activement à la recherche d'un{" "}
-          <span className="font-bold text-base-content">stage en développement web</span> pour
+          <span className="font-bold text-foreground">stage en développement web</span> pour
           continuer à apprendre au contact d'une équipe, sur du code réel et
           des enjeux concrets. Si mon profil ou ce projet vous parle,
           n'hésitez pas à me contacter.
         </p>
 
-        <Link to="/contact" className="btn btn-primary rounded-full w-fit px-6 mt-2">
+        <Button nativeButton={false} render={<Link to="/contact" />} className="rounded-full w-fit px-6 mt-2">
           Me contacter
-        </Link>
+        </Button>
       </div>
     </section>
   );

@@ -27,10 +27,13 @@ export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMus
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <h1 className="text-2xl font-serif mb-6">Contenu de votre playlist</h1>
+      <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-serif font-bold mb-6">
+        <span className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
+        Contenu de votre playlist
+      </h1>
       <div className="flex flex-col gap-1">
         {musicsPlaylist.length === 0 ? (
-          <p className="text-base-content/70">
+          <p className="text-muted-foreground">
             Aucune musique dans cette playlist
           </p>
         ) : (

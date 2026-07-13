@@ -106,7 +106,7 @@ function App() {
   }, [currentQueue]);
 
   return (
-    <section className="box-border h-screen flex flex-col md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr_88px] ">
+    <section className="box-border h-screen flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr_88px] md:gap-3 md:p-3">
       <div className="md:hidden">
         <HeaderMobile />
       </div>
@@ -116,7 +116,13 @@ function App() {
         playlists={playlists}
         setPlaylists={setPlaylists}
       />
-      <main className="flex-1 min-h-0 md:col-start-2 md:row-start-1 bg-zinc-900 rounded-2xl overflow-hidden">
+      <main className="relative flex-1 min-h-0 mx-3 mt-3 md:m-0 md:col-start-2 md:row-start-1 bg-card border border-border rounded-2xl overflow-hidden">
+        {/* "Bloom" du theme : halo violet/indigo en haut du panneau de contenu */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/20 via-secondary/10 to-transparent"
+        />
+        <div className="relative h-full">
         <Routes>
           <Route
             path="/"
@@ -223,9 +229,10 @@ function App() {
             }
           />
         </Routes>
+        </div>
       </main>
       <MediaPlayer
-        className="w-full md:row-start-2 md:col-span-2"
+        className="w-full px-3 pt-3 md:p-0 md:row-start-2 md:col-span-2"
         music={currentMusic}
         currentIndex={currentIndex}
         queue={currentQueue}

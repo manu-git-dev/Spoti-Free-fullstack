@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Loader2, Mail, Code2, Briefcase } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function Contact() {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
@@ -53,102 +56,98 @@ export default function Contact() {
   }
   return (
     <section className="flex flex-col lg:grid lg:grid-cols-2 h-full overflow-y-auto p-4 md:p-8">
-      <section className="flex flex-col lg:col-start-1">
-        <h1 className="font-serif md:text-3xl my-4">Contact</h1>
-        <h2 className="font-serif md:text-2xl my-4">Une question ?</h2>
-        <p className="text-base-content/70 md:text-xl my-4">
+      <section className="flex flex-col lg:col-start-1 lg:pr-8">
+        <h1 className="flex items-center gap-2 font-serif text-2xl md:text-3xl font-bold my-4">
+          <span className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
+          Contact
+        </h1>
+        <h2 className="font-serif text-xl md:text-2xl mb-2">Une question ?</h2>
+        <p className="text-muted-foreground md:text-lg mb-6">
           Ecris-moi, je te réponds rapidement. Que ce soit un bug, une idée de
           fonctionnalité ou juste un petit mot, je lis tout.
         </p>
-        <p className="my-4">manuel.mattana.dev@gmail.com</p>
-        <a
-          className="my-4"
-          href="https://www.github.com/manu-git-dev"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Lien vers mon Github
-        </a>
-        <a
-          className="my-4"
-          href="https://www.linkedin.com/in/manuel-mattana/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Lien vers mon Linkedin
-        </a>
+
+        <div className="flex flex-col gap-2">
+          <a
+            href="mailto:manuel.mattana.dev@gmail.com"
+            className="flex items-center gap-3 rounded-xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          >
+            <Mail className="w-5 h-5 text-primary shrink-0" />
+            <span className="truncate">manuel.mattana.dev@gmail.com</span>
+          </a>
+          <a
+            href="https://www.github.com/manu-git-dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          >
+            <Code2 className="w-5 h-5 text-primary shrink-0" />
+            <span>Mon Github</span>
+          </a>
+          <a
+            href="https://www.linkedin.com/in/manuel-mattana/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          >
+            <Briefcase className="w-5 h-5 text-primary shrink-0" />
+            <span>Mon Linkedin</span>
+          </a>
+        </div>
       </section>
-      <section className="bg-base-200 rounded-2xl p-8 h-fit w-full lg:self-center">
+      <section className="mt-6 lg:mt-0 rounded-2xl border border-border bg-background/50 p-6 md:p-8 h-fit w-full lg:self-center">
         <form action="" className="flex flex-col" onSubmit={handleSubmit}>
           <div className="flex flex-col md:flex-row gap-4 my-4 w-full">
-            <fieldset className="fieldset w-full md:w-1/2">
-              <legend className="fieldset-legend text-xl">Nom</legend>
-              <input
+            <fieldset className="flex flex-col gap-1.5 w-full md:w-1/2">
+              <legend className="text-xl mb-1">Nom</legend>
+              <Input
                 type="text"
-                className="input"
                 placeholder="Ton nom"
                 name="nom"
                 required
               />
             </fieldset>
-            <fieldset className="fieldset w-full md:w-1/2">
-              <legend className="fieldset-legend text-xl">Mail</legend>
-              <input
+            <fieldset className="flex flex-col gap-1.5 w-full md:w-1/2">
+              <legend className="text-xl mb-1">Mail</legend>
+              <Input
                 type="email"
-                className="input"
                 placeholder="ton@email.fr"
                 name="email"
                 required
               />
             </fieldset>
           </div>
-          <fieldset className="fieldset my-4">
-            <legend className="fieldset-legend text-xl">Sujet</legend>
-            <input
+          <fieldset className="flex flex-col gap-1.5 my-4">
+            <legend className="text-xl mb-1">Sujet</legend>
+            <Input
               type="text"
-              className="input"
               placeholder="De quoi veux-tu parler ?"
               name="sujet"
               required
             />
           </fieldset>
-          <fieldset className="fieldset my-4">
-            <legend className="fieldset-legend text-xl">Message</legend>
+          <fieldset className="flex flex-col gap-1.5 my-4">
+            <legend className="text-xl mb-1">Message</legend>
             <textarea
               name="message"
-              className="textarea w-full h-48"
+              className="w-full h-48 rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               placeholder="Ton message..."
               required
             ></textarea>
           </fieldset>
-          <button className="btn btn-primary my-4 " disabled={isSending}>
+          <Button className="my-4 w-fit" disabled={isSending}>
             Envoyer le message
-            <Send />
             {isSending ? (
-              <span className="loading loading-spinner loading-md"></span>
-            ) : null}
-          </button>
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Send />
+            )}
+          </Button>
         </form>{" "}
         {message ? (
-          <div
-            role="alert"
-            className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 shrink-0 stroke-current"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{message}</span>
-          </div>
+          <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
         ) : null}
       </section>
     </section>
