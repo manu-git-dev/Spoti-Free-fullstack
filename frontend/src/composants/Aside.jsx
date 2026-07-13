@@ -1,4 +1,14 @@
-import { Heart, Home, Library, Plus, Info, Mail, User } from "lucide-react";
+import {
+  Heart,
+  Home,
+  Library,
+  Plus,
+  Info,
+  Mail,
+  User,
+  UploadCloud,
+  ShieldCheck,
+} from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
 
@@ -52,6 +62,20 @@ export default function Aside({
           <User className="w-5 h-5" />
           Profil
         </NavLink>
+        {user && (
+          <NavLink to="/deposer" className={lienNav}>
+            <UploadCloud className="w-5 h-5" />
+            Déposer
+          </NavLink>
+        )}
+        {/* Affichage conditionnel = confort. La protection reelle est `adminMiddleware`,
+            cote serveur : masquer un lien ne protege rien. */}
+        {user?.role === "admin" && (
+          <NavLink to="/admin/depots" className={lienNav}>
+            <ShieldCheck className="w-5 h-5" />
+            Modération
+          </NavLink>
+        )}
       </nav>
 
       <div className="h-px w-full bg-border" />

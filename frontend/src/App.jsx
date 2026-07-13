@@ -15,6 +15,8 @@ import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
+import Deposer from "./pages/Deposer";
+import AdminDepots from "./pages/AdminDepots";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { apiFetch, definirSurSessionExpiree } from "@/lib/api";
@@ -203,6 +205,15 @@ function App() {
             }
           />
           <Route path="/inscription" element={<Register />} />
+          <Route path="/deposer" element={<Deposer user={user} />} />
+          <Route
+            path="/admin/depots"
+            element={
+              <ProtectedRoute user={user}>
+                <AdminDepots user={user} />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/a-propos" element={<Apropos />} />
           <Route path="/contact" element={<Contact />} />
 
