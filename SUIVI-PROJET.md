@@ -126,4 +126,5 @@ necessite l'app Pencil pour etre edite). Export statique (PNG/JPEG) disponible d
 depuis le fichier source si la maquette evolue.
 
 Ecrans maquettes (mobile + desktop pour chacun) : Home, Bibliotheque, Favoris, A propos,
-Contact, Connexion, Inscription. Pas encore maquette : Playlists, Profil.
+Contact, Connexion, Inscription, Profil (ajoute le 2026-07-13, voir docs/maquette/README.md
+pour la note sur l'onglet Profil ajoute a l'Aside desktop). Pas encore maquette : Playlists.
