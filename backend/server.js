@@ -4,6 +4,7 @@ import musicRoutes from "./src/routes/musicRoute.js";
 import userRoutes from "./src/routes/userRoute.js";
 import playlistRoute from "./src/routes/playlistRoute.js";
 import contactRoute from "./src/routes/contactRoute.js";
+import submissionRoute from "./src/routes/submissionRoute.js";
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use("/api/musics", musicRoutes); // route défini pour musics
 app.use("/api/users", userRoutes);
 app.use("/api/playlists", playlistRoute);
 app.use("/api/contact", contactRoute);
+app.use("/api/submissions", submissionRoute);
 
 // 404 : aucune route ne correspond. Sans ceci, Express renvoie une page HTML par defaut,
 // alors que tous les clients de cette API attendent du JSON.

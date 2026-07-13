@@ -258,6 +258,12 @@ router.post("/connexion", limiteConnexion, async (req, res) => {
             id_user: user.id_user,
             email: user.email,
             pseudo: user.pseudo,
+            // Le front s'en sert UNIQUEMENT pour afficher ou masquer le lien "Modération".
+            // Ce n'est pas une protection : quelqu'un qui modifierait son localStorage verrait
+            // le lien, mais chacune de ses requetes se heurterait a `adminMiddleware` (403).
+            // Le role n'est volontairement PAS mis dans le JWT : il est relu en base a chaque
+            // requete, pour qu'un retrait de droits prenne effet immediatement.
+            role: user.role,
           },
         });
       } else {

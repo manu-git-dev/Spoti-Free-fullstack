@@ -1,0 +1,4 @@
+# Fichiers deposes par les utilisateurs, en attente de moderation.
+# Ce sont des donnees, pas du code : on versionne le dossier, jamais son contenu.
+*
+!.gitignore
