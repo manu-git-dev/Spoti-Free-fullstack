@@ -1,15 +1,12 @@
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function RemoveMusicPlaylist({
   idMusic,
   idPlaylist,
   setMusicsPlaylist,
 }) {
-  const [typeMessage, setTypeMessage] = useState("");
-  const [message, setMessage] = useState("");
   async function handleClick() {
     const url = `http://localhost:3000/api/playlists/retirer/${idPlaylist}/${idMusic}`;
 
@@ -22,50 +19,30 @@ export default function RemoveMusicPlaylist({
         },
       });
       const resultat = await reponse.json();
-      console.log(resultat);
 
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(resultat.message);
-        setTimeout(() => {
-          setMessage("");
-        }, 1500);
+        toast.error(resultat.message);
         console.error(resultat.message);
         return;
       }
-      setTypeMessage("success");
-      setMessage(resultat.message);
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.success(resultat.message);
       setMusicsPlaylist((prev) =>
         prev.filter((musique) => musique.id_music !== idMusic),
       );
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessage("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
   }
 
   return (
-    <>
-      {message ? (
-        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      ) : null}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={handleClick}
-        aria-label="Retirer de la playlist"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
-    </>
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={handleClick}
+      aria-label="Retirer de la playlist"
+    >
+      <Trash2 className="w-4 h-4" />
+    </Button>
   );
 }

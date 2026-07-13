@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +24,6 @@ export default function AddMusicPlaylist({ idMusic }) {
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState("");
   const [open, setOpen] = useState(false);
-  const [typeMessage, setTypeMessage] = useState("");
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const url = `http://localhost:3000/api/playlists`;
@@ -59,30 +57,16 @@ export default function AddMusicPlaylist({ idMusic }) {
         },
       });
       const resultat = await reponse.json();
-      console.log(resultat);
 
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(resultat.message);
-        setTimeout(() => {
-          setMessage("");
-        }, 1500);
+        toast.error(resultat.message);
         console.error(resultat.message);
         return;
       }
-      setTypeMessage("success");
-      setMessage(resultat.message);
-      // succes : on laisse le message visible un instant dans la modale, puis on ferme
-      setTimeout(() => {
-        setMessage("");
-        setOpen(false);
-      }, 1500);
+      toast.success(resultat.message);
+      setOpen(false);
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessage("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
   }
@@ -121,15 +105,8 @@ export default function AddMusicPlaylist({ idMusic }) {
                   {playlist.name}
                 </SelectItem>
               ))}
-            </SelectContent>
+              </SelectContent>
           </Select>
-          {message ? (
-            <Alert
-              variant={typeMessage === "success" ? "success" : "destructive"}
-            >
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>
               Annuler

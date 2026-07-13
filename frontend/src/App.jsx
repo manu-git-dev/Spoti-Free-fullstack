@@ -15,11 +15,11 @@ import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
+import { Toaster } from "@/components/ui/sonner";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
   const [currentMusic, setCurrentMusic] = useState(null);
-  const [messageDeconnexion, setMessageDeconnexion] = useState("");
   const [valueInput, setValueInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState("");
   const [maxIndex, setMaxIndex] = useState(0);
@@ -130,7 +130,6 @@ function App() {
               <Home
                 musiques={musiques}
                 user={user}
-                messageDeconnexion={messageDeconnexion}
                 setCurrentMusic={setCurrentMusic}
                 setCurrentQueue={setCurrentQueue}
                 musiquesLikee={musiquesLikee}
@@ -138,7 +137,6 @@ function App() {
                 setUser={setUser}
                 token={token}
                 setToken={setToken}
-                setMessageDeconnexion={setMessageDeconnexion}
                 currentMusic={currentMusic}
               />
             }
@@ -187,12 +185,10 @@ function App() {
            
                 <Profil
                   user={user}
-                  messageDeconnexion={messageDeconnexion}
                   musiquesLikee={musiquesLikee}
                   setUser={setUser}
                   token={token}
                   setToken={setToken}
-                  setMessageDeconnexion={setMessageDeconnexion}
                   playlists={playlists}
                 />
              
@@ -243,6 +239,8 @@ function App() {
       <div className="md:hidden">
         <BottomNav user={user} />
       </div>
+      {/* Point de montage unique des toasts : toute l'app appelle toast() sans rien monter */}
+      <Toaster />
     </section>
   );
 }

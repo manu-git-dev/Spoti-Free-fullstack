@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { useRef, useState } from "react";
 import { ListMusic, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +26,6 @@ const degrades = [
 
 export default function Playlist({ id, nom, setPlaylists }) {
   const degrade = degrades[id % degrades.length];
-  const [typeMessage, setTypeMessage] = useState("");
-  const [message, setMessage] = useState("");
-  const [messageSuppression, setMessageSuppression] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
 
@@ -46,31 +43,18 @@ export default function Playlist({ id, nom, setPlaylists }) {
         },
       });
       const resultat = await reponse.json();
-      console.log(resultat);
 
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessageSuppression(resultat.message);
-        setTimeout(() => {
-          setMessageSuppression("");
-        }, 1500);
+        toast.error(resultat.message);
         console.error(resultat.message);
         return;
       }
-      setTypeMessage("success");
-      setMessageSuppression(resultat.message);
-      setTimeout(() => {
-        setMessageSuppression("");
-      }, 1500);
+      toast.success(resultat.message);
       setPlaylists((prev) =>
         prev.filter((playlist) => playlist.id_playlist !== id),
       );
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessageSuppression("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessageSuppression("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
   }
@@ -91,19 +75,11 @@ export default function Playlist({ id, nom, setPlaylists }) {
       const resultat = await reponse.json();
 
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(resultat.message);
-        setTimeout(() => {
-          setMessage("");
-        }, 1500);
+        toast.error(resultat.message);
         console.error(resultat.message);
         return;
       }
-      setTypeMessage("success");
-      setMessage(resultat.message);
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.success(resultat.message);
       setPlaylists((prev) =>
         prev.map((playlist) =>
           playlist.id_playlist === id ? { ...playlist, name } : playlist,
@@ -111,11 +87,7 @@ export default function Playlist({ id, nom, setPlaylists }) {
       );
       setOpen(false);
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessage("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
   }
@@ -159,13 +131,6 @@ export default function Playlist({ id, nom, setPlaylists }) {
               </DialogDescription>
             </DialogHeader>
             <Input type="text" defaultValue={nom} ref={inputRef} />
-            {message ? (
-              <Alert
-                variant={typeMessage === "success" ? "success" : "destructive"}
-              >
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            ) : null}
             <DialogFooter>
               <DialogClose render={<Button variant="outline" />}>
                 Annuler
@@ -185,15 +150,6 @@ export default function Playlist({ id, nom, setPlaylists }) {
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
-
-      {messageSuppression ? (
-        <Alert
-          className="mt-2"
-          variant={typeMessage === "success" ? "success" : "destructive"}
-        >
-          <AlertDescription>{messageSuppression}</AlertDescription>
-        </Alert>
-      ) : null}
     </div>
   );
 }

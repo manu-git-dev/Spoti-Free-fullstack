@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 
 export default function Profil({
   user,
-  messageDeconnexion,
   musiquesLikee,
   setUser,
   token,
   setToken,
-  setMessageDeconnexion,
   playlists,
 }) {
   const [infoUser, setInfoUser] = useState({});
@@ -107,13 +105,7 @@ if (user === null ){
         </div>
 
         <div className="flex justify-center">
-          <Deconnexion
-            user={user}
-            setUser={setUser}
-            token={token}
-            setToken={setToken}
-            setMessageDeconnexion={setMessageDeconnexion}
-          />
+          <Deconnexion setUser={setUser} setToken={setToken} />
         </div>
       </div>
     </section>

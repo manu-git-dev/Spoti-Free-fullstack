@@ -1,15 +1,9 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export default function Deconnexion({
-  user,
-  setUser,
-  token,
-  setToken,
-  setMessageDeconnexion,
-}) {
+export default function Deconnexion({ setUser, setToken }) {
   const navigate = useNavigate();
 
   function handleDeconnexion() {
@@ -17,12 +11,10 @@ export default function Deconnexion({
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
-    setMessageDeconnexion("Déconnexion réussie");
-    setTimeout(() => {
-      setMessageDeconnexion("");
-    }, 1500);
+    toast.success("Déconnexion réussie");
     navigate("/");
   }
+
   return (
     <Button
       variant="ghost"

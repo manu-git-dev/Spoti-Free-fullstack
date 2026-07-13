@@ -1,7 +1,7 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +20,6 @@ export default function ButtonAddPlaylist({
   size = "icon-sm",
   className = "",
 }) {
-  const [message, setMessage] = useState("");
-  const [typeMessage, setTypeMessage] = useState("");
   const [open, setOpen] = useState(false);
 
   async function handleSubmit(event) {
@@ -46,29 +44,19 @@ export default function ButtonAddPlaylist({
       });
       const resultat = await reponse.json();
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(resultat.message);
-        setTimeout(() => {
-          setMessage("");
-        }, 1500);
-        console.log(message);
+        toast.error(resultat.message);
+        console.error(resultat.message);
         return;
       }
-      const newPlaylist = { id_playlist: resultat.id_playlist, name: resultat.name };
+      const newPlaylist = {
+        id_playlist: resultat.id_playlist,
+        name: resultat.name,
+      };
       setPlaylists((prev) => [...prev, newPlaylist]);
-      setTypeMessage("success");
-      setMessage(resultat.message);
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
-      console.log(message);
+      toast.success(resultat.message);
       setOpen(false);
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessage("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
   }
@@ -97,13 +85,6 @@ export default function ButtonAddPlaylist({
                 placeholder="Saisissez le nom de votre playlist"
               />
             </div>
-            {message ? (
-              <Alert
-                variant={typeMessage === "success" ? "success" : "destructive"}
-              >
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            ) : null}
             <DialogFooter>
               <DialogClose render={<Button type="button" variant="outline" />}>
                 Annuler

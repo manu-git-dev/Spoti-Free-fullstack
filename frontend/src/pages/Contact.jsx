@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { Send, Loader2, Mail, Code2, Briefcase } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function Contact() {
-  const [message, setMessage] = useState("");
-  const [typeMessage, setTypeMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   async function handleSubmit(event) {
     event.preventDefault();
@@ -31,24 +29,14 @@ export default function Contact() {
       });
       const resultat = await reponse.json();
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(resultat.message);
-        setTimeout(() => {
-          setMessage("");
-        }, 1500);
+        toast.error(resultat.message);
+        console.error(resultat.message);
         return;
       }
-      setTypeMessage("success");
-      setMessage(resultat.message);
-      setTimeout(() => {
-        setMessage("");
-      }, 5000);
+      toast.success(resultat.message);
+      event.target.reset();
     } catch (erreur) {
-      setTypeMessage("error");
-      setMessage("Impossible de contacter le serveur.");
-      setTimeout(() => {
-        setMessage("");
-      }, 1500);
+      toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
     } finally {
       setIsSending(false);
@@ -143,12 +131,7 @@ export default function Contact() {
               <Send />
             )}
           </Button>
-        </form>{" "}
-        {message ? (
-          <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        ) : null}
+        </form>
       </section>
     </section>
   );
