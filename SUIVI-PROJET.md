@@ -4,47 +4,139 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## Prochaines etapes priorisees (mise a jour 2026-07-13, apres la passe shadcn/Midnight Bloom)
+## ETAT DU PROJET (au 2026-07-14) — a lire en premier
 
-Liste dans l'ordre voulu par Manuel - a traiter dans cet ordre, une fois cette liste
-terminee : check/test complet de l'app, puis deploiement (serveur Hostinger a acheter),
-puis reflexion sur de nouvelles fonctionnalites pour plus tard.
+L'application est **fonctionnellement complete et testee**. Il ne reste rien de bloquant dans le
+code : ce qui reste, c'est la mise en ligne.
 
-1. ~~Inscription : confirmation du mot de passe + regles de securite~~ - **fait**.
-   La confirmation etait deja implementee (verifie par test : deux mots de passe differents
-   bloquent la creation du compte). L'audit du 2026-07-13 a montre que l'API acceptait en
-   revanche **n'importe quoi** quand on l'appelait directement : `password: "a"` -> 201, et
-   `email: "pas-un-email"` -> 201. Les deux sont desormais valides **cote backend**
-   (`POST /api/users/inscription`) : format d'email, et mot de passe d'au moins 8 caracteres.
-   La regle des 8 caracteres est volontairement sobre - a durcir si tu veux (majuscule,
-   chiffre, caractere special). **A retenir** : `type="email"` et une verification en React ne
-   protegent que le navigateur, jamais l'API.
-2. ~~Logo "Spoti-Free" trop petit~~ - **fait** (agrandi + degrade primary->accent dans
-   `Aside.jsx` et `HeaderMobile.jsx`).
-3. ~~`Aside.jsx` - liste "Mes playlists" sans scroll interne~~ - **fait** (le bloc
-   playlists prend la hauteur restante, `flex-1 min-h-0` + `overflow-y-auto` sur la liste).
-   Reste a verifier de visu avec beaucoup d'entrees.
-4. ~~`Playlists.jsx` - contenu trop pauvre~~ - **fait** (vraies cartes : pochette degradee
-   generee depuis l'id, actions renommer/supprimer en icones revelees au survol).
-5. Revoir le contenu texte de la page A propos (`Apropos.jsx`).
-6. ~~Modals au style a revoir~~ - **fait** (actions regroupees dans le `DialogFooter`,
-   `Annuler`/`Ajouter` cote a cote au lieu d'un bouton pleine largeur + un footer separe ;
-   textes anglais residuels traduits).
-7. ~~Messages d'erreur/succes mal affiches~~ - **fait**. Systeme de **toasts global**
-   (`sonner`, le standard shadcn) : un seul `<Toaster />` monte dans `App.jsx`, et les
-   actions ponctuelles (like/unlike, ajout/retrait dans une playlist, creation/renommage/
-   suppression de playlist, deconnexion, formulaire de contact) appellent `toast()`.
-   Les `<Alert>` etaient rendues *dans* le composant declencheur - celle de `ButtonLike`/
-   `RemoveMusicPlaylist` etait donc rendue dans la `TrackRow` et deformait la ligne.
-   `Login.jsx`/`Register.jsx` gardent volontairement leurs `<Alert>` inline : une erreur de
-   validation doit rester a cote du champ concerne, ce n'est pas le role d'un toast.
-8. ~~Codes de statut HTTP du backend~~ - **fait** (passe complete route par route lors de
-   l'audit du 2026-07-13) :
-   - like en doublon : `500` -> **`409`** (c'etait la cause visible du bug des likes)
-   - musique deja dans une playlist : `404` -> **`409`**
-   - nom de playlist vide : `404` -> **`400`** (+ la creation ne validait pas du tout le nom)
-   - listes vides (`/likes`, `/playlists`, contenu d'une playlist) : `404` -> **`200 []`**
-     (une liste vide est un resultat valide, pas une ressource introuvable)
+- **103 tests** automatises : `cd tests && npm install && npm test`
+  (26 parcours + 27 securite + 25 depot + 25 admin). Sortie en code 1 si echec.
+- **0 vulnerabilite** npm (backend et frontend).
+- Build de production OK.
+
+### Ce que fait l'application
+
+Ecoute (bibliotheque, favoris, playlists, lecteur avec file d'attente contextuelle), Top 5 reel
+par nombre d'ecoutes, comptes (inscription, connexion, **mot de passe oublie**), **depot de
+musique par les utilisateurs avec moderation**, et un **espace d'administration** complet
+(tableau de bord avec statistiques et graphiques, moderation des depots, gestion des
+utilisateurs, gestion du catalogue).
+
+### Les prochaines etapes
+
+1. **Deploiement** — c'est la seule chose qui bloque une mise en ligne. Tout est detaille dans
+   `DEPLOIEMENT.md`. Les points a ne pas rater :
+   - **purger les comptes de demonstration**, en particulier `admin@admin.fr` dont le mot de
+     passe n'est plus maitrise : l'emmener en production laisserait une porte ouverte sur tout
+     le catalogue ;
+   - rejouer les **scripts SQL** (voir la liste ci-dessous) ;
+   - `NODE_ENV=production`, un **nouveau** `JWT_SECRET`, `IP_HASH_SALT`, `FRONTEND_URL`,
+     `VITE_API_URL`, et les variables `MAIL_*` (sinon le mot de passe oublie et les
+     notifications de depot n'envoient rien).
+2. Idees de Manuel pour la suite (a preciser).
+
+### Scripts SQL a rejouer sur une nouvelle base (dans cet ordre)
+
+```
+backend/scripts/add-role-column.sql              # users.role (user | admin)
+backend/scripts/add-play-count.sql               # musics.play_count + amorcage du Top 5
+backend/scripts/add-submissions-table.sql        # depots de musique
+backend/scripts/alter-submissions-image-facultative.sql
+backend/scripts/add-visites-table.sql            # frequentation
+backend/scripts/add-password-resets-table.sql    # mot de passe oublie
+```
+
+Puis `node scripts/backfill-duration.js` (sinon les durees s'affichent `--:--`), et creer le
+dossier `backend/uploads/` (vide mais accessible en ecriture).
+
+### Points connus, assumes
+
+- Le token est dans `localStorage` : volable en cas de faille XSS. L'alternative (cookie
+  `httpOnly`) demande de revoir l'authentification.
+- Le bundle frontend depasse 500 kB : un code-splitting accelererait le premier chargement.
+- Pas de CI : les tests existent et sortent en code 1, il ne reste qu'a les brancher.
+- Pas de sauvegarde de `backend/public/` — qui est **gitignore**. Les fichiers audio et les
+  pochettes ne sont donc versionnes nulle part : si le disque lache, ils sont perdus.
+
+### Conventions a respecter (etablies au fil du projet)
+
+- **Surfaces** : `bg-background` = fond de l'app ; `bg-card`/`bg-sidebar` + `border-border` = les
+  panneaux ; `bg-background/50` + `border-border` = ce qui vit **dans** un panneau. Ne jamais
+  mettre `bg-card` sur un enfant du `main` (qui est deja en `bg-card`) : il devient invisible.
+- **Couleurs** : primary (violet) = identite et etat actif ; accent (bleu) = survol ;
+  destructive (rouge) = suppressions **reelles**, jamais la deconnexion.
+- **Tous les appels API passent par `apiFetch`** (`frontend/src/lib/api.js`) : il porte le token,
+  l'URL de base (`VITE_API_URL`) et l'interception des 401. Ne plus jamais ecrire `fetch()` nu ni
+  d'URL en dur.
+- **Les fichiers deposes ne vont JAMAIS dans `public/`** avant validation (voir
+  `docs/FEATURE-depot-musique.md`).
+- **Ne jamais supprimer un fichier partage** : les pochettes sont mutualisees (une image sert a
+  plusieurs morceaux). Toujours verifier qu'aucun autre morceau ne le reference.
+
+## Espace d'administration, mot de passe oublie, Aside - 2026-07-14 - fait
+
+### Tableau de bord admin (`/admin`)
+
+Nouvelle table `visites` + route publique `POST /api/admin/visite`. Deux choix a connaitre :
+- **C'est le FRONT qui signale la visite** (effet sur `useLocation` dans `App.jsx`), pas un
+  middleware serveur : dans une SPA, le serveur ne voit que des appels API, et une seule page en
+  declenche plusieurs — on compterait 5 "visites" pour une seule page consultee.
+- **L'IP est hachee AVEC UN SEL** (`IP_HASH_SALT`). Un SHA-256 d'IP tout seul ne protege rien :
+  il n'existe que ~4 milliards d'IPv4, on peut toutes les hacher en quelques secondes.
+
+Statistiques : totaux, courbe de frequentation (visiteurs uniques / pages vues), inscriptions par
+jour, classements ecoutes/likes, repartition des depots, pages les plus consultees.
+
+**Les graphiques sont en SVG maison** (`composants/graphiques/Graphiques.jsx`) — pas de librairie
+pour quatre formes. La palette a ete **validee par script**, pas choisie a l'oeil : les couleurs
+brutes du theme echouaient (violet a 2.6:1 de contraste seulement, accent bleu hors de la bande
+de luminosite du mode sombre). L'accent est donc legerement assombri (`#5c8fe6`). Si tu ajoutes un
+graphique, garde ces deux couleurs et l'ordre fixe (1re serie = violet, 2e = bleu).
+
+### Gestion des utilisateurs (`/admin/utilisateurs`)
+
+Lister, promouvoir/retrograder (avec **confirmation**), supprimer (avec confirmation qui annonce
+ce qui sera detruit).
+
+**Volontairement PAS d'edition du pseudo, du nom ni de l'email** : l'email est l'identifiant de
+connexion, un admin capable de le changer pourrait se l'attribuer et se connecter a la place de la
+personne. Escalade de privileges, sans besoin legitime. **Ne pas "completer" ce CRUD.**
+
+Garde-fous : pas d'auto-suppression, pas d'auto-retrogradation, jamais le dernier admin.
+
+### Gestion du catalogue (`/admin/musiques`)
+
+Renommer (titre, artiste, genre) et supprimer. Deux corrections importantes :
+- `PUT /api/musics/update/:id` faisait un `UPDATE` de **toutes** les colonnes : un appel n'envoyant
+  que le titre mettait `src_audio` et `src_image` a `NULL` — morceau injouable, pochette cassee,
+  **en silence**. La route n'accepte plus que les metadonnees.
+- `DELETE` supprime maintenant les fichiers — mais **seulement s'ils ne sont references par aucun
+  autre morceau**. Les pochettes sont mutualisees : une suppression aveugle en casse d'autres.
+
+### Mot de passe oublie
+
+Le lien de la page Connexion pointait sur `to="#"`. Parcours complet : `/mot-de-passe-oublie` puis
+`/reinitialiser-mot-de-passe?token=…`. Quatre protections (voir note 47 des notes d'apprentissage) :
+reponse **identique** que le compte existe ou non (anti-enumeration), jeton stocke en **empreinte**,
+**usage unique**, **expiration 1h**. Table `password_resets`.
+
+### Navigation
+
+- **Aside reorganisee en sections** : Écouter / Mes playlists / Mon compte / Administration, puis
+  A propos-Contact fixes en bas. L'administration vient en dernier : c'est un espace de travail,
+  pas la raison d'etre du site.
+- **Trou de navigation mobile corrige** : "Déposer", "Mes demandes" et TOUT l'espace admin etaient
+  inaccessibles sur telephone (les liens vivent dans l'Aside, masquee sous `md`). Le burger du
+  `HeaderMobile` porte desormais ces liens, avec un contenu qui s'adapte au role.
+
+### Depot de musique — ajustements
+
+- La **pochette est facultative** : sans elle, une image du catalogue est tiree au hasard a
+  l'approbation.
+- L'admin peut **consulter et telecharger** l'audio et la pochette avant de valider (verification
+  des droits).
+- Le suivi des demandes a sa propre page (`/mes-depots`), la page `/deposer` reste centree sur son
+  formulaire.
 
 ## Audit complet de l'application - 2026-07-13 - fait
 
