@@ -24,15 +24,44 @@ puis reflexion sur de nouvelles fonctionnalites pour plus tard.
 6. ~~Modals au style a revoir~~ - **fait** (actions regroupees dans le `DialogFooter`,
    `Annuler`/`Ajouter` cote a cote au lieu d'un bouton pleine largeur + un footer separe ;
    textes anglais residuels traduits).
-7. Messages d'erreur/succes : **partiellement fait**. L'`Alert` d'`AddMusicPlaylist` etait
-   rendue *dans* la `TrackRow` et deformait la ligne - elle est remontee dans la modale.
-   **Reste ouvert** : `RemoveMusicPlaylist` a exactement le meme defaut (Alert inline dans
-   la ligne) mais n'a pas de modale ou la loger. La bonne solution est un systeme de
-   **toasts global** (`sonner`, le standard shadcn) qui remplacerait toutes ces `Alert`
-   locales - a trancher avec Manuel, ca touche l'architecture du feedback, pas juste le style.
+7. ~~Messages d'erreur/succes mal affiches~~ - **fait**. Systeme de **toasts global**
+   (`sonner`, le standard shadcn) : un seul `<Toaster />` monte dans `App.jsx`, et les
+   actions ponctuelles (like/unlike, ajout/retrait dans une playlist, creation/renommage/
+   suppression de playlist, deconnexion, formulaire de contact) appellent `toast()`.
+   Les `<Alert>` etaient rendues *dans* le composant declencheur - celle de `ButtonLike`/
+   `RemoveMusicPlaylist` etait donc rendue dans la `TrackRow` et deformait la ligne.
+   `Login.jsx`/`Register.jsx` gardent volontairement leurs `<Alert>` inline : une erreur de
+   validation doit rester a cote du champ concerne, ce n'est pas le role d'un toast.
 8. Repasser sur tous les codes de statut HTTP du backend (deja partiellement note plus
    bas : `404` utilise a la place de `409`/`400` par endroits) - passe de verification
-   complete a faire route par route.
+   complete a faire route par route. **Cas concret identifie** : un like en doublon fait
+   echouer l'`INSERT` sur la cle primaire `(id_user, id_music)` et remonte un **500**
+   (`"Erreur lors de l'ajout du like."`) alors que c'est un **409 Conflict**.
+
+## BUG A CORRIGER (par Manuel) : likes impossibles sur certaines musiques
+
+**Symptome** : certaines musiques refusent d'etre likees (message d'erreur), d'autres non.
+Apres un F5, tout rentre dans l'ordre - ce qui rend le bug deroutant.
+
+**Cause** (reproduite avec Playwright le 2026-07-13) : dans `App.jsx`, le `useEffect` qui
+charge les likes a `[]` comme tableau de dependances et lit `localStorage.getItem("token")`
+*a l'interieur*. Il ne tourne donc **qu'au montage** :
+
+1. On arrive sur l'app deconnecte -> l'effet tourne sans token -> `musiquesLikee = []`.
+2. On se connecte -> `setToken`/`setUser` declenchent un re-render, **mais l'effet ne se
+   relance pas** (dependances `[]`) -> `musiquesLikee` reste **vide**.
+3. Tous les coeurs s'affichent donc vides, **y compris ceux des musiques deja likees**.
+   (Verifie : apres connexion via le formulaire, 20 coeurs vides / 0 plein alors qu'une
+   musique est bien likee en base.)
+4. Cliquer sur l'un d'eux relance un `INSERT` -> violation de la cle primaire
+   `(id_user, id_music)` -> le backend renvoie **500** et le like echoue.
+
+**Piste de correction** : l'effet doit se relancer quand le token change (meme correction
+que celle deja appliquee dans `Profil.jsx`). Le `useEffect` des **playlists**, juste en
+dessous dans `App.jsx`, a exactement le meme defaut.
+
+**Cote backend** (lie au point 8) : un doublon devrait renvoyer un `409 Conflict` explicite
+plutot qu'un `500`, pour que le front puisse afficher un message utile.
 
 ## Passe shadcn/ui + theme Midnight Bloom - 2026-07-13 - faite
 
