@@ -1124,3 +1124,113 @@ Résultat : exactement la même apparence, mais un vrai `<a>` sans `role` trafiq
 (Petit bonus : mes tests Playwright cherchaient `getByRole('button', {name:'Connexion'})` et ont commencé à échouer après ce changement. C'est **la preuve que le correctif marche** — l'élément est enfin annoncé comme un lien, exactement comme le verrait un lecteur d'écran.)
 
 ---
+
+### 40. Toute route qui déclenche une action coûteuse doit être limitée
+
+**Contexte** : question posée à Claude — « l'app est-elle prête à être déployée ? ». Elle ne l'était pas, et le point le plus grave était celui auquel je pensais le moins : **mon formulaire de contact**.
+
+**Le problème** : `POST /api/contact` envoie un **vrai mail** vers ma boîte Gmail, à chaque appel, sans aucune limite. J'avais bien mis un rate limiter sur la connexion (contre le brute-force) et sur l'inscription — mais pas là, parce que je ne voyais pas le formulaire de contact comme « sensible ».
+
+Or il l'est, et pour une raison qui n'a rien à voir avec la sécurité des données : **il déclenche une action qui coûte cher**. Une fois le site en ligne, n'importe quel bot (ils scannent les formulaires de contact en permanence) peut boucler dessus et m'envoyer des milliers de mails. Au mieux ma boîte est noyée, au pire Google suspend mon compte pour envoi abusif.
+
+**Le bon réflexe** : ne pas se demander « cette route est-elle sensible ? » mais **« que se passe-t-il si quelqu'un l'appelle 10 000 fois de suite ? »**. Toute route qui envoie un mail, écrit en base, appelle une API payante ou consomme du CPU mérite une limite.
+
+```js
+const limiteContact = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  skipFailedRequests: true,   // ← ne compter que les envois qui ont REELLEMENT abouti
+});
+
+router.post("/", limiteContact, async (req, res) => { … });
+```
+
+**`skipFailedRequests` compte ici autant que la limite elle-même** : sans lui, un visiteur qui se trompe trois fois de format d'email serait bloqué une heure **sans avoir rien envoyé**. On ne compte que ce qui coûte réellement quelque chose. La limite doit gêner l'abus, jamais l'usage normal.
+
+Au passage, deux autres trous sur cette même route : le format de l'email n'était pas vérifié côté serveur (le `replyTo` du mail pouvait donc contenir n'importe quoi), et rien ne bornait la taille du message (on pouvait envoyer plusieurs Mo).
+
+---
+
+### 41. `cors()` sans option ouvre l'API à tout Internet
+
+**Contexte** : mon `server.js` avait `app.use(cors())`. Je l'avais mis « pour que ça marche » quand le front n'arrivait pas à appeler l'API — sans jamais me demander ce que ça autorisait exactement.
+
+**Ce que fait CORS** : par défaut, un navigateur **interdit** à une page servie par `site-a.com` de lire la réponse d'une requête vers `site-b.com`. C'est une protection du navigateur. Les en-têtes CORS sont la façon dont le serveur dit : « j'accepte que telle origine me lise ».
+
+**`cors()` sans argument répond donc « j'accepte tout le monde »** (`Access-Control-Allow-Origin: *`). N'importe quel site peut faire appeler mon API par le navigateur de ses visiteurs.
+
+**La correction** — n'autoriser que l'origine de mon front :
+
+```js
+const originesAutorisees = [
+  process.env.FRONTEND_URL,      // ex: https://spotifree.fr
+  "http://localhost:5173",       // le dev
+].filter(Boolean);
+
+app.use(cors({ origin: originesAutorisees, credentials: true }));
+```
+
+**Ce que CORS ne fait PAS — et c'est le point important** : ce n'est **pas** une protection de l'API. CORS est appliqué par le **navigateur**, pas par le serveur. Un `curl`, un script Node ou Postman s'en moquent totalement et pourront toujours appeler mes routes.
+
+Autrement dit : CORS empêche *le site d'un tiers* d'utiliser la session de mes visiteurs à leur insu. **Il ne remplace jamais l'authentification et les autorisations côté serveur** (voir note 32). Les deux sont nécessaires, et répondent à deux menaces différentes.
+
+---
+
+### 42. Une protection ne doit jamais pouvoir être désactivée par une variable oubliée
+
+**Contexte** : ma suite de tests crée une dizaine de comptes à chaque exécution… et se faisait donc **bloquer par ma propre protection anti-abus** (20 inscriptions/heure). Il fallait pouvoir la couper pour les tests.
+
+**Le piège** : la solution évidente est une variable d'environnement.
+
+```js
+// DANGEREUX
+skip: () => process.env.RATE_LIMIT_DISABLED === "1",
+```
+
+Le problème est évident dès qu'on y pense : le jour où ce `.env` est copié vers le serveur de production (ou qu'on colle une config en vitesse), **toutes les protections tombent, silencieusement**. Rien ne le signale : le site fonctionne parfaitement… et n'est plus protégé.
+
+**La correction** — verrouiller l'échappatoire sur l'environnement :
+
+```js
+export const limitesDesactivees =
+  process.env.NODE_ENV !== "production" &&      // ← le verrou
+  process.env.RATE_LIMIT_DISABLED === "1";
+```
+
+Même si `RATE_LIMIT_DISABLED=1` se retrouve dans le `.env` de production, il est **sans effet**.
+
+**Le principe général** : un mécanisme de confort (mode debug, désactivation d'une protection, données de test, logs verbeux) doit être **structurellement impossible** à activer en production — pas seulement « on fait attention à ne pas le faire ». On ne se protège pas d'une erreur humaine avec de la discipline, mais avec du code qui rend l'erreur inoffensive.
+
+C'est la même logique que le filtre de mes tests, qui ne supprime que les comptes dont l'email commence par `e2e-test+` : même si le script part en vrille, il ne *peut pas* toucher un vrai compte.
+
+---
+
+### 43. Des tests qui tournent contre la vraie application (et pourquoi ça change tout)
+
+**Contexte** : tous les tests écrits pendant l'audit étaient temporaires, dans un dossier jetable. Ils ont été versionnés dans `tests/`.
+
+**Le choix technique** : pas de Jest, pas de Vitest. Les tests s'exécutent contre l'**application réellement démarrée** (backend + frontend + MySQL) : un simple script Node suffit, et ça évite une dépendance de plus.
+
+Deux suites, qui ne testent pas la même chose :
+
+- **`e2e.test.mjs`** — les parcours, dans un vrai navigateur (Playwright). *Est-ce que l'app fait ce qu'elle doit faire ?*
+- **`securite.test.mjs`** — l'API attaquée **directement**, sans passer par l'interface. C'est le point de vue d'un attaquant : il n'utilise pas mes boutons, il envoie des requêtes. C'est exactement comme ça que la faille du catalogue avait été trouvée — les routes n'étaient appelées par aucun bouton, je les croyais donc inaccessibles.
+
+**Ce que j'en retiens surtout : le test de non-régression.** Chaque bug corrigé pendant l'audit est devenu un test :
+
+```js
+verifier(
+  "reconnexion : les coeurs des titres deja likes sont pleins",
+  pleins === 1,
+);
+```
+
+Ce test-là **échouait** avant le correctif. Il passe maintenant. Si je casse à nouveau la logique des `useEffect`, il redeviendra rouge immédiatement. **Un bug corrigé sans test peut revenir ; un bug corrigé avec un test est verrouillé.**
+
+**Deux détails de conception qui comptent :**
+
+1. **Le code de sortie.** `process.exitCode = 1` s'il y a un échec. Sans ça, une CI verrait le script se terminer « normalement » et croirait que tout va bien, alors que des tests sont rouges.
+
+2. **Un test doit être honnête sur ce qu'il ne teste pas.** Quand les limites anti-abus sont désactivées (pour que la suite puisse créer ses comptes), le test anti brute-force ne peut évidemment pas passer. Il est alors **ignoré avec un avertissement visible**, plutôt que « adapté » pour passer quand même. Un test vert qui ne vérifie rien est pire que pas de test : il donne une fausse confiance.
+
+---
