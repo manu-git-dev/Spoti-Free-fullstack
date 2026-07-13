@@ -1,0 +1,17 @@
+{
+  "name": "spotifree-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests de bout en bout de Spoti-Free (parcours utilisateur + securite de l'API).",
+  "scripts": {
+    "test": "node e2e.test.mjs && node securite.test.mjs",
+    "test:e2e": "node e2e.test.mjs",
+    "test:securite": "node securite.test.mjs",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.5",
+    "playwright": "^1.61.1"
+  }
+}
