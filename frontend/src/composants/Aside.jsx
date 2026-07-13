@@ -1,4 +1,4 @@
-import { Folder, Heart, Home, Library, Plus, Info, Mail } from "lucide-react";
+import { Folder, Heart, Home, Library, Plus, Info, Mail, User } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
 
@@ -47,6 +47,17 @@ export default function Aside({
         >
           <Heart className=" mr-2" />
           Favoris
+        </NavLink>
+        <NavLink
+          to={"/profil"}
+          className={({ isActive }) =>
+            `flex text-xl  p-2 items-center mt-4 rounded-[10px]  ${
+              isActive ? "bg-accent/15 text-accent" : "text-base-content/70"
+            }`
+          }
+        >
+          <User className=" mr-2" />
+          Profil
         </NavLink>
       </nav>
       <div className="h-px w-full bg-base-300" />
