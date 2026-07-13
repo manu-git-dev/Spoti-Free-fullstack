@@ -3,7 +3,7 @@ import HeaderMobile from "./composants/HeaderMobile";
 import BottomNav from "./composants/BottomNav";
 import { useEffect, useState } from "react";
 import MediaPlayer from "./composants/MediaPlayer";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Bibliotheque from "./pages/Bibliotheque";
 import Login from "./pages/Login";
@@ -15,6 +15,7 @@ import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
@@ -44,10 +45,54 @@ function App() {
       })
       .catch((error) => console.error(error));
   }, []);
+  // Le token JWT expire (24h). Passe ce delai, le token stocke reste dans localStorage :
+  // l'app croyait donc l'utilisateur connecte ("Bonjour X", bouton Deconnexion), alors que
+  // chaque action echouait avec "Token invalide". On purge la session des qu'une route
+  // protegee repond 401.
+  function sessionExpiree() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+    toast.info("Ta session a expiré, reconnecte-toi.");
+  }
+
+  // Ces deux effets dependent de `token` (le state), et non de localStorage lu une seule
+  // fois au montage : localStorage n'est pas reactif, donc avec `[]` en dependances ils ne
+  // se relancaient jamais apres une connexion. Consequence : `musiquesLikee` restait vide,
+  // les coeurs des musiques deja likees s'affichaient vides, et recliquer dessus renvoyait
+  // une erreur (like en doublon).
   useEffect(() => {
-    const url = `http://localhost:3000/api/users/likes`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
+    if (!token) {
+      setMusiquesLikee([]);
+      return;
+    }
+    fetch(`http://localhost:3000/api/users/likes`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        if (response.status === 401) {
+          sessionExpiree();
+          return null;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data === null) return;
+        setMusiquesLikee(Array.isArray(data) ? data : []);
+      })
+      .catch((error) => console.error(error));
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setPlaylists([]);
+      return;
+    }
+    fetch(`http://localhost:3000/api/playlists`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -55,33 +100,10 @@ function App() {
     })
       .then((response) => response.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setMusiquesLikee(data);
-        } else {
-          setMusiquesLikee([]);
-        }
+        setPlaylists(Array.isArray(data) ? data : []);
       })
       .catch((error) => console.error(error));
-  }, []);
-  useEffect(() => {
-    const url = `http://localhost:3000/api/playlists`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPlaylists(data);
-        } else {
-          setPlaylists([]);
-        }
-      })
-      .catch((error) => console.error(error));
-  }, []);
+  }, [token]);
 
   let musiquesFiltre = musiques.filter(
     (musique) =>

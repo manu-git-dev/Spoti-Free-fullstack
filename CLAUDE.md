@@ -29,7 +29,8 @@ frontend/
 - Les dossiers/fichiers frontend spécifiques au projet sont en français (`composants/`), garder cette cohérence pour les nouveaux fichiers plutôt que de basculer en anglais.
 - Les routes API sont préfixées `/api/musics`, `/api/users`, `/api/playlists` (voir `server.js`).
 - Les routes protégées passent par `authMiddleware` (JWT dans le header `Authorization: Bearer <token>`), qui attache le payload décodé à `req.user`.
-- Auth : hash des mots de passe avec `bcrypt.hash` à l'inscription (`POST /api/users/inscription`), vérif avec `bcrypt.compare` + génération JWT (expiration 2h) à la connexion (`POST /api/users/connexion`).
+- Les routes d'**administration** (gestion du catalogue : `POST /api/musics/ajouter`, `PUT /api/musics/update/:id`, `DELETE /api/musics/delete/:id`, et `GET /api/users`) passent par `authMiddleware` **puis** `adminMiddleware`, qui relit le rôle en base (colonne `users.role`, valeurs `user`/`admin`) et répond `403` si l'utilisateur n'est pas admin.
+- Auth : hash des mots de passe avec `bcrypt.hash` à l'inscription (`POST /api/users/inscription`), vérif avec `bcrypt.compare` + génération JWT (expiration **24h**) à la connexion (`POST /api/users/connexion`). À l'expiration, le front purge la session automatiquement quand une route protégée répond `401` (voir `App.jsx`).
 
 ## Lancer le projet en dev
 
