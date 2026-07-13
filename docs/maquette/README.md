@@ -17,5 +17,11 @@ permettent de consulter le design sur n'importe quelle machine, sans avoir Penci
 | Contact | `mobile-contact.png` | `desktop-contact.png` |
 | Connexion | `mobile-connexion.png` | `desktop-connexion.jpeg` |
 | Inscription | `mobile-inscription.png` | `desktop-inscription.jpeg` |
+| Profil | `mobile-profil.png` | `desktop-profil.png` |
 
-Pas encore maquettés : Playlists, Profil.
+Pas encore maquetté : Playlists.
+
+Note écran Profil : sur desktop, l'onglet "Profil" a été ajouté à la nav principale de
+l'`Aside` (Accueil/Bibliothèque/Favoris/Profil) — les autres écrans desktop déjà maquettés
+(Accueil, Bibliothèque, etc.) n'ont pas encore été mis à jour avec ce 4e onglet, c'est
+prévu au fur et à mesure plutôt qu'en un seul passage.
