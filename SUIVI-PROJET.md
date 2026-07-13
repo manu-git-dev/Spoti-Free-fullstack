@@ -106,16 +106,75 @@ Les deux effets dependent maintenant de `token` (le state). Voir la note 31 de
 
 ### Points restants (non bloquants)
 
-Tous les points listes ici apres l'audit ont ete traites le 2026-07-13 (voir la section
-suivante). Restent :
+- Le token est stocke dans `localStorage` : lisible par du JavaScript, donc volable en cas de
+  faille XSS. L'alternative (cookie `httpOnly` + `SameSite`) est plus sure mais demande de
+  revoir l'authentification. Assume a ce stade.
+- Le bundle frontend depasse 500 kB : un code-splitting (`import()` dynamique) accelererait le
+  premier chargement. Sans consequence fonctionnelle.
+- Pas de CI : les tests existent (`cd tests && npm test`) et sortent en code 1 en cas d'echec,
+  il ne reste qu'a les brancher sur un workflow GitHub Actions.
 
-- Le `dist/` du frontend depasse 500 kB : envisager du code-splitting (`dynamic import()`)
-  avant un vrai deploiement. Non bloquant.
-- `express-rate-limit` compte par IP : derriere un reverse proxy (Nginx, Hostinger), il faudra
-  `app.set("trust proxy", 1)` dans `server.js`, sinon toutes les requetes paraitront venir de
-  la meme IP (celle du proxy) et la limite bloquerait tout le monde.
-- Deploiement : rejouer `backend/scripts/add-role-column.sql` et `add-play-count.sql` sur la
-  base de production, et definir `VITE_API_URL` dans l'environnement du frontend.
+## Durcissement avant deploiement + suite de tests - 2026-07-13 - fait
+
+Reponse a la question "l'app est-elle prete a etre deployee ?" : elle ne l'etait pas. La partie
+*application* etait saine, c'est la partie *mise en ligne* qui manquait.
+
+### Le formulaire de contact pouvait servir a inonder la boite mail (le plus grave)
+
+`POST /api/contact` envoie un VRAI mail a chaque appel, sans aucune limite. Une fois le site en
+ligne, n'importe quel bot (ils scannent les formulaires en permanence) pouvait boucler dessus :
+boite noyee, voire compte Gmail suspendu pour envoi abusif.
+
+- 3 messages par IP et par heure, avec `skipFailedRequests` : seuls les envois REELLEMENT partis
+  comptent, donc un visiteur qui se trompe de format d'email n'est pas puni.
+- Format d'email valide cote serveur (sinon `replyTo` prenait une valeur arbitraire) et limite
+  de taille (rien n'empechait un message de plusieurs Mo).
+
+### Les autres correctifs
+
+- **CORS** : `cors()` sans option autorisait TOUTES les origines. Restreint a `FRONTEND_URL`.
+- **`JWT_SECRET`** : 27 caracteres -> 64 aleatoires. C'est la cle qui signe tous les tokens ;
+  devinee, elle permet de forger un token admin.
+- **`trust proxy`** (si `NODE_ENV=production`) : sans lui, derriere un reverse proxy, Express voit
+  l'IP du PROXY — le rate limiter aurait bloque **tous** les visiteurs d'un coup au 11e echec.
+- **Middleware d'erreur global** : une exception non rattrapee renvoyait la stack trace au client
+  (fuite des chemins de fichiers). Elle est loggee cote serveur, le client recoit un message
+  generique. Et une route inconnue renvoie du JSON, plus la page HTML par defaut d'Express.
+
+### Les protections sont desactivables... sauf en production
+
+La suite de tests cree plusieurs comptes par execution et se faisait bloquer par ses propres
+protections. `RATE_LIMIT_DISABLED=1` les coupe — mais la variable est **sans effet si
+`NODE_ENV=production`** (voir `backend/src/config.js`). Meme oubliee dans un `.env` de prod, les
+protections restent actives : une protection ne doit jamais pouvoir etre desactivee par une
+variable laissee la par megarde.
+
+### Suite de tests versionnee (`tests/`)
+
+Jusqu'ici les tests etaient temporaires, hors du depot — un vrai manque pour un projet vitrine.
+
+```bash
+cd tests && npm install && npm test     # 44 verifications
+```
+
+- `e2e.test.mjs` (26) : parcours utilisateur dans un vrai navigateur.
+- `securite.test.mjs` (18) : securite de l'API, en tapant directement dessus — le point de vue
+  d'un attaquant, qui n'utilise pas l'interface.
+
+Plusieurs sont des tests de **non-regression** : ils verrouillent les bugs reels de l'audit (le
+bug des likes apres reconnexion, la faille du catalogue, l'app qui depassait l'ecran) pour qu'ils
+ne reviennent pas sans etre detectes. Le processus sort en **code 1** si un test echoue : il n'y
+a plus qu'a brancher une CI.
+
+Les comptes de test portent le prefixe `e2e-test+` et sont supprimes automatiquement ; le filtre
+de nettoyage ne cible que ce prefixe, un vrai compte ne peut donc jamais etre touche.
+
+### `DEPLOIEMENT.md`
+
+Checklist de mise en production. Le point a ne pas rater : **purger les comptes de demonstration**.
+La base de dev contient `patrick@test.fr`, `admin@admin.fr`, `testshadcn…` — dont un **admin**
+dont le mot de passe n'est plus maitrise. L'emmener en production laisserait une porte ouverte
+sur tout le catalogue.
 
 ## Top 5 reel, apiFetch, anti brute-force, a11y, fix de l'Aside - 2026-07-13 - fait
 
