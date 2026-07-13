@@ -144,6 +144,23 @@ router.post("/inscription", async (req, res) => {
         message: "Tous les champs sont obligatoires.",
       });
     }
+
+    // Ces deux controles doivent vivre ICI, cote serveur : le `type="email"` du formulaire
+    // et la verification du mot de passe cote React ne protegent que le navigateur, et se
+    // contournent en appelant l'API directement.
+    const emailValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailValide) {
+      return res.status(400).json({
+        message: "L'adresse email n'est pas valide.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Le mot de passe doit contenir au moins 8 caractères.",
+      });
+    }
+
     const [uniqueEmail] = await db.query(
       "SELECT * FROM `users` WHERE email = ?",
       [email],

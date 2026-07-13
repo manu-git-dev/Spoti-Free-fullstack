@@ -865,3 +865,125 @@ useEffect(() => {
 **À noter aussi** : ce bug de front a été *masqué* par un défaut de backend. Un doublon devrait renvoyer un **409 Conflict** ("cette musique est déjà dans tes favoris"), pas un **500** ("erreur serveur"). Un 500 dit "quelque chose a cassé chez moi" ; un 409 dit "ta demande entre en conflit avec l'état actuel" — c'est une information exploitable, qui m'aurait mis sur la piste tout de suite.
 
 ---
+
+## 2026-07-13 — Spoti-Free (audit complet de l'application)
+
+### 32. Une route sans middleware est une porte ouverte : le cas de mon catalogue
+
+**Contexte** : audit de sécurité du backend, route par route.
+
+**Le problème** : dans `musicRoute.js`, trois routes n'avaient **aucun middleware** :
+
+```js
+router.post("/ajouter", async (req, res) => { ... });        // ← rien
+router.put("/update/:id", async (req, res) => { ... });      // ← rien
+router.delete("/delete/:id", async (req, res) => { ... });   // ← rien
+```
+
+Testé en conditions réelles : **sans le moindre token**, j'ai pu créer une musique, la modifier, puis la supprimer. N'importe qui connaissant l'URL pouvait vider tout le catalogue.
+
+Pourquoi je ne l'avais pas vu : **le frontend n'appelle jamais ces routes**. Aucun bouton "supprimer une musique" n'existe dans l'interface. J'ai donc raisonné comme si elles étaient inaccessibles — alors qu'une API HTTP est publique par nature. Un `curl` suffit. **Ce n'est pas parce qu'un bouton n'existe pas dans l'UI que l'action est protégée.** La sécurité est *forcément* côté serveur.
+
+**La correction — authentification ≠ autorisation.** Deux questions distinctes :
+- **Qui es-tu ?** → `authMiddleware` : le token est-il valide ? Sinon **401 Unauthorized**.
+- **As-tu le droit ?** → `adminMiddleware` : ton rôle t'autorise-t-il cette action ? Sinon **403 Forbidden**.
+
+D'où l'enchaînement (l'ordre compte : le second s'appuie sur `req.user` posé par le premier) :
+
+```js
+router.delete("/delete/:id", authMiddleware, adminMiddleware, async (req, res) => { ... });
+```
+
+Il n'existait pas de notion de rôle : le code testait `if (idUser !== 10)` en dur. J'ai ajouté une colonne `users.role` (`'user' | 'admin'`).
+
+**Détail qui compte : le rôle est relu en base à chaque requête**, pas lu dans le JWT. Un JWT est *signé*, donc non falsifiable — mais il est **figé** jusqu'à son expiration. Si j'y mettais `role: "admin"` et que je retirais les droits à quelqu'un, son token continuerait de le déclarer admin pendant 24h. Relire en base coûte une requête, mais un retrait de droits prend effet immédiatement.
+
+---
+
+### 33. `req.body` peut être `undefined` : la validation front ne protège que le navigateur
+
+Deux découvertes de l'audit, liées par la même idée.
+
+**a) L'API acceptait n'importe quoi.** En appelant directement le backend :
+
+```
+POST /api/users/inscription  { password: "a" }              → 201 Created
+POST /api/users/inscription  { email: "pas-un-email" }      → 201 Created
+```
+
+Pourtant mon formulaire a bien un `type="email"` et une vérification du mot de passe en React. Mais **ces contrôles ne s'exécutent que dans le navigateur** : un `curl`, Postman ou un script les contourne entièrement. Le formulaire sert le confort de l'utilisateur (feedback immédiat) ; **la seule validation qui protège les données est celle du serveur**. Les deux ne sont pas redondantes, elles n'ont pas le même rôle.
+
+**b) Une requête sans `Content-Type` faisait planter la route en 500.** Avec Express 5, `express.json()` ne renseigne `req.body` **que si** la requête porte `Content-Type: application/json`. Sinon `req.body` vaut `undefined`, et la première ligne qui fait :
+
+```js
+const nom = req.body.nom;   // TypeError: Cannot read properties of undefined
+```
+
+part dans le `catch` → **500 "Erreur serveur"**, alors que la vraie réponse est **400 "requête malformée"**. Un 500 dit "j'ai un bug chez moi", un 400 dit "ta requête est invalide" : confondre les deux envoie le débogage dans la mauvaise direction.
+
+Corrigé une fois pour toutes dans `server.js`, plutôt que route par route :
+
+```js
+app.use(express.json());
+app.use((req, res, next) => {
+  if (!req.body) req.body = {};   // garantit un objet, quel que soit le Content-Type
+  next();
+});
+```
+
+---
+
+### 34. `createConnection` vs `createPool` : un point de rupture unique
+
+**Contexte** : `db.js` utilisait `mysql.createConnection()` — **une seule** connexion TCP, ouverte au démarrage et gardée à vie.
+
+**Le problème** : c'est un *single point of failure*. Si MySQL ferme cette connexion (timeout d'inactivité, redémarrage du serveur, coupure réseau), elle n'est **pas rétablie** : toutes les requêtes suivantes échouent jusqu'à ce que je redémarre Node à la main. En local ça ne se voit pas ; en production, l'app tombe toute seule au bout de quelques heures d'inactivité.
+
+Second problème : une connexion unique **sérialise** les requêtes. Deux utilisateurs simultanés attendent chacun leur tour.
+
+**La solution** — un *pool* : un ensemble de connexions gérées automatiquement. Il en ouvre à la demande, les réutilise, et **en recrée une si l'une tombe**.
+
+```js
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  // ...
+  waitForConnections: true,
+  connectionLimit: 10,   // 10 connexions max en parallele
+  queueLimit: 0,         // file d'attente illimitee au-dela
+});
+```
+
+Bonne surprise : **l'API est identique** (`db.query(...)`), donc aucune route n'a eu à changer. Seule subtilité, le pool est *paresseux* — il n'ouvre rien tant qu'on ne lui demande pas de connexion. Je force donc un `getConnection()` au démarrage pour vérifier tout de suite que la base répond, au lieu de le découvrir à la première requête d'un utilisateur.
+
+---
+
+### 35. Un `404` n'est pas un « je n'ai rien trouvé » : liste vide ≠ ressource inexistante
+
+**Contexte** : plusieurs routes renvoyaient `404` quand l'utilisateur n'avait **aucun** like / aucune playlist :
+
+```js
+if (playlists.length === 0) {
+  return res.status(404).json({ message: "Aucune playlist." });  // ← faux
+}
+```
+
+**Pourquoi c'est faux** : `404 Not Found` signifie « **la ressource que tu demandes n'existe pas** » (mauvaise URL). Or ici l'URL `/api/playlists` existe parfaitement, le serveur l'a traitée avec succès, et la réponse — « tu as zéro playlist » — est une **information valide**. Une collection vide est un résultat normal, pas une erreur. La bonne réponse est donc :
+
+```js
+return res.status(200).json(playlists);   // 200 avec []
+```
+
+**La conséquence concrète côté front** : mon code était obligé de traiter un cas d'erreur qui n'en était pas un (`if (Array.isArray(data))… else []`), et une vraie erreur devenait indiscernable d'une liste vide.
+
+**La règle générale** : le code de statut décrit **ce qui est arrivé à la requête**, pas le contenu de la réponse.
+- `200` — requête traitée. Le corps peut très bien être vide (`[]`).
+- `400` — la requête est malformée (**c'est le client qui a tort**).
+- `401` — pas authentifié (« je ne sais pas qui tu es »).
+- `403` — authentifié mais pas autorisé (« je sais qui tu es, et tu n'as pas le droit »).
+- `404` — la ressource demandée n'existe pas.
+- `409` — conflit avec l'état actuel (ex : ce like existe déjà).
+- `500` — **le serveur a planté** : à réserver aux vrais bugs, jamais à un cas métier prévu.
+
+C'est exactement ce qui m'avait égaré sur le bug des likes : un doublon renvoyait `500` (« erreur serveur ») alors que c'était un `409` (« ça existe déjà »). Le mauvais code de statut m'a fait chercher un bug serveur là où il y avait une règle métier.
+
+---
