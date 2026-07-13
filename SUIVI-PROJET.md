@@ -4,7 +4,7 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## Prochaines etapes priorisees (au 2026-07-13)
+## Prochaines etapes priorisees (mise a jour 2026-07-13, apres la passe shadcn/Midnight Bloom)
 
 Liste dans l'ordre voulu par Manuel - a traiter dans cet ordre, une fois cette liste
 terminee : check/test complet de l'app, puis deploiement (serveur Hostinger a acheter),
@@ -13,22 +13,70 @@ puis reflexion sur de nouvelles fonctionnalites pour plus tard.
 1. Inscription : le champ "confirmation mot de passe" existe deja cote UI mais sans
    logique derriere (voir `Register.jsx`) - a implementer. Voir aussi si on ajoute des
    regles de securite sur le mot de passe (longueur min, majuscule, etc.) - a trancher.
-2. Logo "Spoti-Free" trop petit / pas assez travaille visuellement - retouche de style a
-   prevoir (ou `Aside.jsx`/`HeaderMobile.jsx` le concernant).
-3. `Aside.jsx` - la logique d'affichage de la liste "Mes playlists" n'est pas robuste si
-   l'utilisateur a beaucoup de playlists (pas de scroll interne visiblement, risque que
-   l'Aside grandisse sans limite) - a retoucher et verifier avec un cas a beaucoup
-   d'entrees.
-4. `Playlists.jsx` (page "Mes playlists" connecte) - contenu trop pauvre actuellement
-   (juste quelques boutons), a etoffer.
+2. ~~Logo "Spoti-Free" trop petit~~ - **fait** (agrandi + degrade primary->accent dans
+   `Aside.jsx` et `HeaderMobile.jsx`).
+3. ~~`Aside.jsx` - liste "Mes playlists" sans scroll interne~~ - **fait** (le bloc
+   playlists prend la hauteur restante, `flex-1 min-h-0` + `overflow-y-auto` sur la liste).
+   Reste a verifier de visu avec beaucoup d'entrees.
+4. ~~`Playlists.jsx` - contenu trop pauvre~~ - **fait** (vraies cartes : pochette degradee
+   generee depuis l'id, actions renommer/supprimer en icones revelees au survol).
 5. Revoir le contenu texte de la page A propos (`Apropos.jsx`).
-6. Les `<dialog>`/modals de l'app ont un style a revoir - boutons disproportionnes,
-   pas jolies actuellement (ex: modal d'ajout de musique a une playlist).
-7. Les messages d'erreur/succes renvoyes par le backend sont corrects sur le fond, mais
-   leur affichage cote front n'est pas forcement soigne partout - a auditer page par page.
+6. ~~Modals au style a revoir~~ - **fait** (actions regroupees dans le `DialogFooter`,
+   `Annuler`/`Ajouter` cote a cote au lieu d'un bouton pleine largeur + un footer separe ;
+   textes anglais residuels traduits).
+7. Messages d'erreur/succes : **partiellement fait**. L'`Alert` d'`AddMusicPlaylist` etait
+   rendue *dans* la `TrackRow` et deformait la ligne - elle est remontee dans la modale.
+   **Reste ouvert** : `RemoveMusicPlaylist` a exactement le meme defaut (Alert inline dans
+   la ligne) mais n'a pas de modale ou la loger. La bonne solution est un systeme de
+   **toasts global** (`sonner`, le standard shadcn) qui remplacerait toutes ces `Alert`
+   locales - a trancher avec Manuel, ca touche l'architecture du feedback, pas juste le style.
 8. Repasser sur tous les codes de statut HTTP du backend (deja partiellement note plus
    bas : `404` utilise a la place de `409`/`400` par endroits) - passe de verification
    complete a faire route par route.
+
+## Passe shadcn/ui + theme Midnight Bloom - 2026-07-13 - faite
+
+Contexte : la migration vers shadcn/ui (composants dans `src/components/ui/`, en anglais,
+a cote des composants metier de `src/composants/` en francais - les deux cohabitent
+volontairement) etait faite mais non commitee, et l'app restait visuellement monochrome.
+
+Diagnostic : les tokens du theme **etaient deja corrects** dans `index.css` (les valeurs
+oklch correspondent exactement au preset officiel `midnight-bloom` de tweakcn : primary
+`#6c5ce7` violet, card `#2f3436` gris, accent `#6495ed` bleu, secondary `#4b0082` indigo).
+Le probleme n'etait pas les couleurs mais leur **usage** :
+
+- `App.jsx` gardait `bg-zinc-900` sur le `main` - un gris Tailwind **hors theme**, et plus
+  sombre que la sidebar : les deux zones se fondaient l'une dans l'autre. C'etait le dernier
+  reliquat des "classes couleur en dur" listees dans les points ouverts.
+- Le token `--card` (le gris du theme) n'etait utilise **nulle part** dans le contenu : les
+  `TrackRow` et les pages flottaient directement sur `--background`, d'ou l'aplat noir.
+- `secondary` et `accent` etaient quasi absents. Le seul element colore de la Home etait le
+  bouton **rouge** "Se deconnecter" - l'oeil etait attire par la pire action de la page.
+
+Hierarchie de surfaces retenue (a respecter pour tout nouveau composant) :
+- `bg-background` : le fond de l'app, sert de gouttiere entre les panneaux.
+- `bg-card` / `bg-sidebar` + `border-border` : les panneaux (main, Aside, MediaPlayer,
+  BottomNav, HeaderMobile).
+- `bg-background/50` + `border-border` : les elements **a l'interieur** d'un panneau
+  (TrackRow, Card, cartes de playlist, blocs de Profil, formulaire de Contact). Ils se
+  "creusent" dans le panneau clair. **Ne plus utiliser `bg-card` la-dedans** : depuis que le
+  `main` est en `bg-card`, un enfant en `bg-card` devient invisible.
+
+Roles couleur (a suivre) :
+- **primary** (violet) : identite + etat actif (logo, nav active, piste en cours, player).
+- **accent** (bleu) : survol et interactions secondaires.
+- **secondary** (indigo) : decor (le halo "bloom" en haut du contenu).
+- **destructive** (rouge) : suppressions reelles uniquement - **pas** la deconnexion.
+
+Corrige au passage : `ButtonAddPlaylist` forcait `size="icon-sm"` sur son trigger, donc le
+bouton "Ajouter une playlist" (texte long) debordait de l'ecran - le trigger est desormais
+parametrable (`variant`/`size`/`className`). Icones `Github`/`Linkedin` remplacees par
+`Code2`/`Briefcase` (les logos de marques ont ete retires de lucide-react). Cle React
+manquante sur la liste de `Playlists.jsx`.
+
+Verifie avec Playwright en session authentifiee reelle (compte de test peuple avec
+playlists + likes, puis supprime de la base), desktop 1440 et mobile 390, sur toutes les
+routes + l'etat "en lecture" + les modales.
 
 ## Phase actuelle (au 2026-07-06)
 
