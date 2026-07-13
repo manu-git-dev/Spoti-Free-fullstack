@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+import { limitesDesactivees } from "../config.js";
 
 // Anti brute-force : sans cette limite, un script peut tester des milliers de mots de passe
 // a la seconde sur /connexion. bcrypt ralentit chaque tentative, mais ne les empeche pas.
@@ -15,6 +16,7 @@ const limiteConnexion = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   skipSuccessfulRequests: true,
+  skip: () => limitesDesactivees,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -27,6 +29,7 @@ const limiteConnexion = rateLimit({
 const limiteInscription = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 20,
+  skip: () => limitesDesactivees,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
