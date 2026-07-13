@@ -10,9 +10,15 @@ Liste dans l'ordre voulu par Manuel - a traiter dans cet ordre, une fois cette l
 terminee : check/test complet de l'app, puis deploiement (serveur Hostinger a acheter),
 puis reflexion sur de nouvelles fonctionnalites pour plus tard.
 
-1. Inscription : le champ "confirmation mot de passe" existe deja cote UI mais sans
-   logique derriere (voir `Register.jsx`) - a implementer. Voir aussi si on ajoute des
-   regles de securite sur le mot de passe (longueur min, majuscule, etc.) - a trancher.
+1. ~~Inscription : confirmation du mot de passe + regles de securite~~ - **fait**.
+   La confirmation etait deja implementee (verifie par test : deux mots de passe differents
+   bloquent la creation du compte). L'audit du 2026-07-13 a montre que l'API acceptait en
+   revanche **n'importe quoi** quand on l'appelait directement : `password: "a"` -> 201, et
+   `email: "pas-un-email"` -> 201. Les deux sont desormais valides **cote backend**
+   (`POST /api/users/inscription`) : format d'email, et mot de passe d'au moins 8 caracteres.
+   La regle des 8 caracteres est volontairement sobre - a durcir si tu veux (majuscule,
+   chiffre, caractere special). **A retenir** : `type="email"` et une verification en React ne
+   protegent que le navigateur, jamais l'API.
 2. ~~Logo "Spoti-Free" trop petit~~ - **fait** (agrandi + degrade primary->accent dans
    `Aside.jsx` et `HeaderMobile.jsx`).
 3. ~~`Aside.jsx` - liste "Mes playlists" sans scroll interne~~ - **fait** (le bloc
@@ -32,36 +38,84 @@ puis reflexion sur de nouvelles fonctionnalites pour plus tard.
    `RemoveMusicPlaylist` etait donc rendue dans la `TrackRow` et deformait la ligne.
    `Login.jsx`/`Register.jsx` gardent volontairement leurs `<Alert>` inline : une erreur de
    validation doit rester a cote du champ concerne, ce n'est pas le role d'un toast.
-8. Repasser sur tous les codes de statut HTTP du backend (deja partiellement note plus
-   bas : `404` utilise a la place de `409`/`400` par endroits) - passe de verification
-   complete a faire route par route. **Cas concret identifie** : un like en doublon fait
-   echouer l'`INSERT` sur la cle primaire `(id_user, id_music)` et remonte un **500**
-   (`"Erreur lors de l'ajout du like."`) alors que c'est un **409 Conflict**.
+8. ~~Codes de statut HTTP du backend~~ - **fait** (passe complete route par route lors de
+   l'audit du 2026-07-13) :
+   - like en doublon : `500` -> **`409`** (c'etait la cause visible du bug des likes)
+   - musique deja dans une playlist : `404` -> **`409`**
+   - nom de playlist vide : `404` -> **`400`** (+ la creation ne validait pas du tout le nom)
+   - listes vides (`/likes`, `/playlists`, contenu d'une playlist) : `404` -> **`200 []`**
+     (une liste vide est un resultat valide, pas une ressource introuvable)
 
-## BUG A CORRIGER (par Manuel) : likes impossibles sur certaines musiques
+## Audit complet de l'application - 2026-07-13 - fait
 
-**Symptome** : certaines musiques refusent d'etre likees (message d'erreur), d'autres non.
-Apres un F5, tout rentre dans l'ordre - ce qui rend le bug deroutant.
+Passe de verification de bout en bout (backend route par route + 21 tests de parcours
+Playwright sur l'app reelle). Tout ce qui suit a ete **reproduit** avant d'etre corrige.
 
-**Cause** (reproduite avec Playwright le 2026-07-13) : dans `App.jsx`, le `useEffect` qui
-charge les likes a `[]` comme tableau de dependances et lit `localStorage.getItem("token")`
-*a l'interieur*. Il ne tourne donc **qu'au montage** :
+### Faille de securite (critique) - corrigee
 
-1. On arrive sur l'app deconnecte -> l'effet tourne sans token -> `musiquesLikee = []`.
-2. On se connecte -> `setToken`/`setUser` declenchent un re-render, **mais l'effet ne se
-   relance pas** (dependances `[]`) -> `musiquesLikee` reste **vide**.
-3. Tous les coeurs s'affichent donc vides, **y compris ceux des musiques deja likees**.
-   (Verifie : apres connexion via le formulaire, 20 coeurs vides / 0 plein alors qu'une
-   musique est bien likee en base.)
-4. Cliquer sur l'un d'eux relance un `INSERT` -> violation de la cle primaire
-   `(id_user, id_music)` -> le backend renvoie **500** et le like echoue.
+`POST /api/musics/ajouter`, `PUT /api/musics/update/:id` et `DELETE /api/musics/delete/:id`
+n'avaient **aucun middleware**. Verifie en conditions reelles : sans le moindre token, on
+pouvait creer, modifier **et supprimer** les musiques du catalogue.
 
-**Piste de correction** : l'effet doit se relancer quand le token change (meme correction
-que celle deja appliquee dans `Profil.jsx`). Le `useEffect` des **playlists**, juste en
-dessous dans `App.jsx`, a exactement le meme defaut.
+- Nouvelle colonne `users.role` (`user` | `admin`), voir `backend/scripts/add-role-column.sql`
+  (a rejouer sur toute autre machine / base).
+- Nouveau `adminMiddleware` : relit le role **en base** a chaque requete plutot que de le lire
+  dans le JWT, pour qu'un retrait de droits prenne effet immediatement sans attendre
+  l'expiration du token.
+- Les 3 routes du catalogue + `GET /api/users` passent par `authMiddleware` + `adminMiddleware`
+  (`401` sans token, `403` pour un utilisateur normal). Le test `idUser !== 10` code en dur a
+  disparu.
 
-**Cote backend** (lie au point 8) : un doublon devrait renvoyer un `409 Conflict` explicite
-plutot qu'un `500`, pour que le front puisse afficher un message utile.
+### Bug des likes - corrige
+
+Cause : dans `App.jsx`, les effets qui chargent likes et playlists avaient `[]` en dependances
+et lisaient `localStorage` a l'interieur. **localStorage n'est pas reactif** : les effets ne se
+relancaient donc jamais apres une connexion. `musiquesLikee` restait vide -> les coeurs des
+musiques deja likees s'affichaient vides -> recliquer dessus declenchait un `INSERT` en doublon
+-> violation de la cle primaire `(id_user, id_music)` -> `500`.
+
+Les deux effets dependent maintenant de `token` (le state). Voir la note 31 de
+`NOTES-APPRENTISSAGE.md`.
+
+### Autres bugs corriges
+
+- `GET /api/playlists/musics/:idPlaylist` oubliait `duration` dans son `SELECT` : les durees
+  s'affichaient `--:--` dans le contenu d'une playlist.
+- `MusicsInPlaylist` : `useEffect` avec `[]` alors qu'il depend de `idPlaylist`. En passant
+  d'une playlist a une autre, React Router reutilise le composant sans le remonter -> la page
+  affichait le contenu de la **playlist precedente**. Corrige avec `[idPlaylist]`.
+- **JWT expire** (l'ancien point ouvert) : le front croyait l'utilisateur connecte ("Bonjour X",
+  bouton Deconnexion) alors que chaque action echouait avec "Token invalide". La session est
+  desormais purgee des qu'une route protegee repond `401`.
+- Les toasts, places en haut a droite, recouvraient les boutons "Connexion"/"Se deconnecter" -
+  regression introduite par la passe precedente. Ils sont remontes au-dessus du lecteur.
+- `express.json()` ne renseigne `req.body` que si le `Content-Type` est json. Sans ce header,
+  toute route POST/PUT levait une `TypeError` et repondait `500` au lieu de `400`. Garde-fou
+  global ajoute dans `server.js`.
+- Inscription : l'API acceptait `password: "a"` et `email: "pas-un-email"` (201 !). Le
+  `type="email"` du formulaire et la verification React ne protegent que le navigateur.
+  Validation ajoutee **cote serveur**.
+
+### Robustesse
+
+- `db.js` : `createConnection` -> **`createPool`** (une connexion unique est un point de rupture
+  unique : si MySQL la ferme, tout echoue jusqu'au redemarrage). L'API des routes est inchangee.
+- `express-generator` retire (outil de scaffolding CLI jamais utilise a l'execution) : il portait
+  les 5 vulnerabilites de `npm audit`. **0 vulnerabilite** sur le backend comme sur le frontend.
+- Imports morts supprimes (`useState`/`useEffect` dans Favoris et Playlists, `Link` dans App).
+
+### Points restants (non bloquants)
+
+- **Feedback des erreurs 401 sur les actions** : la session expiree est detectee au chargement
+  (effets d'`App.jsx`), mais pas sur une action isolee (un like avec un token expire affiche
+  "Token invalide" sans deconnecter). Le design propre serait un **`AuthContext` + un wrapper
+  `apiFetch` centralise** qui intercepte tous les `401` - c'est un refactor d'architecture a
+  faire consciemment, pas un patch.
+- Le bouton "Connexion" est un `<a role="button">` (shadcn `Button` + `render={<Link/>}`) : un
+  lecteur d'ecran annonce "bouton" alors que l'element navigue. Detail d'accessibilite.
+- Top 5 de `Home.jsx` : toujours un simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes.
+- Pas de limitation du nombre de tentatives de connexion (brute force) - a prevoir avant un
+  vrai deploiement public.
 
 ## Passe shadcn/ui + theme Midnight Bloom - 2026-07-13 - faite
 
@@ -251,30 +305,31 @@ Profil manquant dans `Aside.jsx`) ont ete corriges le jour meme, voir section su
 
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
-- Classes couleur encore en dur (`bg-black`, `bg-zinc-800`, `bg-zinc-900`...) dans le
-  shell `App.jsx`, pas encore migrees vers les tokens du theme (`base-100/200/300`).
-- Top 5 de `Home.jsx` : simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes (aucune
-  table/colonne de comptage n'existe encore cote backend - fonctionnalite a part, pour
-  plus tard).
-- Bug JWT : a l'expiration (2h), le frontend ne deconnecte pas automatiquement
-  l'utilisateur - a detecter via un 401/403 sur une route protegee.
-- Nettoyage differe : `userRoute.js` a un check admin en dur (`idUser !== 10`, pas de
-  role/flag propre) ; `db.js` utilise une connexion unique (`createConnection`) plutot
-  qu'un pool (`createPool`), a changer avant un vrai deploiement.
-- Codes HTTP a harmoniser : certains cas utilisent `404` alors que `409 Conflict` ou
-  `400 Bad Request` seraient plus corrects (ex: doublon dans une playlist, nom vide).
-- `AddMusicPlaylist` : pas de filtre cote frontend pour retirer de la liste deroulante
-  les playlists qui contiennent deja la musique (le backend bloque deja le doublon, mais
-  l'UX pourrait l'empecher avant meme la tentative).
-- `event.stopPropagation()` a ajouter sur les boutons imbriques dans des conteneurs
-  cliquables (`ButtonLike`/`AddMusicPlaylist`/`RemoveMusicPlaylist` dans `Card.jsx`,
-  boutons renommer/supprimer dans `Playlist.jsx`) pour eviter la propagation du clic au
-  parent.
-- `npm audit` (backend) signale 5 vulnerabilites (1 high, 4 critical) portees par
-  `express-generator` (deja present avant la passe du 2026-07-13, pas lie a l'ajout de
-  `music-metadata`) - `express-generator` est un outil de scaffolding CLI, pas utilise a
-  l'execution par `server.js` ; a nettoyer (retirer la dependance si vraiment inutilisee)
-  avant un vrai deploiement.
+Liste nettoyee apres l'audit du 2026-07-13 : les couleurs en dur, le bug JWT, le check admin
+`idUser !== 10`, `createConnection`, les codes HTTP et les vulnerabilites `npm audit` sont
+desormais **regles** (voir la section "Audit complet"). Le point `event.stopPropagation()` etait
+**obsolete** : verifie par test, les boutons (coeur, ajout, renommer/supprimer) sont des freres
+du conteneur cliquable dans le DOM, pas ses enfants - un clic dessus ne lance donc pas la lecture
+et ne navigue pas.
+
+Restent :
+
+- **Feedback des 401 sur une action isolee** : la session expiree est bien detectee au chargement
+  (effets d'`App.jsx`), mais un like effectue avec un token expire affiche "Token invalide" sans
+  deconnecter. Le design cible est un **`AuthContext` + wrapper `apiFetch`** interceptant tous les
+  `401` - refactor d'architecture, a faire consciemment.
+- Top 5 de `Home.jsx` : simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes (aucune table de
+  comptage cote backend - fonctionnalite a part, pour plus tard).
+- `AddMusicPlaylist` : pas de filtre cote frontend pour retirer de la liste deroulante les
+  playlists qui contiennent deja la musique. Le backend bloque le doublon (409, message clair),
+  mais l'UX pourrait l'empecher avant meme la tentative.
+- Accessibilite : le bouton "Connexion" est un `<a role="button">` (shadcn `Button` +
+  `render={<Link/>}`) - un lecteur d'ecran annonce "bouton" alors que l'element navigue.
+- Pas de limitation du nombre de tentatives de connexion (brute force) - a prevoir avant un vrai
+  deploiement public.
+- Deploiement : penser a rejouer `backend/scripts/add-role-column.sql` sur la base de production,
+  et a passer les URLs `http://localhost:3000` du frontend en variable d'environnement (elles sont
+  ecrites en dur dans les composants).
 
 ## Maquette Pencil
 
