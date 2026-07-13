@@ -735,3 +735,92 @@ useEffect(() => {
 Sans ce nettoyage, chaque réaffichage ou démontage du composant ajouterait un nouveau listener sans retirer l'ancien → fuite mémoire, comportements en double.
 
 ---
+
+### 28. Installer un thème (shadcn/tweakcn) ne suffit pas : le contraste vient des **tokens de surface**, pas des couleurs
+
+**Contexte** : après avoir migré vers shadcn/ui et installé le thème "Midnight Bloom" de tweakcn dans `index.css`, l'app restait quasiment toute noire, sans contraste, alors que le thème est censé être coloré (violet/bleu/indigo).
+
+**Problème** : je pensais que le thème était mal installé ou qu'il manquait des couleurs. En réalité les tokens étaient **corrects** dans `index.css` — les valeurs oklch correspondaient exactement au preset officiel (`--primary` = `#6c5ce7` violet, `--card` = `#2f3436` gris, `--accent` = `#6495ed` bleu). Le problème n'était pas les couleurs **définies**, mais les couleurs **utilisées** :
+
+1. `App.jsx` gardait `bg-zinc-900` sur le `<main>` — un gris Tailwind brut, **hors du thème**, et par-dessus le marché plus sombre que la sidebar. Les deux zones se fondaient donc l'une dans l'autre.
+2. Le token `--card` (le gris du thème, celui qui apporte justement le contraste) n'était utilisé **nulle part** dans le contenu : les `TrackRow` n'avaient un fond qu'au survol (`hover:bg-card`), donc au repos elles flottaient directement sur `--background`. D'où le grand aplat noir.
+
+**La leçon** : dans un design system type shadcn, les couleurs ne sont pas décoratives, elles ont un **rôle sémantique**. Ce sont ces rôles qui construisent la profondeur :
+
+- `background` → le fond de l'app (le niveau le plus bas) ;
+- `card` / `popover` / `sidebar` → les **panneaux** posés sur ce fond ;
+- `muted` → les éléments neutres à l'intérieur d'un panneau ;
+- `primary` / `accent` / `secondary` → l'identité et les interactions ;
+- `destructive` → **uniquement** les actions destructrices.
+
+Une classe Tailwind brute (`bg-zinc-900`, `bg-black`) court-circuite tout ce système : elle ne changera jamais avec le thème, et elle ne "sait" pas où elle se situe dans la hiérarchie. **Règle à garder** : dans un projet themé, aucune couleur en dur — que des tokens.
+
+**Sur les rôles couleur** : le seul élément vraiment coloré de ma Home était le bouton **rouge** "Se déconnecter" (`destructive`). L'œil était donc attiré par la pire action de la page. Le rouge est un signal, pas une décoration : il se réserve aux suppressions réelles. La déconnexion est redevenue discrète (grise, rouge seulement au survol).
+
+---
+
+### 29. Le contraste est **relatif** : un enfant `bg-card` dans un parent `bg-card` est invisible
+
+**Contexte** : en corrigeant le point précédent, j'ai mis le `<main>` en `bg-card` (le gris du thème) pour le détacher du fond. Mais du coup, tous les blocs qui étaient **déjà** en `bg-card` à l'intérieur (les cartes de `Card.jsx`, le formulaire de `Contact.jsx`, les blocs de stats de `Profil.jsx`, le toggle liste/grille de `Bibliotheque.jsx`) sont devenus **invisibles** : même couleur que leur parent.
+
+**Le piège** : on pense une couleur "en absolu" (`bg-card` = gris = ça se voit), alors qu'une surface ne se voit **que par différence avec ce qu'il y a derrière**. `bg-card` sur du noir ressort ; `bg-card` sur du `bg-card`, ça n'existe plus.
+
+**Solution** : une fois le panneau passé en surface claire, ses enfants doivent aller dans l'**autre sens** — plus sombres — pour se "creuser" dedans :
+
+```jsx
+// AVANT — la carte a la même couleur que le panneau qui la contient : invisible
+<article className="bg-card rounded-2xl p-3">
+
+// APRÈS — la carte se creuse dans le panneau clair
+<article className="bg-background/50 border border-border rounded-2xl p-3">
+```
+
+D'où la hiérarchie que je garde maintenant pour ce projet (notée aussi dans `SUIVI-PROJET.md`) :
+- `bg-background` → le fond de l'app, la "gouttière" entre les panneaux ;
+- `bg-card` / `bg-sidebar` + `border-border` → les panneaux (le `main`, l'`Aside`, le `MediaPlayer`) ;
+- `bg-background/50` + `border-border` → ce qui vit **à l'intérieur** d'un panneau.
+
+**À retenir** : quand on change la couleur d'un conteneur, il faut re-vérifier tous ses enfants — le contraste n'est jamais une propriété d'un élément seul, toujours d'une **paire** (élément + ce qu'il y a derrière).
+
+---
+
+### 30. Un composant ne doit pas figer le style de son propre déclencheur
+
+**Contexte** : `ButtonAddPlaylist.jsx` est utilisé à deux endroits — dans l'`Aside` (juste une icône `+`) et sur la page Playlists (un bouton texte "Ajouter une playlist"). Sur la page Playlists, le bouton **débordait de l'écran**.
+
+**Problème** : le composant imposait le style de son bouton déclencheur en dur, quel que soit son contenu :
+
+```jsx
+// le trigger est TOUJOURS un petit bouton carré d'icône...
+<DialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+  {children}   {/* ...même quand children = "Ajouter une playlist" */}
+</DialogTrigger>
+```
+
+`size="icon-sm"` donne un bouton carré dimensionné pour une icône. En lui passant un texte long, le texte ne rentre pas et sort du cadre.
+
+**Solution** : ce qui **varie selon le contexte d'appel** ne doit pas être codé en dur dans le composant, mais exposé en prop (avec une valeur par défaut pour ne pas casser l'usage existant) :
+
+```jsx
+export default function ButtonAddPlaylist({
+  children = "",
+  variant = "ghost",     // défaut : l'usage historique (icône dans l'Aside)
+  size = "icon-sm",
+  className = "",
+  ...
+}) {
+  ...
+  <DialogTrigger render={<Button variant={variant} size={size} className={className} />}>
+```
+
+L'appelant décide alors de la présentation, sans que le composant ait à connaître ses contextes d'usage :
+
+```jsx
+<ButtonAddPlaylist variant="default" size="default" className="rounded-full">
+  Ajouter une playlist
+</ButtonAddPlaylist>
+```
+
+**Le principe général** : un composant réutilisable gère la **logique** (ici : ouvrir la modale, faire le `POST`, mettre à jour la liste). La **présentation** de son point d'entrée dépend de l'endroit où on le pose — donc elle se paramètre. Quand on se retrouve à vouloir dupliquer un composant juste pour changer un `size`, c'est le signe qu'une prop manque.
+
+---
