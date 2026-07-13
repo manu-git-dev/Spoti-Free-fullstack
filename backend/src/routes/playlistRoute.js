@@ -11,13 +11,8 @@ router.get("/", authMiddleware, async (req, res) => {
       "SELECT `id_playlist`,`name` FROM `playlists` WHERE id_user = ?",
       [idUser],
     );
-    if (playlists.length === 0) {
-      return res.status(404).json({
-        message: "Aucune playlist.",
-      });
-    } else {
-      return res.status(200).json(playlists);
-    }
+    // Liste vide = resultat valide, pas une erreur -> 200 [] et non 404.
+    return res.status(200).json(playlists);
   } catch (error) {
     console.error(error);
 
@@ -32,17 +27,14 @@ router.get("/musics/:idPlaylist", authMiddleware, async (req, res) => {
   try {
     const idUser = req.user.id_user;
     const idPlaylist = req.params.idPlaylist;
+    // `duration` etait absente de ce SELECT (contrairement a GET /api/musics), d'ou des
+    // durees affichees "--:--" dans le contenu d'une playlist.
     const [musicFromPlaylist] = await db.query(
-      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,musics.id_music,`name` FROM `musics` INNER JOIN `playlists_musics` ON musics.id_music=playlists_musics.id_music INNER JOIN `playlists` ON playlists.id_playlist=playlists_musics.id_playlist WHERE playlists_musics.id_playlist = ? AND playlists.id_user = ?",
+      "SELECT `title`,`artist`,`genre`,`src_image`,`src_audio`,`duration`,musics.id_music,`name` FROM `musics` INNER JOIN `playlists_musics` ON musics.id_music=playlists_musics.id_music INNER JOIN `playlists` ON playlists.id_playlist=playlists_musics.id_playlist WHERE playlists_musics.id_playlist = ? AND playlists.id_user = ?",
       [idPlaylist, idUser],
     );
-    if (musicFromPlaylist.length === 0) {
-      return res.status(404).json({
-        message: "Pas de musiques dans cette playlist.",
-      });
-    } else {
-      return res.status(200).json(musicFromPlaylist);
-    }
+    // Playlist vide = resultat valide, pas une erreur -> 200 [] et non 404.
+    return res.status(200).json(musicFromPlaylist);
   } catch (error) {
     console.error(error);
 
@@ -59,7 +51,8 @@ router.put("/renommer/:idPlaylist", authMiddleware, async (req, res) => {
     const idPlaylist = req.params.idPlaylist;
     const name = req.body.name;
     if (!name) {
-      return res.status(404).json({
+      // 400 Bad Request : la requete du client est malformee (pas un "introuvable").
+      return res.status(400).json({
         message: "Le nom de la playlist ne peut pas être vide.",
       });
     }
@@ -116,7 +109,8 @@ router.post(
           message: "La musique est introuvable",
         });
       } else if (testSaisie3.length > 0) {
-        return res.status(404).json({
+        // 409 Conflict : la ressource existe deja (ce n'est pas un "introuvable").
+        return res.status(409).json({
           message: "La musique est déjà dans la playlist",
         });
       } else {
@@ -209,7 +203,14 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
 router.post("/ajouter", authMiddleware, async (req, res) => {
   try {
     const idUser = req.user.id_user;
-    const nomPlaylist = req.body.nom;
+    const nomPlaylist = req.body.nom?.trim();
+
+    // Sans ce test, un nom vide creait une playlist sans nom.
+    if (!nomPlaylist) {
+      return res.status(400).json({
+        message: "Le nom de la playlist ne peut pas être vide.",
+      });
+    }
 
     const [insertMusic] = await db.query(
       "INSERT INTO `playlists` (`id_playlist`, `name`, `id_user`) VALUES (NULL, ?, ?)",

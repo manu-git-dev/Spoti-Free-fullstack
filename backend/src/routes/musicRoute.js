@@ -1,5 +1,7 @@
 import express from "express";
 import db from "../../db.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
+import adminMiddleware from "../middlewares/adminMiddleware.js";
 
 const router = express.Router();
 //http://localhost:3000/api/musics
@@ -16,8 +18,8 @@ router.get("/", async (req, res) => {
     });
   }
 });
-// Ajouter une musique
-router.post("/ajouter", async (req, res) => {
+// Ajouter une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
   const title = req.body.title;
   const artist = req.body.artist;
   const genre = req.body.genre;
@@ -71,8 +73,8 @@ router.get("/info/:id", async (req, res) => {
     });
   }
 });
-// Update une musique
-router.put("/update/:id", async (req, res) => {
+// Update une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+router.put("/update/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = req.params.id;
     const title = req.body.title;
@@ -102,29 +104,34 @@ router.put("/update/:id", async (req, res) => {
     });
   }
 });
-// Supprimer une musique
-router.delete("/delete/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const [musics] = await db.query("DELETE FROM musics WHERE id_music = ?", [
-      id,
-    ]);
-    if (musics.affectedRows === 0) {
-      return res.status(404).json({
-        message: "La musique est introuvable.",
-      });
-    } else {
-      return res.status(200).json({
-        message: "la musique à bien été supprimée.",
+// Supprimer une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+router.delete(
+  "/delete/:id",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      const [musics] = await db.query("DELETE FROM musics WHERE id_music = ?", [
+        id,
+      ]);
+      if (musics.affectedRows === 0) {
+        return res.status(404).json({
+          message: "La musique est introuvable.",
+        });
+      } else {
+        return res.status(200).json({
+          message: "la musique à bien été supprimée.",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        message: "Erreur lors de la suppression de la musique.",
       });
     }
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Erreur lors de la suppression de la musique.",
-    });
-  }
-});
+  },
+);
 
 export default router;

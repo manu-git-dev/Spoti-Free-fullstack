@@ -13,8 +13,13 @@ const Toaster = ({ ...props }) => {
   return (
     <Sonner
       theme="dark"
-      // en bas, les toasts passaient par-dessus le MediaPlayer (desktop) et la BottomNav (mobile)
-      position="top-right"
+      // Placement : au-dessus du MediaPlayer, centre.
+      // - en haut a droite, le toast recouvrait les boutons "Connexion"/"Se deconnecter" de la Home ;
+      // - en bas sans decalage, il recouvrait le MediaPlayer (desktop) et la BottomNav (mobile).
+      // Les offsets le remontent juste au-dessus de ces barres.
+      position="bottom-center"
+      offset={{ bottom: "104px" }}
+      mobileOffset={{ bottom: "150px" }}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

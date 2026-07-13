@@ -5,6 +5,9 @@ export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMus
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
   const {idPlaylist} = useParams();
 
+  // Depend de `idPlaylist` : en passant d'une playlist a une autre, React Router reutilise
+  // le meme composant (pas de remontage). Avec `[]`, l'effet ne se relancait pas et la page
+  // continuait d'afficher le contenu de la playlist precedente.
   useEffect(() => {
     const url = `http://localhost:3000/api/playlists/musics/${idPlaylist}`;
     const token = localStorage.getItem("token");
@@ -16,14 +19,10 @@ export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMus
     })
       .then((response) => response.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setMusicsPlaylist(data);
-        } else {
-          setMusicsPlaylist([]);
-        }
+        setMusicsPlaylist(Array.isArray(data) ? data : []);
       })
       .catch((error) => console.error(error));
-  }, []);
+  }, [idPlaylist]);
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">

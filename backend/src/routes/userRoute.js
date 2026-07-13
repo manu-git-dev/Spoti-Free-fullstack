@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 const router = express.Router();
 import jwt from "jsonwebtoken";
 import authMiddleware from "../middlewares/authMiddleware.js";
+import adminMiddleware from "../middlewares/adminMiddleware.js";
 
 //affiche les infos du profil
 router.get("/profil", authMiddleware, async (req, res) => {
@@ -24,18 +25,19 @@ router.get("/profil", authMiddleware, async (req, res) => {
   }
 });
 
-//affiche tous les utilisateur ROUTE SECURISÉE
-router.get("/", authMiddleware, async (req, res) => {
-  const idUser = req.user.id_user;
-  if (idUser !== 10) {
-    return res.status(404).json({
-      message: "Accées refusée.",
-    });
-  } else {
+//affiche tous les utilisateurs — ADMIN UNIQUEMENT
+router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
     const [users] = await db.query(
-      "SELECT `pseudo`,`first_name`,`last_name`,`email`,`created_at` FROM users",
+      "SELECT `id_user`,`pseudo`,`first_name`,`last_name`,`email`,`role`,`created_at` FROM users",
     );
-    res.json(users);
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la récupération des utilisateurs.",
+    });
   }
 });
 //affiche les musiques likés d'un utilisateur ROUTE SECURISÉE
@@ -46,13 +48,9 @@ router.get("/likes", authMiddleware, async (req, res) => {
       "SELECT * FROM `musics` INNER JOIN `likes` ON (musics.id_music=likes.id_music) WHERE id_user = ?",
       [idUser],
     );
-    if (likes.length === 0) {
-      return res.status(404).json({
-        message: "Aucune musique Likées.",
-      });
-    } else {
-      return res.status(200).json(likes);
-    }
+    // Une liste vide n'est pas une erreur : on renvoie 200 avec un tableau vide,
+    // pas un 404 (qui signifierait que la ressource /likes n'existe pas).
+    return res.status(200).json(likes);
   } catch (error) {
     console.error(error);
 
@@ -74,15 +72,28 @@ router.post("/like/:idMusic", authMiddleware, async (req, res) => {
       return res.status(404).json({
         message: "La musique est introuvable",
       });
-    } else {
-      const [insertMusicLike] = await db.query(
-        "INSERT INTO `likes` (`id_user`, `id_music`) VALUES (?, ?)",
-        [idUser, idMusic],
-      );
-      return res.status(201).json({
-        message: "Musique ajoutée aux likes avec succès.",
+    }
+
+    // Deja likee ? La table `likes` a une cle primaire (id_user, id_music) : sans ce test,
+    // l'INSERT violerait la contrainte et remonterait un 500 (= "erreur serveur"), alors
+    // que c'est une demande en conflit avec l'etat actuel -> 409.
+    const [dejaLike] = await db.query(
+      "SELECT * FROM `likes` WHERE id_user = ? AND id_music = ?",
+      [idUser, idMusic],
+    );
+    if (dejaLike.length > 0) {
+      return res.status(409).json({
+        message: "Cette musique est déjà dans vos favoris.",
       });
     }
+
+    await db.query(
+      "INSERT INTO `likes` (`id_user`, `id_music`) VALUES (?, ?)",
+      [idUser, idMusic],
+    );
+    return res.status(201).json({
+      message: "Musique ajoutée aux likes avec succès.",
+    });
   } catch (error) {
     console.error(error);
 

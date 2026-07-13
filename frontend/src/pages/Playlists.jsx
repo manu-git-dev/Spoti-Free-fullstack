@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { ListMusic } from "lucide-react";
 import ButtonAddPlaylist from "../composants/ButtonAddPlaylist";
-import { useState, useEffect } from "react";
 import Playlist from "../composants/Playlist";
 import { Button } from "@/components/ui/button";
 export default function Playlists({playlists,setPlaylists,user}) {
