@@ -39,7 +39,8 @@ function formulaireDepot(titre, { audio, nomAudio, image = VRAIE_IMAGE }) {
   donnees.append("artist", MARQUEUR);
   donnees.append("genre", "Test");
   donnees.append("audio", new Blob([audio]), nomAudio);
-  donnees.append("image", new Blob([image]), "cover.jpg");
+  // `image: null` = depot SANS pochette (elle est facultative).
+  if (image) donnees.append("image", new Blob([image]), "cover.jpg");
   return donnees;
 }
 
@@ -253,6 +254,107 @@ await etape("moderation : approbation et refus", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 4. La pochette est facultative
+//
+// Sans pochette, l'admin peut quand meme approuver : une image deja presente dans le catalogue
+// est tiree au hasard. L'admin doit aussi pouvoir CONSULTER la pochette proposee (pour verifier
+// les droits d'image) — d'ou la route dediee.
+// ---------------------------------------------------------------------------
+await etape("pochette facultative", async () => {
+  const { token } = await creerCompte("DepotPochette");
+  const admin = apiAuth(tokenAdmin());
+
+  // --- depot SANS pochette ---
+  const sans = await deposer(token, `Sans pochette ${MARQUEUR}`, {
+    audio: VRAI_MP3,
+    nomAudio: "sans.mp3",
+    image: null,
+  });
+  verifier(
+    "pochette : un depot sans pochette est accepte",
+    sans.reponse.status === 201,
+    `recu ${sans.reponse.status} — ${sans.donnees.message}`,
+  );
+
+  // --- depot AVEC pochette ---
+  await deposer(token, `Avec pochette ${MARQUEUR}`, {
+    audio: VRAI_MP3,
+    nomAudio: "avec.mp3",
+  });
+
+  const { donnees: depots } = await admin("/api/submissions?statut=en_attente");
+  const depotSans = depots.find((d) => d.title === `Sans pochette ${MARQUEUR}`);
+  const depotAvec = depots.find((d) => d.title === `Avec pochette ${MARQUEUR}`);
+
+  verifier(
+    "pochette : l'admin voit quels depots en ont une",
+    !depotSans.a_pochette && Boolean(depotAvec.a_pochette),
+    `sans=${depotSans.a_pochette}, avec=${depotAvec.a_pochette}`,
+  );
+
+  // --- consultation de la pochette (pour verifier les droits d'image) ---
+  const { reponse: pochetteAdmin } = await admin(
+    `/api/submissions/${depotAvec.id_submission}/image`,
+    { brut: true },
+  );
+  verifier(
+    "pochette : l'admin peut la consulter / telecharger (200)",
+    pochetteAdmin.status === 200,
+    `recu ${pochetteAdmin.status}`,
+  );
+
+  const utilisateur = apiAuth(token);
+  const { reponse: pochetteUtilisateur } = await utilisateur(
+    `/api/submissions/${depotAvec.id_submission}/image`,
+    { brut: true },
+  );
+  verifier(
+    "pochette : un utilisateur normal ne peut pas la consulter (403)",
+    pochetteUtilisateur.status === 403,
+    `recu ${pochetteUtilisateur.status}`,
+  );
+
+  const { reponse: pochetteAbsente } = await admin(
+    `/api/submissions/${depotSans.id_submission}/image`,
+    { brut: true },
+  );
+  verifier(
+    "pochette : un depot sans pochette renvoie 404 sur /image",
+    pochetteAbsente.status === 404,
+    `recu ${pochetteAbsente.status}`,
+  );
+
+  // --- approbation sans pochette : une image du catalogue est tiree au hasard ---
+  const approbation = await admin(
+    `/api/submissions/${depotSans.id_submission}/approuver`,
+    { method: "PATCH" },
+  );
+  verifier(
+    "pochette : un depot sans pochette peut etre approuve",
+    approbation.reponse.status === 200,
+    `recu ${approbation.reponse.status}`,
+  );
+
+  const catalogue = await (await fetch(`${API}/api/musics`)).json();
+  const ajoute = catalogue.find((m) => m.title === `Sans pochette ${MARQUEUR}`);
+
+  verifier(
+    "pochette : une pochette du catalogue lui a ete attribuee",
+    Boolean(ajoute?.src_image),
+    ajoute?.src_image ?? "aucune",
+  );
+
+  // La pochette attribuee doit reellement exister : sinon le morceau s'afficherait avec une
+  // image cassee.
+  const fichierPochette = await fetch(`${API}/${ajoute.src_image}`);
+  verifier(
+    "pochette : la pochette attribuee existe bien sur le disque",
+    fichierPochette.status === 200,
+    `recu ${fichierPochette.status} pour ${ajoute.src_image}`,
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Nettoyage : retirer du catalogue ce que ces tests y ont ajoute
 // ---------------------------------------------------------------------------
 await etape("nettoyage du catalogue", async () => {
@@ -271,8 +373,29 @@ await etape("nettoyage du catalogue", async () => {
     [MARQUEUR],
   );
 
+  // Les pochettes PARTAGEES avec le reste du catalogue ne nous appartiennent pas.
+  //
+  // Un depot sans pochette se voit attribuer, a l'approbation, une image DEJA utilisee par
+  // d'autres morceaux (tirage au hasard). La supprimer parce qu'un morceau de test la
+  // reference reviendrait a casser l'affichage de vrais morceaux.
+  //
+  // (Ce n'est pas theorique : une premiere version de ce nettoyage a bel et bien supprime
+  // `images/3.jpg`, utilisee par quatre morceaux du catalogue.)
+  //
+  // On ne supprime donc un fichier que s'il n'est reference par AUCUN autre morceau.
+  const [partagees] = await db.query(
+    "SELECT DISTINCT src_image FROM musics WHERE artist <> ?",
+    [MARQUEUR],
+  );
+  const pochettesAConserver = new Set(partagees.map((m) => m.src_image));
+
   for (const musique of musiques) {
-    for (const relatif of [musique.src_audio, musique.src_image]) {
+    const fichiers = [musique.src_audio];
+    if (!pochettesAConserver.has(musique.src_image)) {
+      fichiers.push(musique.src_image);
+    }
+
+    for (const relatif of fichiers) {
       try {
         fs.unlinkSync(path.join(PUBLIC, relatif));
       } catch {

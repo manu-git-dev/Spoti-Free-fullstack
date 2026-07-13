@@ -168,15 +168,17 @@ router.post(
       const artist = req.body.artist?.trim();
       const genre = req.body.genre?.trim() || null;
 
-      if (!title || !artist || !audio || !image) {
+      // La pochette est FACULTATIVE : si l'utilisateur n'en fournit pas, une pochette deja
+      // utilisee dans le catalogue sera tiree au hasard au moment de l'approbation.
+      if (!title || !artist || !audio) {
         await supprimerFichiers(audio?.filename, image?.filename);
         return res.status(400).json({
-          message: "Titre, artiste, fichier audio et pochette sont obligatoires.",
+          message: "Titre, artiste et fichier audio sont obligatoires.",
         });
       }
 
       // La limite globale de multer est celle de l'audio (10 Mo) : on affine ici pour l'image.
-      if (image.size > TAILLE_MAX_IMAGE) {
+      if (image && image.size > TAILLE_MAX_IMAGE) {
         await supprimerFichiers(audio.filename, image.filename);
         return res.status(413).json({
           message: "Pochette trop lourde (2 Mo maximum).",
@@ -229,7 +231,7 @@ router.post(
           artist,
           genre,
           audio.filename,
-          image.filename,
+          image?.filename ?? null, // pochette facultative
           duration,
         ],
       );
@@ -291,9 +293,12 @@ router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
     // filtrer sur une valeur qui n'existe pas.)
     const filtre = statutsValides.includes(statut) ? statut : null;
 
+    // `a_pochette` : le front doit savoir s'il y a une image a afficher, sans qu'on lui expose
+    // le nom du fichier sur le disque (il n'en a pas besoin, et c'est une information interne).
     const [depots] = await db.query(
       `SELECT s.id_submission, s.title, s.artist, s.genre, s.duration,
-              s.statut, s.motif_refus, s.created_at, u.pseudo
+              s.statut, s.motif_refus, s.created_at, u.pseudo,
+              (s.fichier_image IS NOT NULL) AS a_pochette
          FROM submissions s
          JOIN users u ON u.id_user = s.id_user
         ${filtre ? "WHERE s.statut = ?" : ""}
@@ -323,8 +328,8 @@ router.get("/:id/audio", authMiddleware, adminMiddleware, async (req, res) => {
       [req.params.id],
     );
 
-    if (!depot) {
-      return res.status(404).json({ message: "Dépôt introuvable." });
+    if (!depot?.fichier_audio) {
+      return res.status(404).json({ message: "Fichier introuvable." });
     }
 
     // On utilise le nom stocke EN BASE, jamais un nom venu de l'URL. Sinon une requete du type
@@ -333,6 +338,36 @@ router.get("/:id/audio", authMiddleware, adminMiddleware, async (req, res) => {
     const chemin = path.join(
       DOSSIER_UPLOADS,
       path.basename(depot.fichier_audio),
+    );
+
+    return res.sendFile(chemin);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la lecture." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/submissions/:id/image — voir / telecharger la pochette proposee (admin seulement)
+//
+// Meme principe que la route audio : c'est la seule facon d'acceder au fichier, qui n'est pas
+// dans `public/`. Sert a verifier les droits d'image avant d'accepter le depot.
+// ---------------------------------------------------------------------------
+router.get("/:id/image", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const [[depot]] = await db.query(
+      "SELECT fichier_image FROM submissions WHERE id_submission = ?",
+      [req.params.id],
+    );
+
+    // La pochette est facultative : un depot peut tres bien ne pas en avoir.
+    if (!depot?.fichier_image) {
+      return res.status(404).json({ message: "Aucune pochette pour ce dépôt." });
+    }
+
+    const chemin = path.join(
+      DOSSIER_UPLOADS,
+      path.basename(depot.fichier_image),
     );
 
     return res.sendFile(chemin);
@@ -370,18 +405,49 @@ router.patch(
       }
 
       const nomAudio = path.basename(depot.fichier_audio);
-      const nomImage = path.basename(depot.fichier_image);
 
-      // On deplace les fichiers : c'est maintenant, et seulement maintenant, qu'ils deviennent
-      // publiquement accessibles.
+      // On deplace le fichier audio : c'est maintenant, et seulement maintenant, qu'il devient
+      // publiquement accessible.
       await fs.rename(
         path.join(DOSSIER_UPLOADS, nomAudio),
         path.join(DOSSIER_PUBLIC_AUDIO, nomAudio),
       );
-      await fs.rename(
-        path.join(DOSSIER_UPLOADS, nomImage),
-        path.join(DOSSIER_PUBLIC_IMAGES, nomImage),
-      );
+
+      // La pochette est facultative.
+      // - Fournie -> on la deplace dans public/, comme l'audio.
+      // - Absente  -> on reutilise une pochette DEJA presente dans le catalogue, tiree au
+      //   hasard. On ne copie aucun fichier : plusieurs morceaux peuvent parfaitement partager
+      //   la meme image (c'est deja le cas dans le catalogue existant).
+      let cheminImage;
+
+      if (depot.fichier_image) {
+        const nomImage = path.basename(depot.fichier_image);
+        await fs.rename(
+          path.join(DOSSIER_UPLOADS, nomImage),
+          path.join(DOSSIER_PUBLIC_IMAGES, nomImage),
+        );
+        cheminImage = `images/${nomImage}`;
+      } else {
+        const [[pochette]] = await db.query(
+          "SELECT src_image FROM musics GROUP BY src_image ORDER BY RAND() LIMIT 1",
+        );
+
+        if (!pochette) {
+          // Catalogue vide : il n'y a aucune pochette a reutiliser. On remet l'audio en attente
+          // pour ne pas laisser le depot dans un etat incoherent (fichier deplace, mais pas
+          // d'entree en base).
+          await fs.rename(
+            path.join(DOSSIER_PUBLIC_AUDIO, nomAudio),
+            path.join(DOSSIER_UPLOADS, nomAudio),
+          );
+          return res.status(409).json({
+            message:
+              "Aucune pochette disponible dans le catalogue : demandez-en une au déposant.",
+          });
+        }
+
+        cheminImage = pochette.src_image;
+      }
 
       // Les chemins stockes sont RELATIFS a `public/`, comme le reste du catalogue
       // (`musiques/xxx.mp3`, `images/xxx.jpg`).
@@ -392,7 +458,7 @@ router.patch(
           depot.title,
           depot.artist,
           depot.genre,
-          `images/${nomImage}`,
+          cheminImage,
           `musiques/${nomAudio}`,
           depot.duration,
         ],

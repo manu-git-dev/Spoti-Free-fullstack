@@ -76,8 +76,8 @@ export default function Deposer({ user }) {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!audio || !image) {
-      toast.error("Un fichier audio et une pochette sont nécessaires.");
+    if (!audio) {
+      toast.error("Un fichier audio est nécessaire.");
       return;
     }
 
@@ -91,7 +91,9 @@ export default function Deposer({ user }) {
     donneesEnvoi.append("artist", champs.get("artist"));
     donneesEnvoi.append("genre", champs.get("genre") ?? "");
     donneesEnvoi.append("audio", audio);
-    donneesEnvoi.append("image", image);
+    // Pochette facultative : si l'utilisateur n'en met pas, l'admin en attribuera une du
+    // catalogue a l'approbation.
+    if (image) donneesEnvoi.append("image", image);
 
     setEnvoiEnCours(true);
     try {
@@ -175,11 +177,11 @@ export default function Deposer({ user }) {
               onFichierChange={setAudio}
             />
             <ZoneDepotFichier
-              label="Pochette"
+              label="Pochette (facultatif)"
               accept="image/*"
               extensions={[".jpg", ".jpeg", ".png", ".webp"]}
               tailleMaxMo={2}
-              description="jpg, png, webp — 2 Mo maximum"
+              description="jpg, png, webp — 2 Mo. Sans pochette, une image sera choisie pour toi."
               fichier={image}
               onFichierChange={setImage}
             />
