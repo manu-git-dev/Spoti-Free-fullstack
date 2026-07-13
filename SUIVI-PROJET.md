@@ -106,16 +106,79 @@ Les deux effets dependent maintenant de `token` (le state). Voir la note 31 de
 
 ### Points restants (non bloquants)
 
-- **Feedback des erreurs 401 sur les actions** : la session expiree est detectee au chargement
-  (effets d'`App.jsx`), mais pas sur une action isolee (un like avec un token expire affiche
-  "Token invalide" sans deconnecter). Le design propre serait un **`AuthContext` + un wrapper
-  `apiFetch` centralise** qui intercepte tous les `401` - c'est un refactor d'architecture a
-  faire consciemment, pas un patch.
-- Le bouton "Connexion" est un `<a role="button">` (shadcn `Button` + `render={<Link/>}`) : un
-  lecteur d'ecran annonce "bouton" alors que l'element navigue. Detail d'accessibilite.
-- Top 5 de `Home.jsx` : toujours un simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes.
-- Pas de limitation du nombre de tentatives de connexion (brute force) - a prevoir avant un
-  vrai deploiement public.
+Tous les points listes ici apres l'audit ont ete traites le 2026-07-13 (voir la section
+suivante). Restent :
+
+- Le `dist/` du frontend depasse 500 kB : envisager du code-splitting (`dynamic import()`)
+  avant un vrai deploiement. Non bloquant.
+- `express-rate-limit` compte par IP : derriere un reverse proxy (Nginx, Hostinger), il faudra
+  `app.set("trust proxy", 1)` dans `server.js`, sinon toutes les requetes paraitront venir de
+  la meme IP (celle du proxy) et la limite bloquerait tout le monde.
+- Deploiement : rejouer `backend/scripts/add-role-column.sql` et `add-play-count.sql` sur la
+  base de production, et definir `VITE_API_URL` dans l'environnement du frontend.
+
+## Top 5 reel, apiFetch, anti brute-force, a11y, fix de l'Aside - 2026-07-13 - fait
+
+### L'app depassait la hauteur de l'ecran (Aside)
+
+Symptome signale par Manuel : avec beaucoup de playlists, l'Aside grandit et fait deborder
+toute l'app. Le scroll interne ajoute a la passe design (`overflow-y-auto`) ne s'activait
+jamais.
+
+**Cause** : le shell utilisait `grid-rows-[1fr_88px]`. En CSS Grid, **`1fr` vaut
+`minmax(auto, 1fr)`** : ce `auto` en minimum interdit a la ligne de descendre sous la taille
+de son contenu. Rien ne contraignait donc jamais la hauteur de l'Aside, et l'`overflow-y-auto`
+n'avait aucune raison de s'activer. Corrige avec **`minmax(0, 1fr)`**.
+
+Mesure avec 15 playlists : page = 900px pour un ecran de 900px (et 720/720 en 1280x720), la
+liste scrolle a l'interieur, "A propos"/"Contact" restent visibles.
+
+**Conclusion sur la question posee** (limiter a 5-6 playlists dans l'Aside, ou abandonner
+l'affichage ?) : **ni l'un ni l'autre**. Le probleme etait le CSS, pas le nombre d'entrees —
+avec 6 playlists sur un petit portable, ca aurait deborde quand meme. L'affichage complet est
+conserve.
+
+### Top 5 : un vrai classement par ecoutes
+
+- Colonne `musics.play_count` (`scripts/add-play-count.sql`), amorcee sur 5 titres (5, 4, 3,
+  2, 1) pour que le classement soit credible des la premiere visite.
+- `POST /api/musics/ecoute/:id` (volontairement publique : l'ecoute d'un visiteur compte) et
+  `GET /api/musics/top`.
+- `MediaPlayer` compte une ecoute a chaque **nouvelle** piste lancee (dependance sur
+  `music?.id_music` : reprendre apres une pause ne recompte pas), puis rafraichit le Top 5.
+
+**Pas de tache planifiee** : le classement est un `ORDER BY play_count DESC`, il est donc
+toujours a jour. Un cron hebdomadaire n'aurait rien apporte. (Un vrai "top de la semaine"
+glissant aurait demande une table `plays` avec un `played_at` — option ecartee au profit du
+compteur simple.)
+
+### `src/lib/api.js` : point de passage unique de tous les appels API
+
+Resout trois problemes d'un coup :
+
+- **401 sur une action isolee** (le point restant de l'audit) : un like avec un token expire
+  affichait "Token invalide" et laissait l'utilisateur dans une session morte. Desormais
+  *tout* 401 purge la session, quel que soit l'appel qui l'a provoque. Le helper
+  `messageErreur()` evite d'afficher deux toasts (le jargon technique + le message utile).
+- **URL en dur** : `http://localhost:3000` etait ecrit dans 14 fichiers. Elle vient maintenant
+  de `VITE_API_URL` (voir `frontend/.env.example` ; le `.env` est gitignore).
+- **Token** : chaque composant relisait localStorage et reconstruisait son header
+  `Authorization`. C'est fait une fois, dans `apiFetch`.
+
+Un **`AuthContext` n'est du coup plus necessaire** : plus aucun composant n'a besoin du token.
+
+### Anti brute-force
+
+`express-rate-limit` sur `/connexion` (10 tentatives par IP / 15 min ; `skipSuccessfulRequests`
+: seuls les **echecs** comptent, un utilisateur normal n'est donc jamais bloque) et sur
+`/inscription` (20/h). Verifie : la 11e tentative ratee renvoie un `429`.
+
+### Accessibilite
+
+Les boutons "Connexion" / "Me contacter" etaient des `<a role="button">` (shadcn `Button` +
+`render={<Link/>}`) : un lecteur d'ecran annoncait "bouton" alors que l'element **navigue**.
+Ils utilisent maintenant le pattern shadcn correct : un vrai `<Link>` stylé via
+`buttonVariants()`.
 
 ## Passe shadcn/ui + theme Midnight Bloom - 2026-07-13 - faite
 
