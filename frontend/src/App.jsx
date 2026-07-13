@@ -23,6 +23,7 @@ function App() {
   const [valueInput, setValueInput] = useState("");
   const [currentIndex, setCurrentIndex] = useState("");
   const [maxIndex, setMaxIndex] = useState(0);
+  const [currentQueue, setCurrentQueue] = useState([]);
   const [musiquesLikee, setMusiquesLikee] = useState([]);
   const [playlists, setPlaylists] = useState([]);
 
@@ -94,15 +95,15 @@ function App() {
 
   useEffect(() => {
     setCurrentIndex(
-      musiquesFiltre.findIndex(
+      currentQueue.findIndex(
         (musique) => musique.id_music === currentMusic?.id_music,
       ),
     );
-  }, [currentMusic]);
+  }, [currentMusic, currentQueue]);
 
   useEffect(() => {
-    setMaxIndex(musiquesFiltre.length - 1);
-  }, [musiquesFiltre]);
+    setMaxIndex(currentQueue.length - 1);
+  }, [currentQueue]);
 
   return (
     <section className="box-border h-screen flex flex-col md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr_88px] ">
@@ -125,6 +126,7 @@ function App() {
                 user={user}
                 messageDeconnexion={messageDeconnexion}
                 setCurrentMusic={setCurrentMusic}
+                setCurrentQueue={setCurrentQueue}
                 musiquesLikee={musiquesLikee}
                 setMusiquesLikee={setMusiquesLikee}
                 setUser={setUser}
@@ -141,6 +143,7 @@ function App() {
               <Bibliotheque
                 musiques={musiquesFiltre}
                 setCurrentMusic={setCurrentMusic}
+                setCurrentQueue={setCurrentQueue}
                 setValueInput={setValueInput}
                 valueInput={valueInput}
                 musiquesLikee={musiquesLikee}
@@ -168,9 +171,7 @@ function App() {
           <Route
             path="/playlists"
             element={
-              <ProtectedRoute user={user}>
-                <Playlists playlists={playlists} setPlaylists={setPlaylists} />
-              </ProtectedRoute>
+              <Playlists playlists={playlists} setPlaylists={setPlaylists} user={user} />
             }
           />
 
@@ -198,6 +199,7 @@ function App() {
               <ProtectedRoute user={user}>
                 <MusicsInPlaylist
                   setCurrentMusic={setCurrentMusic}
+                  setCurrentQueue={setCurrentQueue}
                   setMusiquesLikee={setMusiquesLikee}
                   musiquesLikee={musiquesLikee}
                   user={user}
@@ -210,15 +212,14 @@ function App() {
           <Route
             path="/favoris"
             element={
-              <ProtectedRoute user={user}>
-                <Favoris
-                  musiquesLikee={musiquesLikee}
-                  setMusiquesLikee={setMusiquesLikee}
-                  setCurrentMusic={setCurrentMusic}
-                  user={user}
-                  currentMusic={currentMusic}
-                />
-              </ProtectedRoute>
+              <Favoris
+                musiquesLikee={musiquesLikee}
+                setMusiquesLikee={setMusiquesLikee}
+                setCurrentMusic={setCurrentMusic}
+                setCurrentQueue={setCurrentQueue}
+                user={user}
+                currentMusic={currentMusic}
+              />
             }
           />
         </Routes>
@@ -227,7 +228,7 @@ function App() {
         className="w-full md:row-start-2 md:col-span-2"
         music={currentMusic}
         currentIndex={currentIndex}
-        musiquesFiltre={musiquesFiltre}
+        queue={currentQueue}
         setCurrentMusic={setCurrentMusic}
         setCurrentIndex={setCurrentIndex}
         maxIndex={maxIndex}

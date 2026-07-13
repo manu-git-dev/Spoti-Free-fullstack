@@ -10,7 +10,7 @@ import { useState, useRef } from "react";
 export default function MediaPlayer({
   music,
   currentIndex,
-  musiquesFiltre,
+  queue,
   setCurrentMusic,
   setCurrentIndex,
   maxIndex,
@@ -55,11 +55,11 @@ export default function MediaPlayer({
     let nextIndex = currentIndex + 1;
     if (nextIndex > maxIndex) {
       nextIndex = 0;
-      let nextMusic = musiquesFiltre[nextIndex];
+      let nextMusic = queue[nextIndex];
       setCurrentMusic(nextMusic);
       setCurrentIndex(nextIndex);
     } else {
-      let nextMusic = musiquesFiltre[nextIndex];
+      let nextMusic = queue[nextIndex];
       setCurrentMusic(nextMusic);
       setCurrentIndex(nextIndex);
     }
@@ -70,11 +70,11 @@ export default function MediaPlayer({
 
     if (previousIndex < 0) {
       previousIndex = maxIndex;
-      let previousMusic = musiquesFiltre[previousIndex];
+      let previousMusic = queue[previousIndex];
       setCurrentMusic(previousMusic);
       setCurrentIndex(previousIndex);
     } else {
-      let previousMusic = musiquesFiltre[previousIndex];
+      let previousMusic = queue[previousIndex];
       setCurrentMusic(previousMusic);
       setCurrentIndex(previousIndex);
     }

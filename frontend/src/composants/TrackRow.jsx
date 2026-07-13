@@ -6,6 +6,8 @@ export default function TrackRow({
   musique,
   index,
   setCurrentMusic,
+  setCurrentQueue,
+  queue,
   setMusiquesLikee,
   idPlaylist,
   setMusicsPlaylist,
@@ -17,6 +19,17 @@ export default function TrackRow({
   const isPlaying = currentMusic?.id_music === musique.id_music;
   const handleClick = () => {
     setCurrentMusic(musique);
+    setCurrentQueue(queue);
+  };
+  const formatDuration = (seconds) => {
+    if (seconds === null || seconds === undefined) return "--:--";
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${minutes}:${secs}`;
   };
   return (
     <div
@@ -61,6 +74,9 @@ export default function TrackRow({
           )}
         </div>
       )}
+      <span className="text-sm text-base-content/50 shrink-0">
+        {formatDuration(musique.duration)}
+      </span>
     </div>
   );
 }

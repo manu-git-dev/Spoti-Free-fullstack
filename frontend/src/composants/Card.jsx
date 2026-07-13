@@ -5,6 +5,8 @@ import RemoveMusicPlaylist from "./RemoveMusicPlaylist";
 export default function Card({
   musique,
   setCurrentMusic,
+  setCurrentQueue,
+  queue,
   setMusiquesLikee,
   idPlaylist,
   setMusicsPlaylist,
@@ -16,6 +18,7 @@ export default function Card({
   const isPlaying = currentMusic?.id_music === musique.id_music;
   const handleClick = () => {
     setCurrentMusic(musique);
+    setCurrentQueue(queue);
   };
   return (
     <article
