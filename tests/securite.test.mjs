@@ -229,7 +229,164 @@ await etape("CORS", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. Brute-force : les tentatives de connexion sont limitees
+// 6. Mot de passe oublie
+//
+// Cette fonctionnalite est un nid a failles. Les quatre pieges verrouilles ici :
+//   a) l'enumeration de comptes (la reponse doit etre identique, compte existant ou non) ;
+//   b) le jeton stocke en clair (il vaut un mot de passe : on garde son empreinte) ;
+//   c) le jeton reutilisable (le mail reste dans la boite de reception) ;
+//   d) le jeton sans expiration (un lien qui traine est un risque permanent).
+// ---------------------------------------------------------------------------
+await etape("mot de passe oublie", async () => {
+  const crypto = await import("node:crypto");
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  });
+
+  const { cred } = await creerCompte("MotDePasseOublie");
+
+  const demander = (email) =>
+    fetch(`${API}/api/users/mot-de-passe-oublie`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ email }),
+    });
+
+  // --- a) enumeration de comptes ---
+  const existant = await demander(cred.email);
+  const corpsExistant = await existant.json();
+  const inconnu = await demander("personne@nulle-part.invalid");
+  const corpsInconnu = await inconnu.json();
+
+  verifier(
+    "mdp oublie : reponse IDENTIQUE que le compte existe ou non (anti-enumeration)",
+    existant.status === inconnu.status &&
+      corpsExistant.message === corpsInconnu.message,
+    `${existant.status} vs ${inconnu.status}`,
+  );
+
+  // --- b) le jeton n'est pas stocke en clair ---
+  const [[demande]] = await db.query(
+    `SELECT r.token_hash FROM password_resets r
+       JOIN users u ON u.id_user = r.id_user
+      WHERE u.email = ? ORDER BY r.id_reset DESC LIMIT 1`,
+    [cred.email],
+  );
+  verifier(
+    "mdp oublie : le jeton est stocke sous forme d'empreinte, jamais en clair",
+    /^[0-9a-f]{64}$/.test(demande.token_hash),
+    demande.token_hash.slice(0, 16) + "…",
+  );
+
+  // On se donne un jeton connu (comme si on avait recu le mail).
+  const jeton = crypto.randomBytes(32).toString("base64url");
+  const empreinte = crypto.createHash("sha256").update(jeton).digest("hex");
+  await db.query(
+    "UPDATE password_resets SET token_hash = ? WHERE token_hash = ?",
+    [empreinte, demande.token_hash],
+  );
+
+  const reinitialiser = (token, password) =>
+    fetch(`${API}/api/users/reinitialiser-mot-de-passe`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ token, password }),
+    });
+
+  const jetonBidon = await reinitialiser("jeton-invente", "NouveauMdp2026");
+  verifier(
+    "mdp oublie : un jeton inconnu est refuse (400)",
+    jetonBidon.status === 400,
+    `recu ${jetonBidon.status}`,
+  );
+
+  const trop_court = await reinitialiser(jeton, "court");
+  verifier(
+    "mdp oublie : un mot de passe trop court est refuse cote serveur (400)",
+    trop_court.status === 400,
+    `recu ${trop_court.status}`,
+  );
+
+  const valide = await reinitialiser(jeton, "NouveauMdp2026");
+  verifier(
+    "mdp oublie : un jeton valide change le mot de passe (200)",
+    valide.status === 200,
+    `recu ${valide.status}`,
+  );
+
+  const ancien = await fetch(`${API}/api/users/connexion`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ email: cred.email, password: cred.password }),
+  });
+  verifier(
+    "mdp oublie : l'ancien mot de passe ne fonctionne plus",
+    ancien.status !== 200,
+    `recu ${ancien.status}`,
+  );
+
+  const nouveau = await fetch(`${API}/api/users/connexion`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ email: cred.email, password: "NouveauMdp2026" }),
+  });
+  verifier(
+    "mdp oublie : le nouveau mot de passe fonctionne (200)",
+    nouveau.status === 200,
+    `recu ${nouveau.status}`,
+  );
+
+  // --- c) usage unique ---
+  const rejoue = await reinitialiser(jeton, "EncoreUnAutre2026");
+  verifier(
+    "mdp oublie : le jeton ne peut PAS resservir (400)",
+    rejoue.status === 400,
+    `recu ${rejoue.status}`,
+  );
+
+  const apresRejeu = await fetch(`${API}/api/users/connexion`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ email: cred.email, password: "EncoreUnAutre2026" }),
+  });
+  verifier(
+    "mdp oublie : le rejeu n'a pas change le mot de passe",
+    apresRejeu.status !== 200,
+    `recu ${apresRejeu.status}`,
+  );
+
+  // --- d) expiration ---
+  await demander(cred.email);
+  const jetonExpire = crypto.randomBytes(32).toString("base64url");
+  const empreinteExpiree = crypto
+    .createHash("sha256")
+    .update(jetonExpire)
+    .digest("hex");
+  await db.query(
+    `UPDATE password_resets
+        SET token_hash = ?, expire_at = DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+      WHERE id_user = (SELECT id_user FROM users WHERE email = ?)
+        AND used_at IS NULL`,
+    [empreinteExpiree, cred.email],
+  );
+
+  const expire = await reinitialiser(jetonExpire, "ApresExpiration2026");
+  verifier(
+    "mdp oublie : un jeton expire est refuse (400)",
+    expire.status === 400,
+    `recu ${expire.status}`,
+  );
+
+  await db.end();
+});
+
+// ---------------------------------------------------------------------------
+// 7. Brute-force : les tentatives de connexion sont limitees
 //
 // bcrypt protege les mots de passe SI la base fuite, mais n'empeche pas un script de tester
 // des milliers de combinaisons via l'API.

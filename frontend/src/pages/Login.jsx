@@ -94,7 +94,10 @@ export default function Login({ user, setUser, token, setToken }) {
               />
             </div>
           </fieldset>
-          <Link to="#" className="text-primary underline-offset-4 hover:underline text-sm self-end">
+          <Link
+            to="/mot-de-passe-oublie"
+            className="text-primary underline-offset-4 hover:underline text-sm self-end"
+          >
             Mot de passe oublié ?
           </Link>
           <Button className="rounded-full w-full mt-4" type="submit">
