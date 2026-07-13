@@ -18,6 +18,10 @@ export default function AdminUtilisateurs({ user }) {
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [aSupprimer, setASupprimer] = useState(null);
+  // Changer un role est une action sensible (donner les pleins pouvoirs sur le site, ou les
+  // retirer) : elle passe par une confirmation, comme la suppression. Un clic malencontreux ne
+  // doit jamais suffire.
+  const [changementRole, setChangementRole] = useState(null); // { cible, role }
 
   useEffect(() => {
     charger();
@@ -53,6 +57,7 @@ export default function AdminUtilisateurs({ user }) {
       setUtilisateurs((prev) =>
         prev.map((u) => (u.id_user === cible.id_user ? { ...u, role } : u)),
       );
+      setChangementRole(null);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
@@ -173,7 +178,7 @@ export default function AdminUtilisateurs({ user }) {
                       title={
                         estMoi ? "Tu ne peux pas retirer ton propre rôle" : undefined
                       }
-                      onClick={() => changerRole(u, "user")}
+                      onClick={() => setChangementRole({ cible: u, role: "user" })}
                     >
                       <ShieldOff className="w-3.5 h-3.5" />
                       Retirer admin
@@ -183,7 +188,7 @@ export default function AdminUtilisateurs({ user }) {
                       variant="outline"
                       size="sm"
                       className="rounded-full gap-1.5"
-                      onClick={() => changerRole(u, "admin")}
+                      onClick={() => setChangementRole({ cible: u, role: "admin" })}
                     >
                       <Shield className="w-3.5 h-3.5" />
                       Passer admin
@@ -209,6 +214,52 @@ export default function AdminUtilisateurs({ user }) {
           })}
         </ul>
       )}
+
+      {/* Confirmation du changement de role : on decrit ce que le role DONNE concretement,
+          plutot qu'un "Confirmer ?" qui n'apprend rien a la personne qui clique. */}
+      <Dialog
+        open={changementRole !== null}
+        onOpenChange={(ouvert) => !ouvert && setChangementRole(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {changementRole?.role === "admin"
+                ? "Donner les droits d'administrateur ?"
+                : "Retirer les droits d'administrateur ?"}
+            </DialogTitle>
+            <DialogDescription>
+              {changementRole?.role === "admin" ? (
+                <>
+                  <strong>{changementRole?.cible.pseudo}</strong> pourra alors
+                  accéder au tableau de bord, modérer les dépôts, modifier et
+                  supprimer des morceaux du catalogue, et gérer les autres comptes
+                  — y compris les supprimer.
+                </>
+              ) : (
+                <>
+                  <strong>{changementRole?.cible.pseudo}</strong> redeviendra un
+                  utilisateur normal et perdra l'accès à l'espace
+                  d'administration.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+            <Button
+              variant={changementRole?.role === "admin" ? "default" : "destructive"}
+              onClick={() =>
+                changerRole(changementRole.cible, changementRole.role)
+              }
+            >
+              {changementRole?.role === "admin"
+                ? "Confirmer, passer admin"
+                : "Confirmer, retirer admin"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* La suppression est irreversible : on annonce precisement ce qui va disparaitre, plutot
           qu'un "Êtes-vous sûr ?" qui n'informe de rien. */}
