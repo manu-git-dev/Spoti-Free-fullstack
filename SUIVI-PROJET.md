@@ -114,6 +114,58 @@ Les deux effets dependent maintenant de `token` (le state). Voir la note 31 de
 - Pas de CI : les tests existent (`cd tests && npm test`) et sortent en code 1 en cas d'echec,
   il ne reste qu'a les brancher sur un workflow GitHub Actions.
 
+## Depot de musique avec moderation - 2026-07-13 - fait
+
+Un utilisateur connecte depose un morceau (page `/deposer`, glisser-deposer). Le depot part en
+attente, l'admin recoit un mail, ecoute le morceau sur `/admin/depots`, et approuve ou refuse.
+Le morceau ne rejoint le catalogue qu'a l'approbation.
+
+Spec complete : `docs/FEATURE-depot-musique.md`.
+
+### Les deux decisions structurantes
+
+**1. Le fichier depose ne va JAMAIS dans `public/`.** `server.js` fait
+`express.static("public")` : tout ce qui s'y trouve est servi publiquement, immediatement. Un
+morceau depose y serait donc en ligne AVANT moderation. Les fichiers vont dans
+`backend/uploads/` (gitignore) et ne sont deplaces qu'a l'approbation — le seul endroit du code
+ou un fichier entre dans `public/`.
+
+**2. Une table `submissions` separee**, pas un statut sur `musics`. Sinon toutes les requetes
+existantes (catalogue, Top 5, recherche) devraient penser a filtrer les morceaux non valides, et
+un seul oubli les ferait apparaitre. Ici ils ne peuvent pas fuiter : ils ne sont pas dans la
+table que l'app lit.
+
+### La validation du fichier
+
+L'extension et le `Content-Type` viennent du client et se falsifient en renommant un fichier :
+ils ne servent que de premier tri. La vraie validation est le decodage avec `music-metadata` —
+s'il n'y a pas de duree a mesurer, ce n'est pas de l'audio, quel que soit son nom. En prime, le
+decodage fournit la duree, qu'on n'a donc jamais a demander au client.
+
+Verifie par test : un `.txt` renomme en `.mp3` est rejete.
+
+Autres protections : nom de fichier **regenere** cote serveur (`crypto.randomUUID()` — un nom
+comme `../../server.js` ferait ecrire hors de `uploads/`), limites de taille (10 Mo / 2 Mo),
+rate limit (5 depots/heure), suppression des fichiers orphelins en cas d'echec.
+
+### A savoir cote front
+
+Un `<audio src="/api/submissions/12/audio">` ne fonctionne pas : quand le navigateur va chercher
+un `src` lui-meme, il n'envoie pas l'en-tete `Authorization`, et la route (reservee a l'admin)
+repond 401. `composants/LecteurDepot.jsx` telecharge donc le fichier via `apiFetch` et le lit
+depuis un Blob local — sans mettre le token dans une URL (ou il finirait dans les logs et
+l'historique du navigateur).
+
+### Tests
+
+`tests/depot.test.mjs` — 17 verifications. Suite complete : **60 tests** (26 e2e + 17 securite +
+17 depot).
+
+### A faire au deploiement
+
+Rejouer `backend/scripts/add-submissions-table.sql`, et creer le dossier `backend/uploads/`
+(vide, mais il doit exister et etre accessible en ecriture).
+
 ## Durcissement avant deploiement + suite de tests - 2026-07-13 - fait
 
 Reponse a la question "l'app est-elle prete a etre deployee ?" : elle ne l'etait pas. La partie
