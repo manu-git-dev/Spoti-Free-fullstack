@@ -16,6 +16,7 @@ import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
 import Deposer from "./pages/Deposer";
+import MesDepots from "./pages/MesDepots";
 import AdminDepots from "./pages/AdminDepots";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -206,6 +207,7 @@ function App() {
           />
           <Route path="/inscription" element={<Register />} />
           <Route path="/deposer" element={<Deposer user={user} />} />
+          <Route path="/mes-depots" element={<MesDepots user={user} />} />
           <Route
             path="/admin/depots"
             element={

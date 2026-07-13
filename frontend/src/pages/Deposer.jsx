@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, UploadCloud, Clock, Check, X } from "lucide-react";
+import { Loader2, UploadCloud, Inbox, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import ZoneDepotFichier from "../composants/ZoneDepotFichier";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -8,35 +8,19 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiFetch, messageErreur } from "@/lib/api";
 
-const STATUTS = {
-  en_attente: {
-    label: "En attente de validation",
-    icone: Clock,
-    classe: "text-muted-foreground bg-muted/40 border-border",
-  },
-  approuve: {
-    label: "Approuvé",
-    icone: Check,
-    classe: "text-success bg-success/10 border-success/40",
-  },
-  refuse: {
-    label: "Refusé",
-    icone: X,
-    classe: "text-destructive bg-destructive/10 border-destructive/40",
-  },
-};
 
 export default function Deposer({ user }) {
   const [audio, setAudio] = useState(null);
   const [image, setImage] = useState(null);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
-  const [mesDepots, setMesDepots] = useState([]);
+  // On ne garde que le compte : la liste vit sur sa propre page (/mes-depots).
+  const [nbDepots, setNbDepots] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     apiFetch("/api/submissions/mes-depots")
       .then(({ donnees }) => {
-        setMesDepots(Array.isArray(donnees) ? donnees : []);
+        setNbDepots(Array.isArray(donnees) ? donnees.length : 0);
       })
       .catch((error) => console.error(error));
   }, [user]);
@@ -113,9 +97,9 @@ export default function Deposer({ user }) {
       setAudio(null);
       setImage(null);
 
-      // On rafraichit la liste pour que l'utilisateur voie son depot apparaitre.
+      // Le compteur du lien "Mes demandes" doit refleter le nouveau depot.
       const { donnees: liste } = await apiFetch("/api/submissions/mes-depots");
-      setMesDepots(Array.isArray(liste) ? liste : []);
+      setNbDepots(Array.isArray(liste) ? liste.length : 0);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
@@ -206,43 +190,21 @@ export default function Deposer({ user }) {
           </Button>
         </form>
 
-        {mesDepots.length > 0 ? (
-          <div className="mt-8">
-            <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
-              <span className="h-5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
-              Mes dépôts
-            </h2>
-            <ul className="flex flex-col gap-2">
-              {mesDepots.map((depot) => {
-                const statut = STATUTS[depot.statut] ?? STATUTS.en_attente;
-                const Icone = statut.icone;
-                return (
-                  <li
-                    key={depot.id_submission}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-background/50 px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{depot.title}</p>
-                      <p className="truncate text-sm text-muted-foreground">
-                        {depot.artist}
-                      </p>
-                      {depot.statut === "refuse" && depot.motif_refus ? (
-                        <p className="mt-1 text-xs text-destructive">
-                          Motif : {depot.motif_refus}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${statut.classe}`}
-                    >
-                      <Icone className="w-3.5 h-3.5" />
-                      {statut.label}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+        {nbDepots > 0 ? (
+          <Link
+            to="/mes-depots"
+            className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          >
+            <Inbox className="w-5 h-5 text-primary shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block font-medium">Mes demandes de dépôt</span>
+              <span className="block text-sm text-muted-foreground">
+                Suis l'état de {nbDepots > 1 ? "tes" : "ta"} {nbDepots}{" "}
+                {nbDepots > 1 ? "propositions" : "proposition"}.
+              </span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </Link>
         ) : null}
       </div>
     </section>
