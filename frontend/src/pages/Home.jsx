@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import Deconnexion from "../composants/Deconnexion";
 import TrackRow from "../composants/TrackRow";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Home({
-  musiques,
+  top5,
   setCurrentMusic,
   setCurrentQueue,
   user,
@@ -14,7 +15,9 @@ export default function Home({
   setToken,
   currentMusic,
 }) {
-  const topCinq = musiques.slice(0, 5);
+  // `top5` vient de GET /api/musics/top : un vrai classement par nombre d'ecoutes.
+  // (Avant : un `.slice(0, 5)` de la bibliotheque triee par titre — donc pas un top du tout.)
+  const topCinq = top5;
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
@@ -36,13 +39,12 @@ export default function Home({
             >
               S'inscrire
             </Link>
-            <Button
-              nativeButton={false}
-              render={<Link to={"/connexion"} />}
-              className="rounded-full px-6"
+            <Link
+              to="/connexion"
+              className={cn(buttonVariants(), "rounded-full px-6")}
             >
               Connexion
-            </Button>
+            </Link>
           </div>
         ) : (
           <div className="flex items-center justify-end gap-3 shrink-0">

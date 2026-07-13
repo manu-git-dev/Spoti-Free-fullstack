@@ -1,6 +1,7 @@
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { apiFetch, messageErreur } from "@/lib/api";
 
 export default function ButtonLike({
   idMusic,
@@ -11,25 +12,18 @@ export default function ButtonLike({
   const estLike = musiquesLikee.some((musique) => musique.id_music === idMusic);
 
   async function handleLike() {
-    const url = `http://localhost:3000/api/users/like/${idMusic}`;
-
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
+      const { reponse, donnees } = await apiFetch(`/api/users/like/${idMusic}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
-      const resultat = await reponse.json();
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
       setMusiquesLikee((prev) => [...prev, musique]);
-      toast.success(resultat.message);
+      toast.success(donnees.message);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");
       console.error(erreur.message);
@@ -37,24 +31,18 @@ export default function ButtonLike({
   }
 
   async function handleUnlike() {
-    const url = `http://localhost:3000/api/users/unlikes/${idMusic}`;
-
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const resultat = await reponse.json();
+      const { reponse, donnees } = await apiFetch(
+        `/api/users/unlikes/${idMusic}`,
+        { method: "DELETE" },
+      );
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setMusiquesLikee((prev) =>
         prev.filter((musique) => musique.id_music !== idMusic),
       );

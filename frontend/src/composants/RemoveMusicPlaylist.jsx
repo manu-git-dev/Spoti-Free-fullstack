@@ -1,6 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { apiFetch, messageErreur } from "@/lib/api";
 
 export default function RemoveMusicPlaylist({
   idMusic,
@@ -8,24 +9,18 @@ export default function RemoveMusicPlaylist({
   setMusicsPlaylist,
 }) {
   async function handleClick() {
-    const url = `http://localhost:3000/api/playlists/retirer/${idPlaylist}/${idMusic}`;
-
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const resultat = await reponse.json();
+      const { reponse, donnees } = await apiFetch(
+        `/api/playlists/retirer/${idPlaylist}/${idMusic}`,
+        { method: "DELETE" },
+      );
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setMusicsPlaylist((prev) =>
         prev.filter((musique) => musique.id_music !== idMusic),
       );

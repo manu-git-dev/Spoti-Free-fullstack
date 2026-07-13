@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Apropos() {
   return (
@@ -63,9 +64,12 @@ export default function Apropos() {
           n'hésitez pas à me contacter.
         </p>
 
-        <Button nativeButton={false} render={<Link to="/contact" />} className="rounded-full w-fit px-6 mt-2">
+        <Link
+          to="/contact"
+          className={cn(buttonVariants(), "rounded-full w-fit px-6 mt-2")}
+        >
           Me contacter
-        </Button>
+        </Link>
       </div>
     </section>
   );

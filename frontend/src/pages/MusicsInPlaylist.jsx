@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import TrackRow from "../composants/TrackRow";
+import { apiFetch } from "@/lib/api";
 export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMusiquesLikee, musiquesLikee, user, currentMusic}) {
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
   const {idPlaylist} = useParams();
@@ -9,17 +10,9 @@ export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMus
   // le meme composant (pas de remontage). Avec `[]`, l'effet ne se relancait pas et la page
   // continuait d'afficher le contenu de la playlist precedente.
   useEffect(() => {
-    const url = `http://localhost:3000/api/playlists/musics/${idPlaylist}`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setMusicsPlaylist(Array.isArray(data) ? data : []);
+    apiFetch(`/api/playlists/musics/${idPlaylist}`)
+      .then(({ donnees }) => {
+        setMusicsPlaylist(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
   }, [idPlaylist]);
