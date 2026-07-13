@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
-import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Profil({
   user,
@@ -15,19 +17,12 @@ export default function Profil({
   const [infoUser, setInfoUser] = useState({});
  
   useEffect(() => {
-    const url = `http://localhost:3000/api/users/profil`;
-    if (!token){
-        return;
+    if (!token) {
+      return;
     }
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setInfoUser(data);
+    apiFetch("/api/users/profil")
+      .then(({ donnees }) => {
+        setInfoUser(donnees ?? {});
       })
       .catch((error) => console.error(error));
   }, [token]);
@@ -49,9 +44,12 @@ if (user === null ){
           <Link to={"/inscription"} className="text-primary underline-offset-4 hover:underline">
             S'inscrire
           </Link>
-          <Button nativeButton={false} render={<Link to={"/connexion"} />} className="rounded-full px-6">
+          <Link
+            to="/connexion"
+            className={cn(buttonVariants(), "rounded-full px-6")}
+          >
             Connexion
-          </Button>
+          </Link>
         </div>
       </section>
     )

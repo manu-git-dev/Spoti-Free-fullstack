@@ -26,3 +26,7 @@ dist-ssr
 
 node_modules/
 dist/
+
+# Variables d'environnement locales (voir .env.example)
+.env
+.env.local

@@ -4,6 +4,7 @@ import { ListMusic, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch, messageErreur } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -32,24 +33,18 @@ export default function Playlist({ id, nom, setPlaylists }) {
   async function handleDelete(event) {
     event.stopPropagation();
     event.preventDefault();
-    const url = `http://localhost:3000/api/playlists/delete/${id}`;
-
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const resultat = await reponse.json();
+      const { reponse, donnees } = await apiFetch(
+        `/api/playlists/delete/${id}`,
+        { method: "DELETE" },
+      );
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setPlaylists((prev) =>
         prev.filter((playlist) => playlist.id_playlist !== id),
       );
@@ -61,25 +56,18 @@ export default function Playlist({ id, nom, setPlaylists }) {
 
   async function handleRename() {
     const name = inputRef.current.value;
-    const url = `http://localhost:3000/api/playlists/renommer/${id}`;
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name }),
-      });
-      const resultat = await reponse.json();
+      const { reponse, donnees } = await apiFetch(
+        `/api/playlists/renommer/${id}`,
+        { method: "PUT", body: { name } },
+      );
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setPlaylists((prev) =>
         prev.map((playlist) =>
           playlist.id_playlist === id ? { ...playlist, name } : playlist,

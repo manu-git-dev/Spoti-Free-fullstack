@@ -6,9 +6,10 @@ import {
   SkipForward,
   Volume2,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { apiFetch, urlFichier } from "@/lib/api";
 
 export default function MediaPlayer({
   music,
@@ -17,6 +18,7 @@ export default function MediaPlayer({
   setCurrentMusic,
   setCurrentIndex,
   maxIndex,
+  onEcouteComptee,
   className = "",
 }) {
   const [volume, setVolume] = useState(50);
@@ -24,9 +26,20 @@ export default function MediaPlayer({
   const [duration, setDuration] = useState(0);
   const [timeUpdate, setTimeUpdate] = useState(0);
 
-  const API_URL = "http://localhost:3000/";
 
   const audioRef = useRef(null);
+
+  // Compte une ecoute a chaque NOUVELLE piste lancee (alimente le Top 5).
+  // La dependance est `music?.id_music` et non `music` : reprendre la lecture apres une pause
+  // ne relance pas l'effet, donc une meme piste n'est comptee qu'une fois par lancement.
+  const idMusic = music?.id_music;
+  useEffect(() => {
+    if (!idMusic) return;
+
+    apiFetch(`/api/musics/ecoute/${idMusic}`, { method: "POST" })
+      .then(() => onEcouteComptee?.())
+      .catch((error) => console.error(error));
+  }, [idMusic, onEcouteComptee]);
 
   const affichageDuration =
     Math.trunc(duration / 60)
@@ -99,7 +112,7 @@ export default function MediaPlayer({
   return (
     <section className={className}>
       <audio
-        src={`${API_URL}${music.src_audio}`}
+        src={urlFichier(music.src_audio)}
         ref={audioRef}
         volume={volume / 100}
         onLoadedMetadata={() => {
@@ -114,7 +127,7 @@ export default function MediaPlayer({
       {/* Bloc mobile : barre compacte, juste play/pause */}
       <div className="flex md:hidden items-center gap-3 w-full px-3 py-2 bg-card border border-border rounded-2xl">
         <img
-          src={`${API_URL}${music.src_image}`}
+          src={urlFichier(music.src_image)}
           alt={`Pochette album ${music.title}`}
           className="w-11 h-11 rounded-lg object-cover"
         />
@@ -136,7 +149,7 @@ export default function MediaPlayer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 w-64 min-w-0">
             <img
-              src={`${API_URL}${music.src_image}`}
+              src={urlFichier(music.src_image)}
               alt={`Pochette album ${music.title}`}
               className="w-12 h-12 rounded-lg object-cover ring-2 ring-primary/40"
             />

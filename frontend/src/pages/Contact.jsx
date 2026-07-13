@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, Mail, Code2, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { apiFetch, messageErreur } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 export default function Contact() {
   const [isSending, setIsSending] = useState(false);
@@ -18,22 +19,17 @@ export default function Contact() {
       message: formData.get("message"),
     };
 
-    const url = "http://localhost:3000/api/contact/";
     try {
-      const reponse = await fetch(url, {
+      const { reponse, donnees } = await apiFetch("/api/contact/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(contact),
+        body: contact,
       });
-      const resultat = await reponse.json();
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       event.target.reset();
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");

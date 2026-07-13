@@ -1,6 +1,7 @@
 import AddMusicPlaylist from "./AddMusicPlaylist";
 import ButtonLike from "./ButtonLike";
 import RemoveMusicPlaylist from "./RemoveMusicPlaylist";
+import { urlFichier } from "@/lib/api";
 
 export default function TrackRow({
   musique,
@@ -15,7 +16,6 @@ export default function TrackRow({
   user,
   currentMusic,
 }) {
-  const API_URL = "http://localhost:3000/";
   const isPlaying = currentMusic?.id_music === musique.id_music;
   const handleClick = () => {
     setCurrentMusic(musique);
@@ -51,7 +51,7 @@ export default function TrackRow({
         onClick={handleClick}
       >
         <img
-          src={`${API_URL}${musique.src_image}`}
+          src={urlFichier(musique.src_image)}
           alt={`Pochette album ${musique.title}`}
           className={`w-12 h-12 rounded-lg object-cover transition-transform group-hover:scale-105 ${
             isPlaying ? "ring-2 ring-primary" : ""

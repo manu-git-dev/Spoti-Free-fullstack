@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch, messageErreur } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -31,29 +32,22 @@ export default function ButtonAddPlaylist({
       nom: formData.get("nom"),
     };
 
-    const url = "http://localhost:3000/api/playlists/ajouter";
-    const token = localStorage.getItem("token");
     try {
-      const reponse = await fetch(url, {
+      const { reponse, donnees } = await apiFetch("/api/playlists/ajouter", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(user),
+        body: user,
       });
-      const resultat = await reponse.json();
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
       const newPlaylist = {
-        id_playlist: resultat.id_playlist,
-        name: resultat.name,
+        id_playlist: donnees.id_playlist,
+        name: donnees.name,
       };
       setPlaylists((prev) => [...prev, newPlaylist]);
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setOpen(false);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");

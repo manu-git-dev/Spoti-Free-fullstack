@@ -1,7 +1,7 @@
 import Aside from "./composants/Aside";
 import HeaderMobile from "./composants/HeaderMobile";
 import BottomNav from "./composants/BottomNav";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import MediaPlayer from "./composants/MediaPlayer";
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
@@ -17,6 +17,7 @@ import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { apiFetch, definirSurSessionExpiree } from "@/lib/api";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
@@ -27,6 +28,7 @@ function App() {
   const [currentQueue, setCurrentQueue] = useState([]);
   const [musiquesLikee, setMusiquesLikee] = useState([]);
   const [playlists, setPlaylists] = useState([]);
+  const [top5, setTop5] = useState([]);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -38,24 +40,48 @@ function App() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/musics")
-      .then((response) => response.json())
-      .then((data) => {
-        setMusiques(data);
+    apiFetch("/api/musics")
+      .then(({ donnees }) => {
+        setMusiques(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
   }, []);
+
+  // Top 5 reel (classement par nombre d'ecoutes), et non plus un `.slice(0, 5)` de la
+  // bibliotheque triee par titre. `chargerTop5` est rappelee apres chaque ecoute comptee
+  // pour que le classement se mette a jour sans rechargement de page.
+  const chargerTop5 = useCallback(() => {
+    apiFetch("/api/musics/top")
+      .then(({ donnees }) => {
+        setTop5(Array.isArray(donnees) ? donnees : []);
+      })
+      .catch((error) => console.error(error));
+  }, []);
+
+  useEffect(() => {
+    chargerTop5();
+  }, [chargerTop5]);
   // Le token JWT expire (24h). Passe ce delai, le token stocke reste dans localStorage :
   // l'app croyait donc l'utilisateur connecte ("Bonjour X", bouton Deconnexion), alors que
   // chaque action echouait avec "Token invalide". On purge la session des qu'une route
   // protegee repond 401.
-  function sessionExpiree() {
+  const sessionExpiree = useCallback(() => {
+    // deja deconnecte : on ne re-affiche pas le message a chaque appel
+    if (!localStorage.getItem("token")) return;
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
     toast.info("Ta session a expiré, reconnecte-toi.");
-  }
+  }, []);
+
+  // Branche l'interception des 401 : desormais N'IMPORTE quel appel via apiFetch qui recoit
+  // un 401 (une action isolee comme un like, pas seulement le chargement initial) purge la
+  // session automatiquement.
+  useEffect(() => {
+    definirSurSessionExpiree(sessionExpiree);
+  }, [sessionExpiree]);
 
   // Ces deux effets dependent de `token` (le state), et non de localStorage lu une seule
   // fois au montage : localStorage n'est pas reactif, donc avec `[]` en dependances ils ne
@@ -67,22 +93,9 @@ function App() {
       setMusiquesLikee([]);
       return;
     }
-    fetch(`http://localhost:3000/api/users/likes`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => {
-        if (response.status === 401) {
-          sessionExpiree();
-          return null;
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data === null) return;
-        setMusiquesLikee(Array.isArray(data) ? data : []);
+    apiFetch("/api/users/likes")
+      .then(({ donnees }) => {
+        setMusiquesLikee(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
   }, [token]);
@@ -92,15 +105,9 @@ function App() {
       setPlaylists([]);
       return;
     }
-    fetch(`http://localhost:3000/api/playlists`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setPlaylists(Array.isArray(data) ? data : []);
+    apiFetch("/api/playlists")
+      .then(({ donnees }) => {
+        setPlaylists(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
   }, [token]);
@@ -128,7 +135,11 @@ function App() {
   }, [currentQueue]);
 
   return (
-    <section className="box-border h-screen flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr_88px] md:gap-3 md:p-3">
+    // `minmax(0,1fr)` et non `1fr` : en CSS Grid, `1fr` vaut `minmax(auto, 1fr)`, et ce `auto`
+    // interdit a la ligne de descendre sous la taille de son contenu. Resultat : une longue
+    // liste de playlists faisait grandir l'Aside, donc la grille, donc toute l'app au-dela de
+    // l'ecran — et l'`overflow-y-auto` de la liste ne s'activait jamais, faute de contrainte.
+    <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_88px] md:gap-3 md:p-3">
       <div className="md:hidden">
         <HeaderMobile />
       </div>
@@ -151,6 +162,7 @@ function App() {
             element={
               <Home
                 musiques={musiques}
+                top5={top5}
                 user={user}
                 setCurrentMusic={setCurrentMusic}
                 setCurrentQueue={setCurrentQueue}
@@ -252,6 +264,7 @@ function App() {
       <MediaPlayer
         className="w-full px-3 pt-3 md:p-0 md:row-start-2 md:col-span-2"
         music={currentMusic}
+        onEcouteComptee={chargerTop5}
         currentIndex={currentIndex}
         queue={currentQueue}
         setCurrentMusic={setCurrentMusic}

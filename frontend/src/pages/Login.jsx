@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -20,29 +21,23 @@ export default function Login({ user, setUser, token, setToken }) {
       password: formData.get("password"),
     };
 
-    const url = "http://localhost:3000/api/users/connexion";
     try {
-      const reponse = await fetch(url, {
+      const { reponse, donnees } = await apiFetch("/api/users/connexion", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
+        body: user,
       });
-      const resultat = await reponse.json();
-      console.log(resultat);
 
       if (!reponse.ok) {
         setTypeMessage("error");
-        setMessage(resultat.message);
+        setMessage(donnees.message);
         return;
       }
-      localStorage.setItem("token", resultat.token);
-      localStorage.setItem("user", JSON.stringify(resultat.user));
-      setToken(resultat.token);
-      setUser(resultat.user);
+      localStorage.setItem("token", donnees.token);
+      localStorage.setItem("user", JSON.stringify(donnees.user));
+      setToken(donnees.token);
+      setUser(donnees.user);
       setTypeMessage("success");
-      setMessage(resultat.message);
+      setMessage(donnees.message);
       setTimeout(() => {
         navigate("/");
       }, 1000);

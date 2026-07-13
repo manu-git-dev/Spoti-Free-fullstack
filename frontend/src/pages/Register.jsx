@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -29,23 +30,18 @@ export default function Register() {
       password: formData.get("password"),
     };
 
-    const url = "http://localhost:3000/api/users/inscription";
     try {
-      const reponse = await fetch(url, {
+      const { reponse, donnees } = await apiFetch("/api/users/inscription", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
+        body: user,
       });
-      const resultat = await reponse.json();
       if (!reponse.ok) {
         setTypeMessage("error");
-        setMessage(resultat.message);
+        setMessage(donnees.message);
         return;
       }
       setTypeMessage("success");
-      setMessage(resultat.message);
+      setMessage(donnees.message);
       setTimeout(() => {
         navigate("/connexion");
       }, 3000);

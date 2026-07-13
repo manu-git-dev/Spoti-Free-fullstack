@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { ListMusic } from "lucide-react";
 import ButtonAddPlaylist from "../composants/ButtonAddPlaylist";
 import Playlist from "../composants/Playlist";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 export default function Playlists({playlists,setPlaylists,user}) {
 
   if (user === null) {
@@ -23,9 +24,12 @@ export default function Playlists({playlists,setPlaylists,user}) {
           <Link to={"/inscription"} className="text-primary underline-offset-4 hover:underline">
             S'inscrire
           </Link>
-          <Button nativeButton={false} render={<Link to={"/connexion"} />} className="rounded-full px-6">
+          <Link
+            to="/connexion"
+            className={cn(buttonVariants(), "rounded-full px-6")}
+          >
             Connexion
-          </Button>
+          </Link>
         </div>
       </section>
     );

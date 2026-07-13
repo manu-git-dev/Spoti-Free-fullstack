@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { apiFetch, messageErreur } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -26,44 +27,26 @@ export default function AddMusicPlaylist({ idMusic }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const url = `http://localhost:3000/api/playlists`;
-    const token = localStorage.getItem("token");
-    fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPlaylists(data);
-        } else {
-          setPlaylists([]);
-        }
+    apiFetch("/api/playlists")
+      .then(({ donnees }) => {
+        setPlaylists(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
   }, []);
 
   async function handleClick() {
-    const url = `http://localhost:3000/api/playlists/ajouter/${selectedPlaylist}/${idMusic}`;
-
     try {
-      const token = localStorage.getItem("token");
-      const reponse = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const resultat = await reponse.json();
+      const { reponse, donnees } = await apiFetch(
+        `/api/playlists/ajouter/${selectedPlaylist}/${idMusic}`,
+        { method: "POST" },
+      );
 
       if (!reponse.ok) {
-        toast.error(resultat.message);
-        console.error(resultat.message);
+        const message = messageErreur(reponse, donnees);
+        if (message) toast.error(message);
         return;
       }
-      toast.success(resultat.message);
+      toast.success(donnees.message);
       setOpen(false);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");

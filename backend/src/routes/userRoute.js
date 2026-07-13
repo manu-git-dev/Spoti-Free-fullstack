@@ -3,8 +3,36 @@ import db from "../../db.js";
 import bcrypt from "bcryptjs";
 const router = express.Router();
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+
+// Anti brute-force : sans cette limite, un script peut tester des milliers de mots de passe
+// a la seconde sur /connexion. bcrypt ralentit chaque tentative, mais ne les empeche pas.
+// 10 tentatives par IP toutes les 15 minutes ; seuls les ECHECS sont comptes, donc un
+// utilisateur qui se connecte normalement n'est jamais bloque.
+const limiteConnexion = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message:
+      "Trop de tentatives de connexion. Réessaye dans une quinzaine de minutes.",
+  },
+});
+
+// Limite plus large sur l'inscription : evite la creation massive de comptes en boucle.
+const limiteInscription = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Trop de comptes créés depuis cette adresse. Réessaye plus tard.",
+  },
+});
 
 //affiche les infos du profil
 router.get("/profil", authMiddleware, async (req, res) => {
@@ -130,7 +158,7 @@ router.delete("/unlikes/:idMusic", authMiddleware, async (req, res) => {
   }
 });
 // inscription
-router.post("/inscription", async (req, res) => {
+router.post("/inscription", limiteInscription, async (req, res) => {
   try {
     const pseudo = req.body.pseudo;
     const prenom = req.body.prenom;
@@ -189,7 +217,7 @@ router.post("/inscription", async (req, res) => {
 });
 
 //Connexion
-router.post("/connexion", async (req, res) => {
+router.post("/connexion", limiteConnexion, async (req, res) => {
   try {
     const email = req.body.email;
     const password = req.body.password;

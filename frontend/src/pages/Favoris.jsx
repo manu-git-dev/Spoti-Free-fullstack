@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import TrackRow from "../composants/TrackRow";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 export default function Favoris({setCurrentMusic,setCurrentQueue,musiquesLikee,setMusiquesLikee,user,currentMusic}) {
 
   if (user === null) {
@@ -22,9 +23,12 @@ export default function Favoris({setCurrentMusic,setCurrentQueue,musiquesLikee,s
           <Link to={"/inscription"} className="text-primary underline-offset-4 hover:underline">
             S'inscrire
           </Link>
-          <Button nativeButton={false} render={<Link to={"/connexion"} />} className="rounded-full px-6">
+          <Link
+            to="/connexion"
+            className={cn(buttonVariants(), "rounded-full px-6")}
+          >
             Connexion
-          </Button>
+          </Link>
         </div>
       </section>
     );

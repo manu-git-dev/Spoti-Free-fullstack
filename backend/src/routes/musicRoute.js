@@ -18,6 +18,53 @@ router.get("/", async (req, res) => {
     });
   }
 });
+// Top 5 des titres les plus ecoutes.
+// Doit rester DEVANT `/info/:id` : Express teste les routes dans l'ordre de declaration,
+// et `/info/:id` ne capterait pas "/top" — mais si un jour une route `/:id` est ajoutee au
+// meme niveau, elle avalerait "/top" en le prenant pour un identifiant.
+router.get("/top", async (req, res) => {
+  try {
+    const [top] = await db.query(
+      "SELECT * FROM musics ORDER BY play_count DESC, title ASC LIMIT 5",
+    );
+    return res.status(200).json(top);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de la récupération du top 5.",
+    });
+  }
+});
+
+// Enregistre une ecoute (incremente le compteur qui alimente le Top 5).
+// Volontairement publique : un visiteur non connecte peut ecouter, et son ecoute compte.
+router.post("/ecoute/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const [resultat] = await db.query(
+      "UPDATE musics SET play_count = play_count + 1 WHERE id_music = ?",
+      [id],
+    );
+
+    if (resultat.affectedRows === 0) {
+      return res.status(404).json({
+        message: "La musique est introuvable.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Écoute enregistrée.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors de l'enregistrement de l'écoute.",
+    });
+  }
+});
+
 // Ajouter une musique — ADMIN UNIQUEMENT (gestion du catalogue)
 router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
   const title = req.body.title;
