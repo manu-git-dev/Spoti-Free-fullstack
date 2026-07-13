@@ -824,3 +824,44 @@ L'appelant décide alors de la présentation, sans que le composant ait à conna
 **Le principe général** : un composant réutilisable gère la **logique** (ici : ouvrir la modale, faire le `POST`, mettre à jour la liste). La **présentation** de son point d'entrée dépend de l'endroit où on le pose — donc elle se paramètre. Quand on se retrouve à vouloir dupliquer un composant juste pour changer un `size`, c'est le signe qu'une prop manque.
 
 ---
+
+### 31. Un `useEffect` avec `[]` qui lit `localStorage` : l'état ne se resynchronise jamais après connexion
+
+**Contexte** : bug constaté sur les likes — certaines musiques refusaient d'être likées ("Erreur lors de l'ajout du like"), d'autres non. Et après un `F5`, tout remarchait. Symptôme déroutant, mais la cause est nette.
+
+**Le code en cause** (`App.jsx`) :
+
+```jsx
+useEffect(() => {
+  const token = localStorage.getItem("token");   // ← lu UNE seule fois
+  fetch("http://localhost:3000/api/users/likes", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((r) => r.json())
+    .then((data) => setMusiquesLikee(Array.isArray(data) ? data : []));
+}, []);                                           // ← ne se relance jamais
+```
+
+**L'enchaînement** :
+1. J'arrive sur l'app **déconnecté** → l'effet tourne, pas de token → le backend répond 404 → `musiquesLikee = []`.
+2. Je me connecte → `setToken`/`setUser` provoquent un re-render… **mais l'effet ne se relance pas** (dépendances `[]`). `musiquesLikee` reste **vide**.
+3. Donc **tous** les cœurs s'affichent vides — y compris ceux des musiques que j'avais déjà likées.
+4. Je clique sur l'un d'eux → le front croit qu'elle n'est pas likée → `INSERT` → mais la table `likes` a une clé primaire `(id_user, id_music)` → **violation de contrainte** → le backend renvoie 500, le like échoue.
+
+Et au `F5`, l'app se remonte **avec** le token déjà dans `localStorage` : l'effet le trouve, charge les likes, tout est cohérent. D'où l'impression que le bug est aléatoire.
+
+**Ce que ça m'apprend** : `localStorage` n'est **pas réactif**. Le lire dans un effet ne crée aucun lien entre sa valeur et React — React ne "voit" pas que le token a changé. La source de vérité réactive, c'est le **state** (`token`), et c'est lui qui doit figurer dans les dépendances :
+
+```jsx
+// exemple générique
+useEffect(() => {
+  if (!jeton) return;              // le garde-fou va DANS l'effet (cf. note 27)
+  chargerLesDonnees(jeton);
+}, [jeton]);                       // ← se relance quand le jeton change
+```
+
+**La règle** : tout ce que l'effet **utilise** et qui peut **changer** doit être dans le tableau de dépendances. Si une valeur est lue "hors React" (`localStorage`, une variable globale), l'effet ne se resynchronisera pas quand elle change — il faut passer par un state.
+
+**À noter aussi** : ce bug de front a été *masqué* par un défaut de backend. Un doublon devrait renvoyer un **409 Conflict** ("cette musique est déjà dans tes favoris"), pas un **500** ("erreur serveur"). Un 500 dit "quelque chose a cassé chez moi" ; un 409 dit "ta demande entre en conflit avec l'état actuel" — c'est une information exploitable, qui m'aurait mis sur la piste tout de suite.
+
+---
