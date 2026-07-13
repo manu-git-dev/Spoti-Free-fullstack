@@ -1,5 +1,4 @@
 import Aside from "./composants/Aside";
-import Header from "./composants/Header";
 import HeaderMobile from "./composants/HeaderMobile";
 import BottomNav from "./composants/BottomNav";
 import { useEffect, useState } from "react";
@@ -15,6 +14,7 @@ import Playlists from "./pages/Playlists";
 import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
 import ProtectedRoute from "./composants/ProtectedRoute";
+import Profil from "./pages/Profil";
 
 function App() {
   const [musiques, setMusiques] = useState([]);
@@ -109,16 +109,6 @@ function App() {
       <div className="md:hidden">
         <HeaderMobile />
       </div>
-
-      {/* <header className="hidden md:flex md:col-span-2 justify-between bg-zinc-900 rounded-2xl p-2 items-center">
-        <Header
-          user={user}
-          setUser={setUser}
-          token={token}
-          setToken={setToken}
-          setMessageDeconnexion={setMessageDeconnexion}
-        />
-      </header> */}
       <Aside
         className="hidden md:flex md:row-start-1 md:col-start-1"
         user={user}
@@ -179,8 +169,26 @@ function App() {
             path="/playlists"
             element={
               <ProtectedRoute user={user}>
-                <Playlists playlists={playlists} setPlaylists={setPlaylists}/>
+                <Playlists playlists={playlists} setPlaylists={setPlaylists} />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profil"
+            element={
+           
+                <Profil
+                  user={user}
+                  messageDeconnexion={messageDeconnexion}
+                  musiquesLikee={musiquesLikee}
+                  setUser={setUser}
+                  token={token}
+                  setToken={setToken}
+                  setMessageDeconnexion={setMessageDeconnexion}
+                  playlists={playlists}
+                />
+             
             }
           />
 

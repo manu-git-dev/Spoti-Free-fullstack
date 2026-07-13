@@ -47,15 +47,22 @@ export default function Home({
           </Link>
         </div>
       ) : (
-        <Deconnexion
-          user={user}
-          setUser={setUser}
-          token={token}
-          setToken={setToken}
-          setMessageDeconnexion={setMessageDeconnexion}
-        />
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Deconnexion
+            user={user}
+            setUser={setUser}
+            token={token}
+            setToken={setToken}
+            setMessageDeconnexion={setMessageDeconnexion}
+          />
+          <Link
+            to={"/profil"}
+            className="w-9 h-9 shrink-0 rounded-full bg-linear-to-br from-primary to-accent flex items-center justify-center text-sm font-bold text-white"
+          >
+            {user.pseudo?.charAt(0).toUpperCase()}
+          </Link>
+        </div>
       )}
-
       <p className="text-2xl font-serif mb-6">
         {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
       </p>

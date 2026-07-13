@@ -5,6 +5,25 @@ const router = express.Router();
 import jwt from "jsonwebtoken";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
+//affiche les infos du profil
+router.get("/profil", authMiddleware, async (req, res) => {
+  try {
+    const idUser = req.user.id_user;
+    const [infoProfil] = await db.query(
+      "SELECT `pseudo`,`first_name`,`last_name`,`email`,`created_at` FROM users WHERE id_user = ?",
+      [idUser],
+    );
+    const userInfo = infoProfil[0];
+    return res.json(userInfo);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors du suivi du profil.",
+    });
+  }
+});
+
 //affiche tous les utilisateur ROUTE SECURISÉE
 router.get("/", authMiddleware, async (req, res) => {
   const idUser = req.user.id_user;
@@ -159,7 +178,7 @@ router.post("/connexion", async (req, res) => {
     );
     if (uniqueEmail.length === 0) {
       return res.status(400).json({
-        message: "Identifiant incorrect",
+        message: "Identifiants incorrect",
       });
     } else {
       const user = uniqueEmail[0];
