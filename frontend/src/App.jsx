@@ -3,7 +3,7 @@ import HeaderMobile from "./composants/HeaderMobile";
 import BottomNav from "./composants/BottomNav";
 import { useCallback, useEffect, useState } from "react";
 import MediaPlayer from "./composants/MediaPlayer";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Bibliotheque from "./pages/Bibliotheque";
 import Login from "./pages/Login";
@@ -17,12 +17,16 @@ import ProtectedRoute from "./composants/ProtectedRoute";
 import Profil from "./pages/Profil";
 import Deposer from "./pages/Deposer";
 import MesDepots from "./pages/MesDepots";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUtilisateurs from "./pages/AdminUtilisateurs";
+import AdminMusiques from "./pages/AdminMusiques";
 import AdminDepots from "./pages/AdminDepots";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { apiFetch, definirSurSessionExpiree } from "@/lib/api";
 
 function App() {
+  const emplacement = useLocation();
   const [musiques, setMusiques] = useState([]);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [valueInput, setValueInput] = useState("");
@@ -49,6 +53,21 @@ function App() {
       })
       .catch((error) => console.error(error));
   }, []);
+
+  // Comptage des pages vues.
+  //
+  // C'est le FRONT qui signale la visite, et non un middleware cote serveur : dans une SPA, le
+  // serveur ne voit passer que des appels API — et une seule page en declenche plusieurs. On
+  // compterait donc plusieurs "visites" pour une seule page reellement consultee.
+  //
+  // On n'attend pas la reponse et on avale l'erreur : un echec de comptage ne doit jamais
+  // perturber la navigation de l'utilisateur.
+  useEffect(() => {
+    apiFetch("/api/admin/visite", {
+      method: "POST",
+      body: { chemin: emplacement.pathname },
+    }).catch(() => {});
+  }, [emplacement.pathname]);
 
   // Top 5 reel (classement par nombre d'ecoutes), et non plus un `.slice(0, 5)` de la
   // bibliotheque triee par titre. `chargerTop5` est rappelee apres chaque ecoute comptee
@@ -208,6 +227,30 @@ function App() {
           <Route path="/inscription" element={<Register />} />
           <Route path="/deposer" element={<Deposer user={user} />} />
           <Route path="/mes-depots" element={<MesDepots user={user} />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute user={user}>
+                <AdminDashboard user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/utilisateurs"
+            element={
+              <ProtectedRoute user={user}>
+                <AdminUtilisateurs user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/musiques"
+            element={
+              <ProtectedRoute user={user}>
+                <AdminMusiques user={user} />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/depots"
             element={

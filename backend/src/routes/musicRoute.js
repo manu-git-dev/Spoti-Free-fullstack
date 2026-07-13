@@ -1,4 +1,6 @@
 import express from "express";
+import path from "node:path";
+import fs from "node:fs/promises";
 import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
@@ -120,29 +122,48 @@ router.get("/info/:id", async (req, res) => {
     });
   }
 });
-// Update une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+// Modifier une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+//
+// Seules les METADONNEES sont modifiables : titre, artiste, genre.
+//
+// Les chemins des fichiers (`src_audio`, `src_image`) et la duree ne sont PAS acceptes depuis
+// le client, pour deux raisons :
+//
+// 1. Robustesse — l'ancienne version faisait un UPDATE de toutes les colonnes d'un coup. Un
+//    formulaire qui n'envoie que le titre mettait donc `src_audio` et `src_image` a NULL : le
+//    morceau devenait injouable et sa pochette cassee, sans que rien ne le signale.
+//
+// 2. Securite — un chemin de fichier venant du client est une valeur qu'on ne controle pas.
+//    Rien n'empecherait d'y ecrire `../../.env` et de le faire servir par express.static.
+//    La duree, elle, est extraite du fichier reel : une valeur envoyee par le client pourrait
+//    simplement mentir.
 router.put("/update/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = req.params.id;
-    const title = req.body.title;
-    const artist = req.body.artist;
-    const genre = req.body.genre;
-    const srcImage = req.body.srcImage;
-    const srcAudio = req.body.srcAudio;
-    const duration = req.body.duration;
+    const title = req.body.title?.trim();
+    const artist = req.body.artist?.trim();
+    const genre = req.body.genre?.trim() || null;
+
+    if (!title || !artist) {
+      return res.status(400).json({
+        message: "Le titre et l'artiste sont obligatoires.",
+      });
+    }
+
     const [musics] = await db.query(
-      "UPDATE `musics` SET `title` = ?, `artist` = ?, `genre` = ?, `src_image` = ?, `src_audio` = ?,`duration` = ? WHERE id_music = ?",
-      [title, artist, genre, srcImage, srcAudio, duration, id],
+      "UPDATE `musics` SET `title` = ?, `artist` = ?, `genre` = ? WHERE id_music = ?",
+      [title, artist, genre, id],
     );
-    if (musics.affectedRows === 0) { // si l'id corresponds a aucune musique
+
+    if (musics.affectedRows === 0) {
       return res.status(404).json({
         message: "La musique est introuvable.",
       });
-    } else {
-      return res.status(200).json({
-        message: "la musique à bien été modifiée",
-      });
     }
+
+    return res.status(200).json({
+      message: `« ${title} » a bien été modifiée.`,
+    });
   } catch (error) {
     console.error(error);
 
@@ -159,18 +180,56 @@ router.delete(
   async (req, res) => {
     try {
       const id = req.params.id;
-      const [musics] = await db.query("DELETE FROM musics WHERE id_music = ?", [
-        id,
-      ]);
-      if (musics.affectedRows === 0) {
+
+      const [[musique]] = await db.query(
+        "SELECT title, src_audio, src_image FROM musics WHERE id_music = ?",
+        [id],
+      );
+
+      if (!musique) {
         return res.status(404).json({
           message: "La musique est introuvable.",
         });
-      } else {
-        return res.status(200).json({
-          message: "la musique à bien été supprimée.",
-        });
       }
+
+      await db.query("DELETE FROM musics WHERE id_music = ?", [id]);
+
+      // ---------------------------------------------------------------------
+      // Nettoyage des fichiers — LE piege de cette route.
+      //
+      // Un meme fichier peut etre partage par PLUSIEURS morceaux : c'est deja le cas des
+      // pochettes du catalogue (une seule image sert a quatre titres), et le depot de musique
+      // attribue justement une pochette existante, tiree au hasard, quand l'utilisateur n'en
+      // fournit pas.
+      //
+      // Supprimer aveuglement le fichier d'un morceau casserait donc l'affichage des autres.
+      // (Ce n'est pas theorique : un script de nettoyage a reellement efface `images/3.jpg`,
+      // utilisee par quatre titres.)
+      //
+      // On ne supprime donc un fichier que s'il n'est plus reference par AUCUN morceau. Sinon,
+      // on le laisse : mieux vaut un fichier inutile sur le disque qu'une image cassee.
+      // ---------------------------------------------------------------------
+      for (const relatif of [musique.src_audio, musique.src_image]) {
+        if (!relatif) continue;
+
+        const [[{ nb }]] = await db.query(
+          "SELECT COUNT(*) AS nb FROM musics WHERE src_audio = ? OR src_image = ?",
+          [relatif, relatif],
+        );
+
+        if (nb > 0) continue; // encore utilise par un autre morceau : on n'y touche pas
+
+        try {
+          await fs.unlink(path.join(process.cwd(), "public", relatif));
+        } catch (error) {
+          // Fichier deja absent : ce n'est pas une raison de faire echouer la suppression.
+          if (error.code !== "ENOENT") console.error(error);
+        }
+      }
+
+      return res.status(200).json({
+        message: `« ${musique.title} » a bien été supprimée.`,
+      });
     } catch (error) {
       console.error(error);
 
