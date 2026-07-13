@@ -4,6 +4,32 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
+## Prochaines etapes priorisees (au 2026-07-13)
+
+Liste dans l'ordre voulu par Manuel - a traiter dans cet ordre, une fois cette liste
+terminee : check/test complet de l'app, puis deploiement (serveur Hostinger a acheter),
+puis reflexion sur de nouvelles fonctionnalites pour plus tard.
+
+1. Inscription : le champ "confirmation mot de passe" existe deja cote UI mais sans
+   logique derriere (voir `Register.jsx`) - a implementer. Voir aussi si on ajoute des
+   regles de securite sur le mot de passe (longueur min, majuscule, etc.) - a trancher.
+2. Logo "Spoti-Free" trop petit / pas assez travaille visuellement - retouche de style a
+   prevoir (ou `Aside.jsx`/`HeaderMobile.jsx` le concernant).
+3. `Aside.jsx` - la logique d'affichage de la liste "Mes playlists" n'est pas robuste si
+   l'utilisateur a beaucoup de playlists (pas de scroll interne visiblement, risque que
+   l'Aside grandisse sans limite) - a retoucher et verifier avec un cas a beaucoup
+   d'entrees.
+4. `Playlists.jsx` (page "Mes playlists" connecte) - contenu trop pauvre actuellement
+   (juste quelques boutons), a etoffer.
+5. Revoir le contenu texte de la page A propos (`Apropos.jsx`).
+6. Les `<dialog>`/modals de l'app ont un style a revoir - boutons disproportionnes,
+   pas jolies actuellement (ex: modal d'ajout de musique a une playlist).
+7. Les messages d'erreur/succes renvoyes par le backend sont corrects sur le fond, mais
+   leur affichage cote front n'est pas forcement soigne partout - a auditer page par page.
+8. Repasser sur tous les codes de statut HTTP du backend (deja partiellement note plus
+   bas : `404` utilise a la place de `409`/`400` par endroits) - passe de verification
+   complete a faire route par route.
+
 ## Phase actuelle (au 2026-07-06)
 
 Refonte visuelle mobile-first : **passe complete site-wide faite le 2026-07-06**
