@@ -987,3 +987,140 @@ return res.status(200).json(playlists);   // 200 avec []
 C'est exactement ce qui m'avait égaré sur le bug des likes : un doublon renvoyait `500` (« erreur serveur ») alors que c'était un `409` (« ça existe déjà »). Le mauvais code de statut m'a fait chercher un bug serveur là où il y avait une règle métier.
 
 ---
+
+### 36. `1fr` en CSS Grid ne veut pas dire « au maximum une fraction »
+
+**Contexte** : avec beaucoup de playlists, l'Aside grandissait et faisait déborder toute l'app au-delà de l'écran. J'avais pourtant mis un `overflow-y-auto` sur la liste — et il ne s'activait **jamais**.
+
+**Le shell de l'app** :
+
+```jsx
+<section className="h-screen md:grid md:grid-rows-[1fr_88px]">
+  <aside>…liste des playlists…</aside>   {/* ligne 1 : 1fr */}
+  <MediaPlayer />                         {/* ligne 2 : 88px */}
+</section>
+```
+
+**Le piège** : `1fr` n'est **pas** « occupe une fraction de la place disponible, et pas plus ». C'est un raccourci pour :
+
+```css
+minmax(auto, 1fr)
+```
+
+Et ce **`auto` en minimum** signifie « **ne descends jamais en dessous de la taille de ton contenu** ». Donc quand la liste s'allongeait, la ligne grandissait avec elle, l'aside grandissait, la grille grandissait, et l'app dépassait la hauteur de l'écran.
+
+Du coup, mon `overflow-y-auto` ne pouvait rien faire : **un conteneur ne scrolle que s'il a une hauteur maximale**. Ici, aucune contrainte ne l'empêchait de s'étirer indéfiniment — il n'y avait donc jamais de « trop-plein » à faire défiler.
+
+**La correction** — autoriser explicitement la ligne à rétrécir sous son contenu :
+
+```jsx
+md:grid-rows-[minmax(0,1fr)_88px]
+```
+
+Vérifié avec 15 playlists : la page fait exactement la hauteur de l'écran (900px pour 900px), et la liste défile à l'intérieur.
+
+**Le même piège existe en Flexbox**, avec un nom différent : un élément flex a `min-height: auto` par défaut, d'où le fameux `min-h-0` qu'on ajoute sur les enfants flex qui doivent scroller. C'est exactement la même idée : *par défaut, un élément CSS refuse de devenir plus petit que son contenu — il faut le lui permettre explicitement.*
+
+**La leçon à garder** : quand un `overflow-y-auto` « ne marche pas », la cause n'est presque jamais l'`overflow` lui-même — c'est qu'**aucun parent ne contraint la hauteur**. Remonter la chaîne des parents jusqu'à trouver celui qui s'étire.
+
+---
+
+### 37. Centraliser les appels réseau : un seul endroit pour le token, l'URL et les erreurs
+
+**Contexte** : chaque composant faisait son `fetch` dans son coin :
+
+```jsx
+const token = localStorage.getItem("token");
+const reponse = await fetch("http://localhost:3000/api/users/like/" + idMusic, {
+  method: "POST",
+  headers: { Authorization: `Bearer ${token}` },
+});
+```
+
+Répété dans une quinzaine de fichiers. Trois problèmes, tous réglés par un module unique (`src/lib/api.js`) :
+
+**a) L'URL en dur rendait le déploiement impossible.** `http://localhost:3000` était écrit dans 14 fichiers : mettre le projet en ligne aurait voulu dire les éditer un par un. Elle vient maintenant d'une variable d'environnement (`VITE_API_URL`), avec le localhost en valeur par défaut pour le dev. Règle : **tout ce qui change selon l'environnement (URL, clé, port) sort du code.**
+
+**b) La logique du token était dupliquée** partout. Un seul endroit la porte désormais.
+
+**c) Surtout : personne n'interceptait les `401`.** Quand le token expirait, chaque composant affichait bêtement le message brut de l'API (« Token invalide ») et l'utilisateur restait coincé dans une session morte. Maintenant, **tout** `401` — d'où qu'il vienne — purge la session :
+
+```js
+const reponse = await fetch(`${BASE_URL}${chemin}`, { …ajoute le token… });
+
+if (reponse.status === 401) {
+  surSessionExpiree?.();   // callback enregistré par App
+}
+```
+
+**Le point de conception à retenir** : `api.js` ne connaît **pas** React. Il ne fait pas d'`import` de mon state, il expose un **callback** (`definirSurSessionExpiree`) que `App` enregistre au montage. La dépendance va dans un seul sens (App → api), jamais l'inverse. Un module bas niveau ne doit jamais dépendre de la couche au-dessus de lui.
+
+**Conséquence inattendue et intéressante** : je pensais avoir besoin d'un `AuthContext` pour partager le token. **Il n'est plus nécessaire du tout** — puisque `apiFetch` gère le token lui-même, plus aucun composant n'a besoin de le connaître. Un bon découpage supprime le besoin d'une abstraction, au lieu d'en ajouter une.
+
+**Détail d'UX qui compte** : au début, deux toasts s'affichaient à l'expiration — « Token invalide » (le message de l'API, remonté par le composant) puis « Ta session a expiré ». J'ai ajouté un helper `messageErreur(reponse, donnees)` qui renvoie `null` sur un 401 : le message technique de l'API n'a rien à faire sous les yeux de l'utilisateur quand un message clair est déjà affiché.
+
+---
+
+### 38. bcrypt ne protège pas du brute-force : il faut limiter le nombre de tentatives
+
+**Contexte** : ma route `/connexion` hache bien les mots de passe avec bcrypt et compare avec `bcrypt.compare`. Je pensais donc l'authentification « sécurisée ». Elle ne l'était pas.
+
+**Ce que bcrypt fait — et ne fait pas.** bcrypt protège les mots de passe **si la base fuite** : les hachages sont lents à casser. Mais il **n'empêche pas** un attaquant de tester des mots de passe via l'API. Il ralentit chaque tentative (~100ms), ce qui n'arrête personne : un script tourne en boucle et teste les mots de passe les plus courants, indéfiniment. Rien dans mon code ne l'en empêchait.
+
+**La correction** — limiter le nombre de tentatives par IP (`express-rate-limit`) :
+
+```js
+const limiteConnexion = rateLimit({
+  windowMs: 15 * 60 * 1000,        // fenetre de 15 minutes
+  limit: 10,                        // 10 tentatives max
+  skipSuccessfulRequests: true,     // ← seuls les ECHECS comptent
+});
+
+router.post("/connexion", limiteConnexion, async (req, res) => { … });
+```
+
+Au-delà, l'API répond **429 Too Many Requests**.
+
+**Le détail qui fait la différence : `skipSuccessfulRequests`.** Sans lui, quelqu'un qui se connecte et se déconnecte souvent finirait bloqué alors qu'il n'a rien fait de mal. En ne comptant que les **échecs**, la limite ne gêne que celui qui cherche à deviner un mot de passe.
+
+**À prévoir au déploiement** : `express-rate-limit` identifie les clients par leur IP. Derrière un reverse proxy (Nginx, hébergeur), toutes les requêtes semblent venir de l'IP **du proxy** — la limite bloquerait alors tout le monde d'un coup. Il faut `app.set("trust proxy", 1)` pour qu'Express lise la vraie IP dans l'en-tête `X-Forwarded-For`.
+
+---
+
+### 39. Un lien n'est pas un bouton (même s'il en a l'air)
+
+**Contexte** : mes boutons "Connexion" et "Me contacter" utilisaient le composant `Button` de shadcn en lui demandant de se rendre comme un lien :
+
+```jsx
+<Button nativeButton={false} render={<Link to="/connexion" />}>
+  Connexion
+</Button>
+```
+
+Le HTML produit : `<a href="/connexion" role="button">`.
+
+**Le problème** : `role="button"` **écrase** la sémantique naturelle de l'élément. Un lecteur d'écran annonce « bouton », alors que l'élément **navigue** vers une autre page. Or les deux ne se comportent pas pareil pour l'utilisateur :
+
+- un **lien** navigue → on peut l'ouvrir dans un nouvel onglet, le copier, y revenir avec « Précédent » ;
+- un **bouton** déclenche une action → il s'active avec `Espace`, un lien avec `Entrée` uniquement.
+
+Annoncer « bouton » sur quelque chose qui navigue, c'est mentir sur ce qui va se passer.
+
+**La correction** — le pattern officiel de shadcn : ne pas utiliser le composant `Button`, mais **styler un vrai lien** avec ses classes :
+
+```jsx
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+<Link to="/connexion" className={cn(buttonVariants(), "rounded-full px-6")}>
+  Connexion
+</Link>
+```
+
+Résultat : exactement la même apparence, mais un vrai `<a>` sans `role` trafiqué.
+
+**La règle générale** : l'apparence et la sémantique sont deux choses distinctes. **On choisit la balise pour ce que l'élément *fait*, puis on lui donne l'apparence qu'on veut avec du CSS.** L'attribut `role` sert à *décrire* un élément qui n'a pas de balise native adaptée — jamais à en déguiser un qui en a déjà une.
+
+(Petit bonus : mes tests Playwright cherchaient `getByRole('button', {name:'Connexion'})` et ont commencé à échouer après ce changement. C'est **la preuve que le correctif marche** — l'élément est enfin annoncé comme un lien, exactement comme le verrait un lecteur d'écran.)
+
+---
