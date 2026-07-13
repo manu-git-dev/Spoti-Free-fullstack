@@ -1347,3 +1347,149 @@ useEffect(() => {
 ```
 
 ---
+
+## 2026-07-14 — Spoti-Free (dashboard admin, dépôt, mot de passe oublié)
+
+### 47. « Mot de passe oublié » : quatre pièges, dont un qu'on ne voit pas venir
+
+**Contexte** : le lien « Mot de passe oublié ? » de ma page Connexion pointait sur `to="#"`. Fonctionnalité banale en apparence, et pourtant un nid à failles.
+
+**a) L'énumération de comptes — le piège invisible.** Le réflexe naturel est de répondre « cet email n'existe pas » quand c'est le cas. C'est une **fuite de données personnelles** : n'importe qui peut alors tester des adresses en masse pour savoir **qui est inscrit sur mon site**. Savoir que quelqu'un a un compte quelque part est déjà une information — et c'est le point de départ d'attaques ciblées.
+
+La réponse doit donc être **strictement identique** (même message, même code HTTP), que le compte existe ou non :
+
+> « Si un compte existe avec cette adresse, un lien de réinitialisation vient d'être envoyé. »
+
+Le même raisonnement vaut pour la réinitialisation : « jeton inconnu », « déjà utilisé » et « expiré » renvoient **un seul et même message**. Les distinguer renseignerait un attaquant sur la validité d'un jeton qu'il teste.
+
+**b) Le jeton ne se stocke pas en clair.** Ce jeton **vaut un mot de passe** : qui le possède peut changer celui du compte. Si la base fuitait, tous les comptes ayant une demande en cours seraient compromis. On stocke donc son **empreinte SHA-256**, et on compare les empreintes.
+
+Détail intéressant : ici **pas de bcrypt**, contrairement aux mots de passe. Pourquoi ? bcrypt sert à *ralentir* le cassage de secrets **faibles, choisis par des humains** (`azerty123` se devine, il faut donc rendre chaque essai coûteux). Un jeton de 32 octets aléatoires a une entropie énorme : il est insensible aux attaques par dictionnaire, un SHA-256 suffit.
+
+**c) Usage unique.** Le mail **reste dans la boîte de réception**. Quelqu'un qui y accède plus tard (ordinateur partagé, boîte piratée) ne doit pas pouvoir rejouer le lien → colonne `used_at`.
+
+**d) Expiration.** Un lien de réinitialisation qui traîne est un risque permanent → 1 heure.
+
+**Et le jeton lui-même** : `crypto.randomBytes(32)`. Surtout pas un UUID ni `Math.random()` — il faut de **l'imprévisible**, pas seulement de l'unique. Un UUID v4 garantit qu'il n'y aura pas de collision, pas qu'on ne peut pas le deviner.
+
+---
+
+### 48. Une donnée personnelle se hache **avec un sel** — sinon le hash ne protège rien
+
+**Contexte** : pour compter les visiteurs uniques du dashboard, je dois distinguer les visiteurs. L'IP est l'identifiant naturel… mais c'est une **donnée personnelle** (RGPD).
+
+**La solution** : ne jamais la stocker en clair, mais garder son empreinte. Ça suffit à compter des visiteurs **distincts** sans pouvoir remonter à quelqu'un.
+
+**Le piège** : un `SHA-256(ip)` tout seul **ne protège rien**.
+
+Pourquoi ? Il n'existe que **~4 milliards d'adresses IPv4**. Un attaquant peut toutes les hacher en quelques secondes, construire la table de correspondance, et retrouver l'IP d'origine de n'importe quel hash. L'espace des valeurs possibles est trop petit.
+
+**La correction — un sel secret**, stocké côté serveur (dans le `.env`), ajouté avant de hacher :
+
+```js
+const ipHash = crypto
+  .createHash("sha256")
+  .update(ip + process.env.IP_HASH_SALT)   // ← le sel change tout
+  .digest("hex");
+```
+
+Sans connaître le sel, l'attaque devient impossible : il faudrait re-hacher les 4 milliards d'IP **pour chaque sel possible**.
+
+**La règle générale** : hacher une donnée **à faible entropie** (une IP, un numéro de téléphone, un code postal, une date de naissance) sans sel, c'est de la pseudonymisation de façade. Le sel n'est pas un détail d'implémentation, c'est ce qui fait tenir la protection.
+
+---
+
+### 49. La couleur d'un graphique se **valide**, elle ne se choisit pas à l'œil
+
+**Contexte** : pour le dashboard admin, j'ai voulu utiliser les couleurs de mon thème (violet `#6c5ce7`, bleu `#6495ed`) pour les deux séries de la courbe de fréquentation. Elles vont bien ensemble, ça me semblait évident.
+
+**Un validateur les a rejetées.** Deux problèmes que je n'aurais **jamais** vus à l'œil :
+
+1. **Contraste insuffisant** : le violet n'avait que **2.6:1** face à la surface sombre des cartes (le minimum pour une marque est 3:1). Sur mon écran, ça « passait ». Sur un écran moins bon, ou en plein soleil, la courbe s'efface.
+2. **Luminosité hors bande** : le bleu était trop clair pour le mode sombre (L 0.675, la bande admise s'arrête à 0.67).
+
+Bonne surprise en revanche : la **séparation daltonisme** passait déjà largement (ΔE 21.6 en deutéranopie, pour un seuil de 12) — violet et bleu restent distinguables. Mais ça, je ne pouvais pas le savoir non plus.
+
+Correction : assombrir légèrement le bleu (`#6495ed` → `#5c8fe6`). Tous les contrôles passent.
+
+**Ce que j'en retiens** : ces quatre propriétés (bande de luminosité, chroma, contraste sur la surface, séparation daltonisme) sont **calculables**. Les estimer à l'œil, c'est deviner. Environ **8 % des hommes** sont daltoniens — « je trouve que ça se distingue bien » n'est pas une donnée.
+
+Autres règles que j'ai appliquées sans les connaître avant :
+- **Jamais deux axes Y** sur un même graphique : les deux échelles étant arbitraires, la comparaison visuelle ne veut rien dire. Deux mesures d'échelles différentes → deux graphiques.
+- **Une seule couleur pour une série unique.** Colorer chaque barre d'un classement d'une teinte différente laisse croire que la couleur porte une information — alors que le rang n'est pas une catégorie.
+- **Les statuts ne sont pas des couleurs de série** : ils ont une palette réservée et sortent toujours avec **une icône et un mot**, jamais identifiés par la couleur seule.
+
+---
+
+### 50. Un admin a les droits que son rôle **exige** — pas tous ceux qui sont possibles
+
+**Contexte** : en construisant la gestion des utilisateurs, la tentation était de faire un CRUD complet — lister, **modifier** (pseudo, nom, email), supprimer. C'est ce qu'on fait « par défaut ».
+
+**Pourquoi j'ai retiré l'édition de l'email** : c'est **l'identifiant de connexion**. Un admin capable de le changer peut se l'attribuer, puis se connecter à la place de la personne. C'est une **escalade de privilèges** — et pour quel besoin réel ? Aucun. Personne n'a jamais eu besoin de changer l'email de quelqu'un d'autre.
+
+Idem pour le pseudo : le seul cas légitime serait un pseudo insultant — et là on **supprime ou on bloque**, on ne renomme pas.
+
+**Le principe** : chaque droit accordé est une surface d'attaque. On n'ajoute pas une capacité « parce qu'on peut », mais parce qu'un besoin l'exige. Le CRUD complet est un réflexe, pas une décision.
+
+**Et les garde-fous sur ce qui reste** (suppression, changement de rôle) :
+- un admin ne peut pas **se supprimer lui-même** ni **se rétrograder** (il s'enfermerait dehors) ;
+- on ne peut pas supprimer **le dernier admin** (plus personne ne pourrait administrer, et il n'existe aucun moyen de se re-promouvoir depuis l'interface) ;
+- la confirmation **annonce ce qui va être détruit** (« 3 playlists, 12 favoris, 2 dépôts ») plutôt qu'un « Êtes-vous sûr ? » qui n'informe de rien — on clique « Oui » par réflexe sur une question vide.
+
+---
+
+### 51. CSS préfère **déformer** plutôt que déborder
+
+**Contexte** : deux bugs différents, la même cause profonde. C'est la leçon CSS la plus utile de ces deux jours.
+
+**Cas 1 — la grille (`1fr`).** L'app dépassait la hauteur de l'écran quand l'aside avait beaucoup de playlists. `grid-rows-[1fr_88px]` : or `1fr` vaut `minmax(auto, 1fr)`, et ce **`auto` en minimum** interdit à la ligne de descendre sous la taille de son contenu. La ligne grandissait donc, et mon `overflow-y-auto` ne s'activait jamais (rien ne contraignait la hauteur). → `minmax(0, 1fr)`.
+
+**Cas 2 — la colonne flex (`shrink`).** En réorganisant l'aside en sections, le bloc des playlists **s'est écrasé à zéro** : la liste avait purement disparu, et deux sections se chevauchaient. En flex, un enfant se **comprime par défaut** pour faire tenir ses voisins. → `shrink-0`.
+
+**La leçon commune** : par défaut, CSS fait tout pour que ça « rentre » — quitte à écraser un élément à zéro, ou à laisser un conteneur s'étirer indéfiniment. Il ne déborde pas, il **déforme**.
+
+Donc quand un élément **disparaît**, s'aplatit, ou qu'un `overflow` « ne marche pas », la cause n'est presque jamais là où on regarde : c'est qu'un parent, quelque part, a le droit de se déformer. Il faut **remonter la chaîne des parents** et l'interdire explicitement (`shrink-0`, `min-h-0`, `minmax(0,1fr)`).
+
+---
+
+### 52. Une fonctionnalité qu'on ne peut pas atteindre n'existe pas
+
+**Contexte** : j'ai construit tout un espace d'administration (dashboard, modération, utilisateurs, catalogue) plus les pages de dépôt. Sur mobile, **rien ne débordait, rien n'était moche, aucune erreur** — le responsive était parfait.
+
+**Sauf qu'aucune de ces pages n'était accessible.**
+
+Tous les liens vivaient dans l'`Aside`, qui est `hidden md:flex` — **masquée sous `md`**. La barre du bas ne porte que les 5 onglets principaux, et le burger ne contenait qu'« À propos » et « Contact ». Sur téléphone, **6 pages n'étaient joignables qu'en tapant l'URL à la main**.
+
+**Ce qui est instructif** : aucun test ne l'aurait vu. Pas d'erreur, pas de débordement, les pages s'affichaient parfaitement **quand on y arrivait**. Un test de rendu vérifie « est-ce que ça s'affiche bien ? », jamais « est-ce qu'on peut y aller ? ».
+
+**Le réflexe à prendre** : après avoir construit une page, se demander « **par où on y accède, concrètement ?** » — et le vérifier sur chaque taille d'écran. Une page sans chemin d'accès n'est pas une page, c'est du code mort qui a l'air vivant.
+
+---
+
+### 53. Un `UPDATE` de toutes les colonnes écrase ce qu'on ne lui envoie pas
+
+**Contexte** : la route de modification d'une musique, écrite au début du projet.
+
+```js
+// DANGEREUX
+await db.query(
+  "UPDATE musics SET title=?, artist=?, genre=?, src_image=?, src_audio=?, duration=? WHERE id_music=?",
+  [title, artist, genre, srcImage, srcAudio, duration, id],
+);
+```
+
+**Le problème** : mon formulaire d'admin n'envoie que le **titre, l'artiste et le genre** (on ne remplace pas un fichier en le renommant). Les trois autres valeurs arrivent donc à `undefined` → mysql2 les écrit **`NULL`**.
+
+Résultat : le morceau devient **injouable** (plus de `src_audio`) et sa pochette **cassée** (plus de `src_image`), **en silence**. La requête réussit, l'API répond 200, rien ne signale quoi que ce soit. On ne le découvre qu'en rechargeant la page.
+
+**La correction** : n'accepter **que ce qui est réellement modifiable**.
+
+```js
+"UPDATE musics SET title = ?, artist = ?, genre = ? WHERE id_music = ?"
+```
+
+**Et il y a un second motif, de sécurité** : un chemin de fichier venant du client est une valeur qu'on ne contrôle pas. Rien n'empêchait d'écrire `../../.env` dans `src_audio` et de le faire servir par `express.static`. La durée, elle, est extraite du fichier réel — une valeur envoyée par le client pourrait simplement mentir.
+
+**La règle** : une route de modification expose **la liste des champs modifiables**, jamais « toutes les colonnes de la table ». Ce qui est dérivé (une durée lue dans le fichier) ou structurel (un chemin de stockage) se calcule côté serveur et ne s'accepte jamais du client.
+
+---
