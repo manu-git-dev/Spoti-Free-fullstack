@@ -1,11 +1,32 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 export default function AddMusicPlaylist({ idMusic }) {
   const [playlists, setPlaylists] = useState([]);
-  const selectRef = useRef(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState("");
+  const [open, setOpen] = useState(false);
   const [typeMessage, setTypeMessage] = useState("");
   const [message, setMessage] = useState("");
-  
+
   useEffect(() => {
     const url = `http://localhost:3000/api/playlists`;
     const token = localStorage.getItem("token");
@@ -27,8 +48,7 @@ export default function AddMusicPlaylist({ idMusic }) {
   }, []);
 
   async function handleClick() {
-    const idPlaylist = selectRef.current.value;
-    const url = `http://localhost:3000/api/playlists/ajouter/${idPlaylist}/${idMusic}`;
+    const url = `http://localhost:3000/api/playlists/ajouter/${selectedPlaylist}/${idMusic}`;
 
     try {
       const token = localStorage.getItem("token");
@@ -52,8 +72,10 @@ export default function AddMusicPlaylist({ idMusic }) {
       }
       setTypeMessage("success");
       setMessage(resultat.message);
+      // succes : on laisse le message visible un instant dans la modale, puis on ferme
       setTimeout(() => {
         setMessage("");
+        setOpen(false);
       }, 1500);
     } catch (erreur) {
       setTypeMessage("error");
@@ -67,67 +89,57 @@ export default function AddMusicPlaylist({ idMusic }) {
 
   return (
     <>
-      {message ? (
-        <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Ajouter à une playlist"
             />
-          </svg>
-          <span>{message}</span>
-        </div>
-      ) : null}{" "}
-      {/* Open the modal using document.getElementById('ID').showModal() method */}
-      <button
-        className="btn btn-circle btn-ghost btn-sm"
-        onClick={() =>
-          document.getElementById(`my_modal_${idMusic}`).showModal()
-        }
-        aria-label="Ajouter à une playlist"
-      >
-        <Plus className="w-4 h-4" />
-      </button>
-      <dialog id={`my_modal_${idMusic}`} className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Hello!</h3>
-          <p className="py-4">
-            Press ESC key or click the button below to close
-          </p>
-          <select
-            ref={selectRef}
-            defaultValue="Pick a color"
-            className="select"
-            name="select"
-          >
-            <option disabled={true}>Selectionner une playlist</option>
-            {playlists.map((playlist) => (
-              <option key={playlist.id_playlist} value={playlist.id_playlist}>
-                {playlist.name}
-              </option>
-            ))}
-          </select>
-          <div className="modal-action">
-            <form method="dialog">
-              {/* if there is a button in form, it will close the modal */}
-              <button className="btn">Close</button>
-            </form>
-            <button onClick={handleClick} className="btn btn-success">
+          }
+        >
+          <Plus className="w-4 h-4" />
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter à une playlist</DialogTitle>
+            <DialogDescription>
+              Choisissez la playlist dans laquelle ajouter ce titre.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={selectedPlaylist} onValueChange={setSelectedPlaylist}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Sélectionner une playlist" />
+            </SelectTrigger>
+            <SelectContent>
+              {playlists.map((playlist) => (
+                <SelectItem
+                  key={playlist.id_playlist}
+                  value={String(playlist.id_playlist)}
+                >
+                  {playlist.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {message ? (
+            <Alert
+              variant={typeMessage === "success" ? "success" : "destructive"}
+            >
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          ) : null}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
+            <Button onClick={handleClick} disabled={!selectedPlaylist}>
               Ajouter
-            </button>
-          </div>
-        </div>
-      </dialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

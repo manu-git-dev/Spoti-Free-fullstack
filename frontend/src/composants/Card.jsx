@@ -22,18 +22,26 @@ export default function Card({
   };
   return (
     <article
-      className={`bg-base-200 rounded-2xl p-3 flex flex-col cursor-pointer hover:shadow-xl transition-shadow ${
-        isPlaying ? "ring-2 ring-primary" : ""
+      className={`group bg-background/50 border rounded-2xl p-3 flex flex-col cursor-pointer transition-all hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 ${
+        isPlaying
+          ? "border-primary bg-primary/10"
+          : "border-border hover:border-accent"
       }`}
     >
       <div onClick={handleClick}>
         <img
           src={`${API_URL}${musique.src_image}`}
           alt={`Pochette album ${musique.title}`}
-          className="w-full aspect-square object-cover rounded-xl"
+          className="w-full aspect-square object-cover rounded-xl transition-transform group-hover:scale-[1.02]"
         />
-        <h2 className="font-semibold truncate mt-2">{musique.title}</h2>
-        <p className="text-xs text-base-content/60 uppercase truncate">
+        <h2
+          className={`font-semibold truncate mt-2 ${
+            isPlaying ? "text-primary" : ""
+          }`}
+        >
+          {musique.title}
+        </h2>
+        <p className="text-xs text-muted-foreground uppercase truncate">
           {musique.artist}
         </p>
       </div>

@@ -19,18 +19,18 @@ export default function BottomNav({ user }) {
   ];
 
   return (
-    <div className="pt-3 px-[21px] pb-[21px] bg-base-100">
-      <nav className="flex items-center gap-1 h-[62px] bg-base-200 border border-base-300 rounded-[36px] p-1">
+    <div className="pt-3 px-[21px] pb-[21px] bg-background">
+      <nav className="flex items-center gap-1 h-[62px] bg-card border border-border rounded-[36px] p-1">
         {tabs.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={label}
             to={to}
             end={end}
             className={({ isActive }) => {
-              return `flex flex-1 flex-col items-center justify-center gap-1 h-full rounded-[26px] ${
+              return `flex flex-1 flex-col items-center justify-center gap-1 h-full rounded-[26px] transition-colors ${
                 isActive
-                  ? "bg-accent text-accent-content"
-                  : "text-base-content/60"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                  : "text-muted-foreground hover:text-foreground"
               }`;
             }}
           >

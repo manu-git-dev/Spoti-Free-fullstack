@@ -1,4 +1,5 @@
 import {
+  Music,
   Pause,
   Play,
   SkipBack,
@@ -6,6 +7,8 @@ import {
   Volume2,
 } from "lucide-react";
 import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 export default function MediaPlayer({
   music,
@@ -81,7 +84,16 @@ export default function MediaPlayer({
   };
 
   if (!music) {
-    return <p className={`hidden md:flex ${className}`}>Aucune musique sélectionnée</p>;
+    return (
+      <section className={`hidden md:flex ${className}`}>
+        <div className="flex items-center justify-center gap-3 w-full h-full bg-card border border-border rounded-2xl px-6 text-muted-foreground">
+          <Music className="w-5 h-5 opacity-60" />
+          <p className="text-sm">
+            Aucune musique sélectionnée — choisis un titre pour lancer la lecture.
+          </p>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -100,7 +112,7 @@ export default function MediaPlayer({
       ></audio>
 
       {/* Bloc mobile : barre compacte, juste play/pause */}
-      <div className="flex md:hidden items-center gap-3 w-full px-3 py-2 bg-zinc-800 rounded-2xl">
+      <div className="flex md:hidden items-center gap-3 w-full px-3 py-2 bg-card border border-border rounded-2xl">
         <img
           src={`${API_URL}${music.src_image}`}
           alt={`Pochette album ${music.title}`}
@@ -108,66 +120,64 @@ export default function MediaPlayer({
         />
         <div className="flex flex-col min-w-0 flex-1">
           <p className="truncate font-semibold text-sm">{music.title}</p>
-          <p className="truncate text-xs text-base-content/60">{music.artist}</p>
+          <p className="truncate text-xs text-muted-foreground">{music.artist}</p>
         </div>
-        <button
-          className="btn btn-circle btn-primary btn-sm"
-          onClick={handlePlay}
-        >
+        <Button size="icon-sm" onClick={handlePlay} aria-label={isPlaying ? "Pause" : "Lecture"}>
           {isPlaying ? (
             <Pause className="w-4 h-4 fill-current" />
           ) : (
             <Play className="w-4 h-4 fill-current" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Bloc desktop : barre de contrôle complète */}
-      <div className="hidden md:flex md:flex-col w-full bg-zinc-800 rounded-2xl px-6 py-3 gap-1">
+      <div className="hidden md:flex md:flex-col w-full h-full bg-card border border-border rounded-2xl px-6 py-3 gap-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 w-64 min-w-0">
             <img
               src={`${API_URL}${music.src_image}`}
               alt={`Pochette album ${music.title}`}
-              className="w-12 h-12 rounded-lg object-cover"
+              className="w-12 h-12 rounded-lg object-cover ring-2 ring-primary/40"
             />
             <div className="min-w-0">
               <p className="truncate font-semibold">{music.title}</p>
-              <p className="truncate text-sm text-base-content/60">
+              <p className="truncate text-sm text-muted-foreground">
                 {music.artist}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="cursor-pointer hover:scale-110" onClick={handlePrevious}>
+            <button
+              className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
+              onClick={handlePrevious}
+            >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
-            <button
-              className="btn btn-circle btn-primary"
-              onClick={handlePlay}
-            >
+            <Button size="icon" onClick={handlePlay} aria-label={isPlaying ? "Pause" : "Lecture"}>
               {isPlaying ? (
                 <Pause className="w-5 h-5 fill-current" />
               ) : (
                 <Play className="w-5 h-5 fill-current" />
               )}
-            </button>
-            <button className="cursor-pointer hover:scale-110" onClick={handleNext}>
+            </Button>
+            <button
+              className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
+              onClick={handleNext}
+            >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
           </div>
 
           <div className="flex items-center gap-2 w-64 justify-end">
             <Volume2 className="w-5 h-5 opacity-70" />
-            <input
-              type="range"
+            <Slider
+              value={[volume]}
               min={0}
-              max="100"
-              value={volume}
-              className="range range-primary range-xs w-24"
-              onChange={(e) => {
-                const newVolume = Number(e.target.value);
+              max={100}
+              className="w-24"
+              onValueChange={([newVolume]) => {
                 setVolume(newVolume);
                 audioRef.current.volume = newVolume / 100;
               }}
@@ -176,22 +186,20 @@ export default function MediaPlayer({
         </div>
 
         <div className="flex items-center gap-3 px-2">
-          <span className="text-xs text-base-content/60">
+          <span className="text-xs text-muted-foreground">
             {affichageCurrentTime}
           </span>
-          <input
-            type="range"
+          <Slider
+            value={[timeUpdate || 0]}
             min={0}
             max={duration || 0}
-            value={timeUpdate || 0}
-            className="range range-primary range-xs flex-1"
-            onChange={(e) => {
-              const newTime = Number(e.target.value);
+            className="flex-1"
+            onValueChange={([newTime]) => {
               setTimeUpdate(newTime);
               audioRef.current.currentTime = newTime;
             }}
           />
-          <span className="text-xs text-base-content/60">
+          <span className="text-xs text-muted-foreground">
             {affichageDuration}
           </span>
         </div>

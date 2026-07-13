@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import Deconnexion from "../composants/Deconnexion";
 import TrackRow from "../composants/TrackRow";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Home({
   musiques,
@@ -21,54 +23,57 @@ export default function Home({
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
       {messageDeconnexion ? (
-        <div role="alert" className="alert alert-success mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{messageDeconnexion}</span>
-        </div>
+        <Alert variant="success" className="mb-4">
+          <AlertDescription>{messageDeconnexion}</AlertDescription>
+        </Alert>
       ) : null}
-      {user === null ? (
-        <div className="flex items-center justify-end gap-4 w-full">
-          <Link to={"/inscription"} className="link mx-2">
-            S'inscrire
-          </Link>
-          <Link to={"/connexion"}>
-            <button className="btn btn-primary rounded-full px-6">Connexion</button>
-          </Link>
+      <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold">
+            {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Prêt à écouter quelque chose ?
+          </p>
         </div>
-      ) : (
-        <div className="flex items-center justify-end gap-3 w-full">
-          <Deconnexion
-            user={user}
-            setUser={setUser}
-            token={token}
-            setToken={setToken}
-            setMessageDeconnexion={setMessageDeconnexion}
-          />
-          <Link
-            to={"/profil"}
-            className="w-9 h-9 shrink-0 rounded-full bg-linear-to-br from-primary to-accent flex items-center justify-center text-sm font-bold text-white"
-          >
-            {user.pseudo?.charAt(0).toUpperCase()}
-          </Link>
-        </div>
-      )}
-      <p className="text-2xl font-serif mb-6">
-        {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
-      </p>
 
-      <h2 className="text-lg font-semibold mb-4">
+        {user === null ? (
+          <div className="flex items-center justify-end gap-4 shrink-0">
+            <Link
+              to={"/inscription"}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              S'inscrire
+            </Link>
+            <Button
+              nativeButton={false}
+              render={<Link to={"/connexion"} />}
+              className="rounded-full px-6"
+            >
+              Connexion
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-3 shrink-0">
+            <Deconnexion
+              user={user}
+              setUser={setUser}
+              token={token}
+              setToken={setToken}
+              setMessageDeconnexion={setMessageDeconnexion}
+            />
+            <Link
+              to={"/profil"}
+              className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-sm font-bold text-white ring-2 ring-primary/30 hover:ring-primary transition"
+            >
+              {user.pseudo?.charAt(0).toUpperCase()}
+            </Link>
+          </div>
+        )}
+      </div>
+
+      <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
+        <span className="h-5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
         Top 5 des titres les plus écoutés
       </h2>
       <div className="flex flex-col gap-1">

@@ -33,11 +33,17 @@ export default function TrackRow({
   };
   return (
     <div
-      className={`flex items-center gap-4 px-2 py-2 rounded-xl border-l-2 hover:bg-base-200 transition-colors ${
-        isPlaying ? "border-primary bg-primary/10" : "border-transparent"
+      className={`group flex items-center gap-4 px-3 py-2 rounded-xl border border-l-4 transition-colors ${
+        isPlaying
+          ? "border-border border-l-primary bg-primary/15"
+          : "border-transparent border-l-transparent bg-background/40 hover:bg-background/70 hover:border-l-accent"
       }`}
     >
-      <span className="w-6 text-center text-base-content/50 font-serif">
+      <span
+        className={`w-6 text-center font-serif ${
+          isPlaying ? "text-primary" : "text-muted-foreground"
+        }`}
+      >
         {index + 1}
       </span>
       <div
@@ -47,11 +53,19 @@ export default function TrackRow({
         <img
           src={`${API_URL}${musique.src_image}`}
           alt={`Pochette album ${musique.title}`}
-          className="w-12 h-12 rounded-lg object-cover"
+          className={`w-12 h-12 rounded-lg object-cover transition-transform group-hover:scale-105 ${
+            isPlaying ? "ring-2 ring-primary" : ""
+          }`}
         />
         <div className="min-w-0">
-          <p className="truncate font-semibold">{musique.title}</p>
-          <p className="truncate text-sm text-base-content/60">
+          <p
+            className={`truncate font-semibold ${
+              isPlaying ? "text-primary" : ""
+            }`}
+          >
+            {musique.title}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">
             {musique.artist}
           </p>
         </div>
@@ -74,7 +88,7 @@ export default function TrackRow({
           )}
         </div>
       )}
-      <span className="text-sm text-base-content/50 shrink-0">
+      <span className="hidden sm:block text-sm text-muted-foreground shrink-0 tabular-nums">
         {formatDuration(musique.duration)}
       </span>
     </div>

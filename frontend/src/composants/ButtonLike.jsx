@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
 export default function ButtonLike({
   idMusic,
   setMusiquesLikee,
@@ -92,43 +95,29 @@ export default function ButtonLike({
   return (
     <>
       {message ? (
-        <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{message}</span>
-        </div>
+        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
       ) : null}
 
       {estLike ? (
-        <button
-          className="btn btn-circle btn-ghost btn-sm"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleUnlike}
           aria-label="Retirer des favoris"
         >
           <Heart className="w-4 h-4 fill-accent text-accent" />
-        </button>
+        </Button>
       ) : (
-        <button
-          className="btn btn-circle btn-ghost btn-sm"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleLike}
           aria-label="Ajouter aux favoris"
         >
           <Heart className="w-4 h-4" />
-        </button>
+        </Button>
       )}
     </>
   );

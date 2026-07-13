@@ -1,9 +1,28 @@
-import { useState,useRef } from "react";
-export default function ButtonAddPlaylist({ setPlaylists,playlists,children = "" }) {
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+
+export default function ButtonAddPlaylist({
+  setPlaylists,
+  playlists,
+  children = "",
+  variant = "ghost",
+  size = "icon-sm",
+  className = "",
+}) {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
-
-  const modalRef = useRef(null);
+  const [open, setOpen] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -35,7 +54,7 @@ export default function ButtonAddPlaylist({ setPlaylists,playlists,children = ""
         console.log(message);
         return;
       }
-      const newPlaylist = {id_playlist:resultat.id_playlist, name:resultat.name}
+      const newPlaylist = { id_playlist: resultat.id_playlist, name: resultat.name };
       setPlaylists((prev) => [...prev, newPlaylist]);
       setTypeMessage("success");
       setMessage(resultat.message);
@@ -43,6 +62,7 @@ export default function ButtonAddPlaylist({ setPlaylists,playlists,children = ""
         setMessage("");
       }, 1500);
       console.log(message);
+      setOpen(false);
     } catch (erreur) {
       setTypeMessage("error");
       setMessage("Impossible de contacter le serveur.");
@@ -55,61 +75,44 @@ export default function ButtonAddPlaylist({ setPlaylists,playlists,children = ""
 
   return (
     <>
-      <button
-        className="btn"
-        onClick={() => modalRef.current.showModal()}
-      >
-        {children}
-      </button>{" "}
-      {message ? (
-        <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          render={<Button variant={variant} size={size} className={className} />}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{message}</span>
-        </div>
-      ) : null}
-      <dialog ref={modalRef} className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Créer une playlist</h3>
-          <form action="" onSubmit={handleSubmit}>
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">
-                Quel nom souhaitez-vous donner à votre Playlist
-              </legend>
-              <input
+          {children}
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer une playlist</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="nom" className="text-sm text-muted-foreground">
+                Quel nom souhaitez-vous donner à votre playlist ?
+              </label>
+              <Input
                 type="text"
-                className="input"
+                id="nom"
                 name="nom"
                 placeholder="Saisissez le nom de votre playlist"
               />
-              <button className="btn btn-success" type="submit">
-                Ajouter
-              </button>
-            </fieldset>
+            </div>
+            {message ? (
+              <Alert
+                variant={typeMessage === "success" ? "success" : "destructive"}
+              >
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            ) : null}
+            <DialogFooter>
+              <DialogClose render={<Button type="button" variant="outline" />}>
+                Annuler
+              </DialogClose>
+              <Button type="submit">Ajouter</Button>
+            </DialogFooter>
           </form>
-          <div className="modal-action">
-            <form method="dialog">
-              {/* if there is a button in form, it will close the modal */}
-
-              <button className="btn btn-error ml-2">fermer</button>
-            </form>
-          </div>
-        </div>
-      </dialog>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Music } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login({ user, setUser, token, setToken }) {
   const [message, setMessage] = useState("");
@@ -53,32 +56,16 @@ export default function Login({ user, setUser, token, setToken }) {
     <>
       {" "}
       {message ? (
-        <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{message}</span>
-        </div>
+        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
       ) : null}
       <section className="h-full flex flex-col justify-center items-center p-4">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
-          <Music className="text-primary-content w-7 h-7" />
+          <Music className="text-primary-foreground w-7 h-7" />
         </div>
         <h1 className="text-4xl font-serif">Connexion</h1>
-        <p className="text-base-content/70 text-center mb-6">
+        <p className="text-muted-foreground text-center mb-6">
           Content de te revoir ! Connecte-toi pour retrouver ta musique.
         </p>
         <form
@@ -86,45 +73,42 @@ export default function Login({ user, setUser, token, setToken }) {
           className="flex flex-col gap-4 w-full max-w-sm"
           onSubmit={handleSubmit}
         >
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Adresse mail</legend>
-            <label className="input w-full">
-              <Mail className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Adresse mail</legend>
+            <div className="relative">
+              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 type="email"
                 name="email"
-                className="grow"
+                className="pl-8"
                 placeholder="ton@email.fr"
                 required
               />
-            </label>
+            </div>
           </fieldset>
-          <fieldset className="fieldset w-full">
-            <legend className="fieldset-legend">Mot de passe</legend>
-            <label className="input w-full">
-              <Lock className="opacity-50 w-4 h-4" />
-              <input
+          <fieldset className="flex flex-col gap-1.5 w-full">
+            <legend className="text-sm mb-1">Mot de passe</legend>
+            <div className="relative">
+              <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 type="password"
-                className="grow"
+                className="pl-8"
                 placeholder="Ton mot de passe"
                 name="password"
                 required
               />
-            </label>
+            </div>
           </fieldset>
-          <Link to="#" className="link link-primary text-sm self-end">
+          <Link to="#" className="text-primary underline-offset-4 hover:underline text-sm self-end">
             Mot de passe oublié ?
           </Link>
-          <button
-            className="btn btn-primary rounded-full w-full mt-4"
-            type="submit"
-          >
+          <Button className="rounded-full w-full mt-4" type="submit">
             Connexion
-          </button>
+          </Button>
         </form>
-        <p className="text-sm text-base-content/70 mt-4">
+        <p className="text-sm text-muted-foreground mt-4">
           Pas encore de compte ?{" "}
-          <Link to="/inscription" className="link link-primary">
+          <Link to="/inscription" className="text-primary underline-offset-4 hover:underline">
             S'inscrire
           </Link>
         </p>

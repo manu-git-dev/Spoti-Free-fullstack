@@ -1,11 +1,37 @@
 import { Link } from "react-router-dom";
-import { useRef } from "react";
-import { useState } from "react";
-export default function Playlist({ id, nom, setPlaylists}) {
+import { useRef, useState } from "react";
+import { ListMusic, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+
+// Pochette generee : chaque playlist recoit un degrade stable, derive de son id
+const degrades = [
+  "from-chart-1 to-chart-3",
+  "from-chart-2 to-chart-1",
+  "from-chart-4 to-chart-3",
+  "from-chart-5 to-chart-2",
+  "from-chart-3 to-chart-4",
+];
+
+export default function Playlist({ id, nom, setPlaylists }) {
+  const degrade = degrades[id % degrades.length];
   const [typeMessage, setTypeMessage] = useState("");
   const [message, setMessage] = useState("");
   const [messageSuppression, setMessageSuppression] = useState("");
+  const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
+
   async function handleDelete(event) {
     event.stopPropagation();
     event.preventDefault();
@@ -83,6 +109,7 @@ export default function Playlist({ id, nom, setPlaylists}) {
           playlist.id_playlist === id ? { ...playlist, name } : playlist,
         ),
       );
+      setOpen(false);
     } catch (erreur) {
       setTypeMessage("error");
       setMessage("Impossible de contacter le serveur.");
@@ -94,84 +121,78 @@ export default function Playlist({ id, nom, setPlaylists}) {
   }
 
   return (
-    <div key={id}>
-      <Link to={`/playlists/${id}`}>
-        <h2>{nom}</h2>
-      </Link>
-      {/* Open the modal using document.getElementById('ID').showModal() method */}
-      <button
-        className="btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          document.getElementById(`my_modal_add-${id}`).showModal();
-        }}
+    <div className="group relative flex flex-col">
+      <Link
+        to={`/playlists/${id}`}
+        className="flex flex-col rounded-2xl border border-border bg-background/50 p-3 transition-all hover:bg-background/80 hover:border-accent hover:shadow-lg hover:shadow-primary/10"
       >
-        Renommer la playlist
-      </button>
-      <dialog id={`my_modal_add-${id}`} className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Hello {id}!</h3>
-          <p className="py-4">
-            Press ESC key or click the button below to close
-          </p>
-          <input type="text" defaultValue={nom} ref={inputRef} />
-          {message ? (
-            <div
-              role="alert"
-              className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 shrink-0 stroke-current"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{message}</span>
-            </div>
-          ) : null}
-          <div className="modal-action">
-            <form method="dialog">
-              {/* if there is a button in form, it will close the modal */}
-              <button className="btn">Close</button>
-            </form>
-            <button className="btn btn-accent" onClick={handleRename}>
-              Renommer
-            </button>
-          </div>
-        </div>
-      </dialog>
-
-      <button className="btn btn-error" onClick={handleDelete}>
-        Supprimer la playlist
-      </button>      
-      {messageSuppression ? (
         <div
-          role="alert"
-          className={`alert ${typeMessage === "success" ? "alert-success" : "alert-error"}`}
+          className={`aspect-square w-full rounded-xl bg-gradient-to-br ${degrade} flex items-center justify-center`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{messageSuppression}</span>
+          <ListMusic className="w-10 h-10 text-white/90" />
         </div>
+        <h2 className="mt-2 truncate font-semibold">{nom}</h2>
+        <p className="text-xs text-muted-foreground uppercase">Playlist</p>
+      </Link>
+
+      {/* Actions : discretes, revelees au survol de la carte */}
+      <div className="absolute top-5 right-5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger
+            render={
+              <Button
+                size="icon-sm"
+                variant="secondary"
+                className="rounded-full bg-background/80 backdrop-blur hover:bg-background"
+                aria-label={`Renommer la playlist ${nom}`}
+                onClick={(event) => event.stopPropagation()}
+              />
+            }
+          >
+            <Pencil className="w-4 h-4" />
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Renommer la playlist</DialogTitle>
+              <DialogDescription>
+                Choisis un nouveau nom pour « {nom} ».
+              </DialogDescription>
+            </DialogHeader>
+            <Input type="text" defaultValue={nom} ref={inputRef} />
+            {message ? (
+              <Alert
+                variant={typeMessage === "success" ? "success" : "destructive"}
+              >
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            ) : null}
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" />}>
+                Annuler
+              </DialogClose>
+              <Button onClick={handleRename}>Renommer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Button
+          size="icon-sm"
+          variant="secondary"
+          className="rounded-full bg-background/80 backdrop-blur text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+          aria-label={`Supprimer la playlist ${nom}`}
+          onClick={handleDelete}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {messageSuppression ? (
+        <Alert
+          className="mt-2"
+          variant={typeMessage === "success" ? "success" : "destructive"}
+        >
+          <AlertDescription>{messageSuppression}</AlertDescription>
+        </Alert>
       ) : null}
     </div>
   );
