@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 const router = express.Router();
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
+import crypto from "node:crypto";
+import nodemailer from "nodemailer";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
@@ -160,6 +162,177 @@ router.delete("/unlikes/:idMusic", authMiddleware, async (req, res) => {
     });
   }
 });
+// ---------------------------------------------------------------------------
+// Mot de passe oublie
+// ---------------------------------------------------------------------------
+
+// Sans limite, cette route est une arme : elle envoie un mail a chaque appel. On pourrait donc
+// s'en servir pour inonder la boite de quelqu'un (harcelement), ou pour faire suspendre notre
+// propre compte d'envoi pour abus.
+const limiteMotDePasseOublie = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  skip: () => limitesDesactivees,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Trop de demandes. Réessaye dans une heure.",
+  },
+});
+
+/** SHA-256 : sert a stocker l'empreinte du jeton, jamais le jeton lui-meme. */
+function empreinte(jeton) {
+  return crypto.createHash("sha256").update(jeton).digest("hex");
+}
+
+// POST /api/users/mot-de-passe-oublie
+//
+// LE piege de cette route : l'enumeration de comptes.
+//
+// Si on repondait "cet email n'existe pas" quand c'est le cas, n'importe qui pourrait tester des
+// adresses en masse pour savoir lesquelles sont inscrites sur le site. C'est une fuite de donnees
+// personnelles (savoir que quelqu'un a un compte ici est deja une information), et le point de
+// depart d'attaques ciblees.
+//
+// On renvoie donc TOUJOURS la meme reponse, que l'email existe ou non.
+router.post(
+  "/mot-de-passe-oublie",
+  limiteMotDePasseOublie,
+  async (req, res) => {
+    // Reponse volontairement identique dans tous les cas.
+    const reponseNeutre = {
+      message:
+        "Si un compte existe avec cette adresse, un lien de réinitialisation vient d'être envoyé.",
+    };
+
+    try {
+      const email = req.body.email?.trim();
+
+      if (!email) {
+        return res.status(400).json({ message: "L'adresse email est obligatoire." });
+      }
+
+      const [[utilisateur]] = await db.query(
+        "SELECT id_user, pseudo, email FROM users WHERE email = ?",
+        [email],
+      );
+
+      // Compte inexistant : on s'arrete la, mais on renvoie la MEME reponse (et le meme code)
+      // que si tout s'etait bien passe.
+      if (!utilisateur) {
+        return res.status(200).json(reponseNeutre);
+      }
+
+      // Jeton cryptographiquement aleatoire. Surtout pas un UUID v4 ni un `Math.random()` :
+      // il faut de l'imprevisible, pas seulement de l'unique.
+      const jeton = crypto.randomBytes(32).toString("base64url");
+
+      // On invalide les demandes precedentes encore actives : une seule doit valoir a la fois.
+      await db.query(
+        "UPDATE password_resets SET used_at = NOW() WHERE id_user = ? AND used_at IS NULL",
+        [utilisateur.id_user],
+      );
+
+      await db.query(
+        `INSERT INTO password_resets (id_user, token_hash, expire_at)
+         VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))`,
+        [utilisateur.id_user, empreinte(jeton)],
+      );
+
+      // Le lien pointe vers le FRONT (c'est lui qui affiche le formulaire), avec le jeton en
+      // clair — c'est la seule et unique fois qu'il circule.
+      const base = process.env.FRONTEND_URL ?? "http://localhost:5173";
+      const lien = `${base}/reinitialiser-mot-de-passe?token=${jeton}`;
+
+      if (process.env.MAIL_USER && process.env.MAIL_PASS) {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+        });
+
+        await transporter.sendMail({
+          from: process.env.MAIL_USER,
+          to: utilisateur.email,
+          subject: "Spoti-Free — réinitialisation de ton mot de passe",
+          text:
+            `Bonjour ${utilisateur.pseudo},\n\n` +
+            `Tu as demandé à réinitialiser ton mot de passe. Ce lien est valable 1 heure :\n\n` +
+            `${lien}\n\n` +
+            `Si tu n'es pas à l'origine de cette demande, ignore ce message : ton mot de passe reste inchangé.\n`,
+        });
+      }
+
+      return res.status(200).json(reponseNeutre);
+    } catch (error) {
+      console.error(error);
+      // Meme en cas d'erreur d'envoi, on ne revele rien : le message reste neutre.
+      return res.status(200).json(reponseNeutre);
+    }
+  },
+);
+
+// POST /api/users/reinitialiser-mot-de-passe
+router.post("/reinitialiser-mot-de-passe", async (req, res) => {
+  try {
+    const jeton = req.body.token;
+    const motDePasse = req.body.password;
+
+    if (!jeton || !motDePasse) {
+      return res.status(400).json({
+        message: "Le lien et le nouveau mot de passe sont obligatoires.",
+      });
+    }
+
+    // Meme regle qu'a l'inscription : la validation vit cote serveur, pas seulement dans le
+    // formulaire (qu'un appel direct a l'API contourne).
+    if (motDePasse.length < 8) {
+      return res.status(400).json({
+        message: "Le mot de passe doit contenir au moins 8 caractères.",
+      });
+    }
+
+    // On cherche par EMPREINTE : le jeton en clair n'existe nulle part en base.
+    const [[demande]] = await db.query(
+      "SELECT id_reset, id_user, expire_at, used_at FROM password_resets WHERE token_hash = ?",
+      [empreinte(jeton)],
+    );
+
+    // Jeton inconnu, deja utilise, ou expire : un seul et meme message. Distinguer les cas
+    // renseignerait un attaquant sur la validite d'un jeton qu'il teste.
+    const invalide =
+      !demande || demande.used_at || new Date(demande.expire_at) < new Date();
+
+    if (invalide) {
+      return res.status(400).json({
+        message:
+          "Ce lien n'est plus valable. Il a peut-être expiré ou déjà été utilisé — refais une demande.",
+      });
+    }
+
+    const hash = await bcrypt.hash(motDePasse, 10);
+
+    await db.query("UPDATE users SET password_hash = ? WHERE id_user = ?", [
+      hash,
+      demande.id_user,
+    ]);
+
+    // Usage unique : le lien reste dans la boite mail, il ne doit plus rien pouvoir faire.
+    await db.query(
+      "UPDATE password_resets SET used_at = NOW() WHERE id_reset = ?",
+      [demande.id_reset],
+    );
+
+    return res.status(200).json({
+      message: "Mot de passe modifié. Tu peux maintenant te connecter.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Erreur lors de la réinitialisation.",
+    });
+  }
+});
+
 // inscription
 router.post("/inscription", limiteInscription, async (req, res) => {
   try {

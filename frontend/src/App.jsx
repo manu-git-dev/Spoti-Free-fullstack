@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import Bibliotheque from "./pages/Bibliotheque";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import MotDePasseOublie from "./pages/MotDePasseOublie";
+import ReinitialiserMotDePasse from "./pages/ReinitialiserMotDePasse";
 import Apropos from "./pages/Apropos";
 import Contact from "./pages/Contact";
 import Playlists from "./pages/Playlists";
@@ -225,6 +227,14 @@ function App() {
             }
           />
           <Route path="/inscription" element={<Register />} />
+          <Route
+            path="/mot-de-passe-oublie"
+            element={<MotDePasseOublie />}
+          />
+          <Route
+            path="/reinitialiser-mot-de-passe"
+            element={<ReinitialiserMotDePasse />}
+          />
           <Route path="/deposer" element={<Deposer user={user} />} />
           <Route path="/mes-depots" element={<MesDepots user={user} />} />
           <Route
