@@ -659,3 +659,33 @@ Le piège : cet enfant contenait lui-même des champs en `w-full` (largeur en `%
 `w-full` explicite règle le cas par défaut, et `lg:self-center` ne s'applique qu'à partir du breakpoint où le centrage a réellement du sens.
 
 ---
+
+## 2026-07-13 — Spoti-Free
+
+### 26. `toLocaleDateString` — formater une date lisible à partir d'une chaîne ISO
+
+**Concept** (demande de cours, exemple générique) : une API renvoie souvent une date sous forme de chaîne ISO (ex: `"2026-07-13T10:00:00.000Z"`), qui n'est qu'une chaîne de caractères, pas exploitable directement pour un affichage propre.
+
+```js
+const article = { titre: "Mon article", publieLe: "2026-07-13T10:00:00.000Z" };
+
+new Date(article.publieLe).toLocaleDateString("fr-FR");
+// → "13/07/2026"
+```
+
+Deux étapes :
+1. `new Date(article.publieLe)` construit un vrai objet `Date` JS à partir de la chaîne.
+2. `.toLocaleDateString("fr-FR")` formate cette date selon les conventions françaises (jour/mois/année), au lieu du format US par défaut.
+
+Un deuxième argument (objet d'options) permet un format plus détaillé :
+
+```js
+new Date(article.publieLe).toLocaleDateString("fr-FR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+// → "13 juillet 2026"
+```
+
+---

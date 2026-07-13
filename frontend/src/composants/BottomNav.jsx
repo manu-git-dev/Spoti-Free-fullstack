@@ -1,9 +1,7 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, } from "react-router-dom";
 import { Home, Library, ListMusic, Heart, User } from "lucide-react";
 
 export default function BottomNav({ user }) {
-  const location = useLocation();
-  const redirectedFromProtected = Boolean(location.state?.fromProtected);
   const tabs = [
     { to: "/", label: "Accueil", icon: Home, end: true },
     { to: "/bibliotheque", label: "Biblio", icon: Library },
@@ -17,7 +15,7 @@ export default function BottomNav({ user }) {
       label: "Favoris",
       icon: Heart,
     },
-    { to: "/connexion", label: "Profil", icon: User },
+    { to: "/profil", label: "Profil", icon: User },
   ];
 
   return (
@@ -29,10 +27,8 @@ export default function BottomNav({ user }) {
             to={to}
             end={end}
             className={({ isActive }) => {
-              const reallyActive =
-                isActive && !(to === "/connexion" && redirectedFromProtected);
               return `flex flex-1 flex-col items-center justify-center gap-1 h-full rounded-[26px] ${
-                reallyActive
+                isActive
                   ? "bg-accent text-accent-content"
                   : "text-base-content/60"
               }`;

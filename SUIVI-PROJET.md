@@ -90,14 +90,42 @@ image carree encadree, juste icones en bas).
   testes (`Around the World` -> `Bad Guy` -> `Believer` -> retour `Bad Guy`) ; capture des
   nouveaux styles Bibliotheque/Home/Favoris/lecteur comparee a la maquette.
 
+## Page Profil + toggle liste/grille Bibliotheque du 2026-07-13 - faite
+
+- Fait : route backend `GET /api/users/profil` (`userRoute.js`) protegee par
+  `authMiddleware`, filtree sur `req.user.id_user` (pas de parametre d'URL, evite l'IDOR).
+- Fait : nouvelle page `frontend/src/pages/Profil.jsx` - avatar en cercle dégradé
+  `primary -> accent` avec l'initiale du pseudo, prenom/nom/pseudo/email, stats
+  (playlists/favoris/membre depuis), bouton Deconnexion restyle (`Deconnexion.jsx`, pilule
+  contour `error` + icone `LogOut`, partage avec `Home.jsx`). Route `/profil` volontairement
+  **publique** (pas de `ProtectedRoute`) - `Profil.jsx` gere lui-meme l'etat invite (message
+  + liens Connexion/Inscription) si `user === null`, pour que l'onglet Profil de la
+  `BottomNav` ait un sens meme deconnecte sur mobile.
+- Fait : simplification de `BottomNav.jsx` - l'onglet Profil pointe desormais
+  inconditionnellement vers `/profil` (avant : `/connexion` en dur) ; suppression du hack
+  `redirectedFromProtected`/`fromProtected` qui n'existait que pour compenser cette
+  redirection forcee.
+- Fait : petit avatar rond (lien vers `/profil`) ajoute a cote du bouton
+  Deconnexion dans `Home.jsx`, visible seulement si connecte (pas de doublon avec les
+  boutons Connexion/Inscription pour un visiteur).
+- Fait : suppression de `composants/Header.jsx` (code mort, plus utilise depuis le passage
+  de la nav desktop sur `Aside.jsx`).
+- Fait : `Bibliotheque.jsx` - toggle d'affichage liste/grille (`useState viewMode`, defaut
+  `"liste"`). Mode liste reutilise `TrackRow` (meme pattern que le Top 5 de `Home.jsx`,
+  `.map` avec `index` pour le rang) ; mode grille inchange (`ListesCard`/`Card.jsx`). Toggle
+  stylise en pilule `bg-base-200` avec icones `List`/`LayoutGrid` (lucide-react), calque sur
+  le style des tabs de `BottomNav`/`Aside`.
+
+Reste ouvert (voir aussi liste generale ci-dessous) :
+- Bug Rules of Hooks dans `Profil.jsx` (`if (token) { useEffect(...) }`, ligne ~17) - un
+  hook ne peut pas etre appele conditionnellement, a corriger (deplacer le test `token`
+  a l'interieur de l'effet plutot qu'autour).
+- Pas de lien "Profil" dans `Aside.jsx` (sidebar desktop) - seul point d'entree desktop
+  actuel : l'avatar dans `Home.jsx`. Prevu a la maquette (voir `docs/maquette/README.md`)
+  mais pas encore reporte dans le code.
+
 ## Autres points ouverts (pas urgents, a reprendre quand on y arrive)
 
-- Pas de page Profil : l'onglet "Profil" pointe pour l'instant vers `/connexion` en
-  placeholder.
-- Boutons connexion/inscription/deconnexion places temporairement dans `Home.jsx`
-  (juste pour tester `ProtectedRoute` manuellement, desormais stylees comme la maquette
-  mais toujours pas au bon endroit) - la vraie destination est `Aside.jsx` (desktop) et
-  le menu burger de `HeaderMobile.jsx` (mobile), une fois une vraie zone Profil concue.
 - Classes couleur encore en dur (`bg-black`, `bg-zinc-800`, `bg-zinc-900`...) dans le
   shell `App.jsx`, pas encore migrees vers les tokens du theme (`base-100/200/300`).
 - Top 5 de `Home.jsx` : simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes (aucune
