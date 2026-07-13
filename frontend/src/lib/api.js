@@ -28,6 +28,14 @@ export function urlFichier(chemin) {
 }
 
 /**
+ * URL absolue d'une route de l'API, pour les cas ou le navigateur va la chercher lui-meme
+ * (attribut `src` d'un <audio> ou d'une <img>) plutot que de passer par `apiFetch`.
+ */
+export function urlApi(chemin) {
+  return `${BASE_URL}${chemin}`;
+}
+
+/**
  * Message d'erreur a afficher a l'utilisateur, ou `null` s'il n'y a rien a dire.
  *
  * Sur un 401, la session vient d'etre purgee et un toast global ("Ta session a expiré")
@@ -47,17 +55,31 @@ export function messageErreur(reponse, donnees) {
  * `donnees` pour le corps deja parse.
  */
 export async function apiFetch(chemin, options = {}) {
-  const { body, headers, ...reste } = options;
+  // `brut: true` : ne pas tenter de parser la reponse en JSON. Utile quand la route renvoie un
+  // fichier (audio, image) et non des donnees — l'appelant recupere alors `reponse` et fait ce
+  // qu'il veut du corps (`.blob()`, `.text()`...).
+  const { body, headers, brut = false, ...reste } = options;
   const token = localStorage.getItem("token");
+
+  // Un envoi de fichiers passe par FormData, pas par du JSON. Dans ce cas il ne faut SURTOUT
+  // pas poser `Content-Type` soi-meme : le navigateur doit le generer lui-meme, car il doit y
+  // inclure la "boundary" (le separateur entre les champs) qu'il vient de tirer au hasard.
+  // Ecrire "multipart/form-data" a la main, sans cette boundary, rend le corps illisible pour
+  // le serveur — et multer repond alors une erreur incomprehensible.
+  const estFormData = body instanceof FormData;
 
   const reponse = await fetch(`${BASE_URL}${chemin}`, {
     ...reste,
     headers: {
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined && !estFormData
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(body !== undefined
+      ? { body: estFormData ? body : JSON.stringify(body) }
+      : {}),
   });
 
   // 401 = "je ne sais pas qui tu es" : token absent, invalide ou expire. La session locale
@@ -65,6 +87,12 @@ export async function apiFetch(chemin, options = {}) {
   // la session reste valide, on ne deconnecte donc pas.)
   if (reponse.status === 401) {
     surSessionExpiree?.();
+  }
+
+  // Reponse binaire (un fichier) : on rend la reponse telle quelle, sans la consommer — sinon
+  // l'appelant ne pourrait plus lire le corps (un corps de reponse ne se lit qu'une fois).
+  if (brut) {
+    return { reponse, donnees: null };
   }
 
   let donnees = null;
