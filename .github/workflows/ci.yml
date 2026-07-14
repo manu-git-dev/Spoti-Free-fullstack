@@ -1,0 +1,121 @@
+# Integration continue : a chaque push, une machine NEUVE installe le projet et lance les tests.
+#
+# L'interet n'est pas seulement d'executer les tests — c'est de les executer sur une machine qui
+# ne connait rien de cet ordinateur : pas de MAMP, pas de fichier .env, pas de base deja remplie,
+# pas de fichiers audio. Si le projet demarre ici, c'est qu'il est reellement installable par
+# quelqu'un d'autre. C'est exactement la question que se pose un recruteur qui clone le depot.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Tests (106) + build
+    runs-on: ubuntu-latest
+
+    # Une vraie base MySQL, jetable, montee pour la duree du job. Le `health-cmd` est important :
+    # sans lui, les etapes suivantes demarreraient avant que MySQL soit pret a accepter une
+    # connexion, et le backend echouerait avec ECONNREFUSED.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: spotifree
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # --- Configuration ------------------------------------------------------------------
+      # Le .env n'est pas versionne (il contient des secrets). On en fabrique un, avec des
+      # valeurs jetables : cette base et ce serveur n'existent que pour ce job.
+      - name: Fabriquer backend/.env
+        run: |
+          cat > backend/.env <<'EOF'
+          PORT=3000
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_USER=root
+          DB_PASSWORD=root
+          DB_NAME=spotifree
+          JWT_SECRET=secret-jetable-de-ci-aucune-valeur-en-production
+          IP_HASH_SALT=sel-jetable-de-ci
+          FRONTEND_URL=http://localhost:5173
+          RATE_LIMIT_DISABLED=1
+          EOF
+
+      # Volontairement PAS de MAIL_USER / MAIL_PASS : le backend n'envoie un mail que si elles
+      # existent. La CI ne doit evidemment pas expedier de vrais mails.
+      - name: Fabriquer frontend/.env
+        run: echo "VITE_API_URL=http://localhost:3000" > frontend/.env
+
+      # --- Dependances --------------------------------------------------------------------
+      - name: Installer les dependances
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+          npm ci --prefix tests
+
+      - name: Installer le navigateur de Playwright
+        run: npx --prefix tests playwright install --with-deps chromium
+
+      # --- Base de donnees ----------------------------------------------------------------
+      # C'est ici que la CI prouve quelque chose : la base est reconstruite DEPUIS ZERO, a partir
+      # des seuls fichiers versionnes. Si le schema n'etait pas dans Git, cette etape echouerait.
+      - name: Creer la base (schema + catalogue)
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot spotifree < backend/scripts/schema.sql
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot spotifree < backend/scripts/seed-musics.sql
+
+      # Les vrais fichiers audio ne sont pas versionnes (23 Mo, et pas nos droits). On recree
+      # `backend/public/` avec un mp3 SILENCIEUX fabrique pour l'occasion.
+      - name: Preparer les medias de test
+        run: node tests/preparer-medias.mjs
+
+      # --- Demarrage ----------------------------------------------------------------------
+      # `working-directory` est indispensable : `db.js` appelle `dotenv.config()` sans chemin, ce
+      # qui charge le `.env` du DOSSIER COURANT. Lance depuis la racine, le backend chercherait un
+      # `.env` a la racine, ne le trouverait pas, et n'aurait aucun acces a la base.
+      - name: Demarrer le backend
+        working-directory: backend
+        run: node server.js &
+
+      - name: Demarrer le frontend
+        run: npm run dev --prefix frontend &
+
+      # On attend que les deux repondent VRAIMENT, plutot que de dormir un nombre de secondes
+      # arbitraire : trop court, les tests partent dans le vide ; trop long, on gaspille.
+      - name: Attendre que les serveurs repondent
+        run: |
+          npx wait-on http://localhost:3000/api/musics http://localhost:5173 --timeout 60000
+          echo "Backend et frontend en ligne."
+
+      # --- Verification -------------------------------------------------------------------
+      - name: Lancer les 106 tests
+        run: npm test --prefix tests
+
+      # Le build de production est un test a lui seul : le serveur de developpement pardonne des
+      # choses que le build refuse.
+      - name: Build de production du frontend
+        run: npm run build --prefix frontend
+
+      - name: Verifier les vulnerabilites npm
+        run: |
+          npm audit --omit=dev --prefix backend
+          npm audit --omit=dev --prefix frontend
