@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
+import Logo from "./Logo";
 
 const lienNav = ({ isActive }) =>
   `flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
@@ -44,6 +45,7 @@ export default function Aside({
   className = "",
   playlists,
   setPlaylists,
+  isPlaying,
 }) {
   const isPlaylistsActive = useMatch("/playlists");
 
@@ -54,12 +56,7 @@ export default function Aside({
       {/* Le logo et les liens de bas de page restent fixes ; c'est la zone du milieu qui
           defile. Sans cela, un admin (9 liens + ses playlists) ferait deborder l'Aside sur un
           petit ecran. */}
-      <NavLink
-        to="/"
-        className="shrink-0 px-3 py-1 text-3xl font-serif font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
-      >
-        Spoti-Free
-      </NavLink>
+      <Logo enLecture={isPlaying} className="shrink-0 px-3 py-1" />
 
       <div className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
         {/* --- Ce que l'on vient faire ici tous les jours --- */}
@@ -97,7 +94,10 @@ export default function Aside({
               Mes playlists
             </NavLink>
             {user && (
-              <ButtonAddPlaylist playlists={playlists} setPlaylists={setPlaylists}>
+              <ButtonAddPlaylist
+                playlists={playlists}
+                setPlaylists={setPlaylists}
+              >
                 <Plus className="w-5 h-5" />
               </ButtonAddPlaylist>
             )}

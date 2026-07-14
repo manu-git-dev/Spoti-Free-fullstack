@@ -35,6 +35,11 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState("");
   const [maxIndex, setMaxIndex] = useState(0);
   const [currentQueue, setCurrentQueue] = useState([]);
+  // "En lecture" vivait DANS MediaPlayer. Mais le logo (dans l'Aside et le HeaderMobile) doit
+  // savoir si la musique tourne pour animer son egaliseur — et l'Aside n'est pas un enfant du
+  // lecteur, c'est son frere. Un etat partage par deux freres doit remonter dans leur parent
+  // commun, qui le redistribue : c'est le "lifting state up" de React.
+  const [isPlaying, setIsPlaying] = useState(false);
   const [musiquesLikee, setMusiquesLikee] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [top5, setTop5] = useState([]);
@@ -165,13 +170,14 @@ function App() {
     // l'ecran — et l'`overflow-y-auto` de la liste ne s'activait jamais, faute de contrainte.
     <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_88px] md:gap-3 md:p-3">
       <div className="md:hidden">
-        <HeaderMobile user={user} />
+        <HeaderMobile user={user} isPlaying={isPlaying} />
       </div>
       <Aside
         className="hidden md:flex md:row-start-1 md:col-start-1"
         user={user}
         playlists={playlists}
         setPlaylists={setPlaylists}
+        isPlaying={isPlaying}
       />
       <main className="relative flex-1 min-h-0 mx-3 mt-3 md:m-0 md:col-start-2 md:row-start-1 bg-card border border-border rounded-2xl overflow-hidden">
         {/* "Bloom" du theme : halo violet/indigo en haut du panneau de contenu */}
@@ -180,109 +186,109 @@ function App() {
           className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/20 via-secondary/10 to-transparent"
         />
         <div className="relative h-full">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Home
-                musiques={musiques}
-                top5={top5}
-                user={user}
-                setCurrentMusic={setCurrentMusic}
-                setCurrentQueue={setCurrentQueue}
-                musiquesLikee={musiquesLikee}
-                setMusiquesLikee={setMusiquesLikee}
-                setUser={setUser}
-                token={token}
-                setToken={setToken}
-                currentMusic={currentMusic}
-              />
-            }
-          />
-          <Route
-            path="/bibliotheque"
-            element={
-              <Bibliotheque
-                musiques={musiquesFiltre}
-                setCurrentMusic={setCurrentMusic}
-                setCurrentQueue={setCurrentQueue}
-                setValueInput={setValueInput}
-                valueInput={valueInput}
-                musiquesLikee={musiquesLikee}
-                setMusiquesLikee={setMusiquesLikee}
-                user={user}
-                currentMusic={currentMusic}
-              />
-            }
-          />
-          <Route
-            path="/connexion"
-            element={
-              <Login
-                user={user}
-                setUser={setUser}
-                token={token}
-                setToken={setToken}
-              />
-            }
-          />
-          <Route path="/inscription" element={<Register />} />
-          <Route
-            path="/mot-de-passe-oublie"
-            element={<MotDePasseOublie />}
-          />
-          <Route
-            path="/reinitialiser-mot-de-passe"
-            element={<ReinitialiserMotDePasse />}
-          />
-          <Route path="/deposer" element={<Deposer user={user} />} />
-          <Route path="/mes-depots" element={<MesDepots user={user} />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute user={user}>
-                <AdminDashboard user={user} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/utilisateurs"
-            element={
-              <ProtectedRoute user={user}>
-                <AdminUtilisateurs user={user} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/musiques"
-            element={
-              <ProtectedRoute user={user}>
-                <AdminMusiques user={user} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/depots"
-            element={
-              <ProtectedRoute user={user}>
-                <AdminDepots user={user} />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/a-propos" element={<Apropos />} />
-          <Route path="/contact" element={<Contact />} />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Home
+                  musiques={musiques}
+                  top5={top5}
+                  user={user}
+                  setCurrentMusic={setCurrentMusic}
+                  setCurrentQueue={setCurrentQueue}
+                  musiquesLikee={musiquesLikee}
+                  setMusiquesLikee={setMusiquesLikee}
+                  setUser={setUser}
+                  token={token}
+                  setToken={setToken}
+                  currentMusic={currentMusic}
+                />
+              }
+            />
+            <Route
+              path="/bibliotheque"
+              element={
+                <Bibliotheque
+                  musiques={musiquesFiltre}
+                  setCurrentMusic={setCurrentMusic}
+                  setCurrentQueue={setCurrentQueue}
+                  setValueInput={setValueInput}
+                  valueInput={valueInput}
+                  musiquesLikee={musiquesLikee}
+                  setMusiquesLikee={setMusiquesLikee}
+                  user={user}
+                  currentMusic={currentMusic}
+                />
+              }
+            />
+            <Route
+              path="/connexion"
+              element={
+                <Login
+                  user={user}
+                  setUser={setUser}
+                  token={token}
+                  setToken={setToken}
+                />
+              }
+            />
+            <Route path="/inscription" element={<Register />} />
+            <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+            <Route
+              path="/reinitialiser-mot-de-passe"
+              element={<ReinitialiserMotDePasse />}
+            />
+            <Route path="/deposer" element={<Deposer user={user} />} />
+            <Route path="/mes-depots" element={<MesDepots user={user} />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute user={user}>
+                  <AdminDashboard user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/utilisateurs"
+              element={
+                <ProtectedRoute user={user}>
+                  <AdminUtilisateurs user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/musiques"
+              element={
+                <ProtectedRoute user={user}>
+                  <AdminMusiques user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/depots"
+              element={
+                <ProtectedRoute user={user}>
+                  <AdminDepots user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/a-propos" element={<Apropos />} />
+            <Route path="/contact" element={<Contact />} />
 
-          <Route
-            path="/playlists"
-            element={
-              <Playlists playlists={playlists} setPlaylists={setPlaylists} user={user} />
-            }
-          />
+            <Route
+              path="/playlists"
+              element={
+                <Playlists
+                  playlists={playlists}
+                  setPlaylists={setPlaylists}
+                  user={user}
+                />
+              }
+            />
 
-          <Route
-            path="/profil"
-            element={
-           
+            <Route
+              path="/profil"
+              element={
                 <Profil
                   user={user}
                   musiquesLikee={musiquesLikee}
@@ -291,40 +297,39 @@ function App() {
                   setToken={setToken}
                   playlists={playlists}
                 />
-             
-            }
-          />
+              }
+            />
 
-          <Route
-            path="/playlists/:idPlaylist"
-            element={
-              <ProtectedRoute user={user}>
-                <MusicsInPlaylist
+            <Route
+              path="/playlists/:idPlaylist"
+              element={
+                <ProtectedRoute user={user}>
+                  <MusicsInPlaylist
+                    setCurrentMusic={setCurrentMusic}
+                    setCurrentQueue={setCurrentQueue}
+                    setMusiquesLikee={setMusiquesLikee}
+                    musiquesLikee={musiquesLikee}
+                    user={user}
+                    currentMusic={currentMusic}
+                  />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/favoris"
+              element={
+                <Favoris
+                  musiquesLikee={musiquesLikee}
+                  setMusiquesLikee={setMusiquesLikee}
                   setCurrentMusic={setCurrentMusic}
                   setCurrentQueue={setCurrentQueue}
-                  setMusiquesLikee={setMusiquesLikee}
-                  musiquesLikee={musiquesLikee}
                   user={user}
                   currentMusic={currentMusic}
                 />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/favoris"
-            element={
-              <Favoris
-                musiquesLikee={musiquesLikee}
-                setMusiquesLikee={setMusiquesLikee}
-                setCurrentMusic={setCurrentMusic}
-                setCurrentQueue={setCurrentQueue}
-                user={user}
-                currentMusic={currentMusic}
-              />
-            }
-          />
-        </Routes>
+              }
+            />
+          </Routes>
         </div>
       </main>
       <MediaPlayer
@@ -336,6 +341,8 @@ function App() {
         setCurrentMusic={setCurrentMusic}
         setCurrentIndex={setCurrentIndex}
         maxIndex={maxIndex}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
       />
       <div className="md:hidden">
         <BottomNav user={user} />
