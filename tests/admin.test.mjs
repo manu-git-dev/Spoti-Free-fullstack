@@ -5,11 +5,10 @@
 //
 // Lancer : cd tests && npm run test:admin
 
-import jwt from "jsonwebtoken";
-
 import {
   API,
   creerCompte,
+  creerAdmin,
   apiAuth,
   verifier,
   etape,
@@ -17,12 +16,18 @@ import {
   nettoyerComptesDeTest,
 } from "./utils.mjs";
 
-const tokenAdmin = () =>
-  jwt.sign({ id_user: 10, email: "admin@admin.fr" }, process.env.JWT_SECRET, {
-    expiresIn: "10m",
-  });
+// Un VRAI compte admin, cree pour ces tests puis supprime avec les autres.
+//
+// Avant, on forgeait un jeton pour `id_user: 10` / `admin@admin.fr` — un compte qui n'existait que
+// dans la base de developpement de cette machine. Sur une base neuve (la CI), `adminMiddleware` ne
+// trouvait personne et repondait 403 : les tests etaient injouables ailleurs.
+//
+// Ironie : `admin@admin.fr` est justement le compte que `DEPLOIEMENT.md` demande de PURGER avant
+// la mise en production. Ces tests auraient donc casse le jour de la purge.
+const { token: JETON_ADMIN, user: ADMIN } = await creerAdmin("AdminTest");
 
-const ID_ADMIN = 10;
+const tokenAdmin = () => JETON_ADMIN;
+const ID_ADMIN = ADMIN.id_user;
 
 // ---------------------------------------------------------------------------
 // 1. Tout l'espace admin est ferme aux utilisateurs normaux

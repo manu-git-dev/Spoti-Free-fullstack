@@ -97,6 +97,52 @@ export async function creerCompte(pseudo = "TestUser") {
   return { cred, token: donnees.token, user: donnees.user };
 }
 
+/**
+ * Cree un compte de test, le promeut ADMIN en base, et renvoie { cred, token, user }.
+ *
+ * Avant, les tests d'administration forgeaient un jeton pour `id_user: 10` / `admin@admin.fr` —
+ * un compte qui n'existait QUE dans la base de developpement de cette machine. Les tests etaient
+ * donc injouables ailleurs : sur une base neuve (la CI), `adminMiddleware` ne trouvait aucun
+ * utilisateur et repondait 403. C'est la CI qui a revele cette dependance cachee.
+ *
+ * Ironie : `admin@admin.fr` est precisement le compte que `DEPLOIEMENT.md` demande de PURGER
+ * avant la mise en production. Des tests qui en dependent auraient casse le jour de la purge.
+ *
+ * Ici, le compte est cree par l'API (donc avec un vrai mot de passe hache), promu par une seule
+ * requete SQL, et le jeton renvoye est un VRAI jeton de connexion — pas un jeton fabrique a la
+ * main. Le nettoyage le supprime comme les autres comptes de test.
+ */
+export async function creerAdmin(pseudo = "AdminTest") {
+  const compte = await creerCompte(pseudo);
+
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT),
+  });
+  await db.query("UPDATE users SET role = 'admin' WHERE email = ?", [
+    compte.cred.email,
+  ]);
+  await db.end();
+
+  // On se reconnecte : le role est relu en base a chaque requete par `adminMiddleware`, mais on
+  // veut un jeton emis APRES la promotion, comme le ferait un vrai admin qui se connecte.
+  const connexion = await fetch(`${API}/api/users/connexion`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({
+      email: compte.cred.email,
+      password: compte.cred.password,
+    }),
+  });
+  const donnees = await connexion.json();
+
+  return { cred: compte.cred, token: donnees.token, user: donnees.user };
+}
+
 /** Appelle l'API en tant qu'utilisateur connecte. */
 export function apiAuth(token) {
   return async (chemin, options = {}) => {

@@ -9,11 +9,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
-import jwt from "jsonwebtoken";
 
 import {
   API,
   creerCompte,
+  creerAdmin,
   apiAuth,
   verifier,
   etape,
@@ -58,13 +58,16 @@ async function deposer(token, titre, options) {
   return { reponse, donnees: await reponse.json() };
 }
 
-/** Un token admin, forge a partir du secret local (le mot de passe admin n'est pas connu). */
+// Un VRAI compte admin, cree pour ces tests puis supprime avec les autres.
+//
+// Avant, on forgeait un jeton pour `id_user: 10` / `admin@admin.fr` — un compte qui n'existait que
+// dans la base de developpement de cette machine. Sur une base neuve (la CI), `adminMiddleware` ne
+// trouvait personne et repondait 403 : les tests etaient injouables ailleurs. C'est la CI qui a
+// revele cette dependance cachee.
+const { token: JETON_ADMIN } = await creerAdmin("DepotAdmin");
+
 function tokenAdmin() {
-  return jwt.sign(
-    { id_user: 10, email: "admin@admin.fr" },
-    process.env.JWT_SECRET,
-    { expiresIn: "10m" },
-  );
+  return JETON_ADMIN;
 }
 
 // ---------------------------------------------------------------------------
