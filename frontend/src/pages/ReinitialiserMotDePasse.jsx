@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { motDePasseValide } from "@/lib/validation";
+import ChecklistMotDePasse from "@/composants/ChecklistMotDePasse";
 
 export default function ReinitialiserMotDePasse() {
   const [parametres] = useSearchParams();
@@ -17,15 +20,31 @@ export default function ReinitialiserMotDePasse() {
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
 
+  // Champs controles : les memes regles qu'a l'inscription doivent etre annoncees ici, sinon on
+  // laisserait l'utilisateur choisir un mot de passe que le serveur refusera.
+  const [motDePasse, setMotDePasse] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [touche, setTouche] = useState({});
+
+  const motDePasseOk = motDePasseValide(motDePasse);
+  const confirmationOk = confirmation !== "" && confirmation === motDePasse;
+  const erreurMotDePasse = Boolean(touche.password) && !motDePasseOk;
+  const erreurConfirmation =
+    Boolean(touche.confirm) && confirmation !== "" && !confirmationOk;
+
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const champs = new FormData(event.currentTarget);
-    const motDePasse = champs.get("password");
-    const confirmation = champs.get("confirmPassword");
-
     // Verification de confort : elle evite un aller-retour reseau pour une faute de frappe.
-    // La vraie validation (longueur, validite du jeton) est faite par le serveur.
+    // La vraie validation (regles du mot de passe, validite du jeton) est faite par le serveur.
+    if (!motDePasseOk) {
+      setTouche({ password: true, confirm: true });
+      setErreur(
+        "Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.",
+      );
+      return;
+    }
+
     if (motDePasse !== confirmation) {
       setErreur("Les deux mots de passe ne correspondent pas.");
       return;
@@ -86,11 +105,11 @@ export default function ReinitialiserMotDePasse() {
             Nouveau mot de passe
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Choisis un mot de passe d'au moins 8 caractères.
+            Choisis un nouveau mot de passe.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium">
               Nouveau mot de passe
@@ -99,10 +118,23 @@ export default function ReinitialiserMotDePasse() {
               id="password"
               type="password"
               name="password"
-              placeholder="Au moins 8 caractères"
-              minLength={8}
+              placeholder="Ton nouveau mot de passe"
+              className={cn(
+                erreurMotDePasse && "border-destructive",
+                motDePasseOk && "border-success",
+              )}
+              value={motDePasse}
+              onChange={(event) => setMotDePasse(event.target.value)}
+              onBlur={() => setTouche((p) => ({ ...p, password: true }))}
+              aria-invalid={erreurMotDePasse}
+              aria-describedby="regles-mot-de-passe"
               required
               autoFocus
+            />
+            <ChecklistMotDePasse
+              id="regles-mot-de-passe"
+              motDePasse={motDePasse}
+              montrerErreurs={erreurMotDePasse}
             />
           </div>
 
@@ -115,8 +147,24 @@ export default function ReinitialiserMotDePasse() {
               type="password"
               name="confirmPassword"
               placeholder="Retape le mot de passe"
+              className={cn(
+                erreurConfirmation && "border-destructive",
+                confirmationOk && "border-success",
+              )}
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              onBlur={() => setTouche((p) => ({ ...p, confirm: true }))}
+              aria-invalid={erreurConfirmation}
+              aria-describedby={
+                erreurConfirmation ? "erreur-confirmation" : undefined
+              }
               required
             />
+            {erreurConfirmation ? (
+              <p id="erreur-confirmation" className="text-xs text-destructive">
+                Les deux mots de passe ne correspondent pas.
+              </p>
+            ) : null}
           </div>
 
           {erreur ? (

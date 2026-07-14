@@ -9,6 +9,11 @@ import nodemailer from "nodemailer";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
+import {
+  emailValide,
+  motDePasseValide,
+  MESSAGE_MOT_DE_PASSE,
+} from "../validation.js";
 
 // Anti brute-force : sans cette limite, un script peut tester des milliers de mots de passe
 // a la seconde sur /connexion. bcrypt ralentit chaque tentative, mais ne les empeche pas.
@@ -284,10 +289,12 @@ router.post("/reinitialiser-mot-de-passe", async (req, res) => {
     }
 
     // Meme regle qu'a l'inscription : la validation vit cote serveur, pas seulement dans le
-    // formulaire (qu'un appel direct a l'API contourne).
-    if (motDePasse.length < 8) {
+    // formulaire (qu'un appel direct a l'API contourne). Et surtout, c'est LA MEME regle :
+    // une exigence appliquee a l'inscription mais pas ici se contournerait en passant par
+    // "mot de passe oublie" pour se choisir un mot de passe faible.
+    if (!motDePasseValide(motDePasse)) {
       return res.status(400).json({
-        message: "Le mot de passe doit contenir au moins 8 caractères.",
+        message: MESSAGE_MOT_DE_PASSE,
       });
     }
 
@@ -352,16 +359,15 @@ router.post("/inscription", limiteInscription, async (req, res) => {
     // Ces deux controles doivent vivre ICI, cote serveur : le `type="email"` du formulaire
     // et la verification du mot de passe cote React ne protegent que le navigateur, et se
     // contournent en appelant l'API directement.
-    const emailValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!emailValide) {
+    if (!emailValide(email)) {
       return res.status(400).json({
         message: "L'adresse email n'est pas valide.",
       });
     }
 
-    if (password.length < 8) {
+    if (!motDePasseValide(password)) {
       return res.status(400).json({
-        message: "Le mot de passe doit contenir au moins 8 caractères.",
+        message: MESSAGE_MOT_DE_PASSE,
       });
     }
 
