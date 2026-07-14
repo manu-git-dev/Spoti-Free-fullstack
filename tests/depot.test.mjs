@@ -22,12 +22,17 @@ import {
 } from "./utils.mjs";
 
 const ICI = path.dirname(url.fileURLToPath(import.meta.url));
-const PUBLIC = path.join(ICI, "..", "backend", "public");
+const FIXTURES = path.join(ICI, "fixtures");
 
-const VRAI_MP3 = fs.readFileSync(
-  path.join(PUBLIC, "musiques", "atlasaudio-sentimental-piano.mp3"),
-);
-const VRAIE_IMAGE = fs.readFileSync(path.join(PUBLIC, "images", "1.jpg"));
+// Les medias viennent des FIXTURES, pas de `backend/public/` (qui est gitignore).
+// Un test qui depend d'un fichier absent du depot ne peut pas tourner ailleurs que sur la
+// machine de son auteur — c'est precisement ce que la CI doit interdire.
+//
+// `audio-test.mp3` est un vrai MP3 (des trames MPEG valides), mais SILENCIEUX : `music-metadata`
+// y lit bien une duree, donc le backend l'accepte comme de l'audio — et il est libre de tout
+// droit, contrairement aux morceaux du catalogue.
+const VRAI_MP3 = fs.readFileSync(path.join(FIXTURES, "audio-test.mp3"));
+const VRAIE_IMAGE = fs.readFileSync(path.join(FIXTURES, "pochette-test.jpg"));
 
 // Marqueur pour retrouver et nettoyer ce que ces tests creent dans le catalogue.
 const MARQUEUR = `__depot-test-${Date.now()}`;
