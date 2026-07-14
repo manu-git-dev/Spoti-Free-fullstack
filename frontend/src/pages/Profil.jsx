@@ -41,7 +41,10 @@ if (user === null ){
           </p>
         </div>
         <div className="flex items-center gap-4 mt-2">
-          <Link to={"/inscription"} className="text-primary underline-offset-4 hover:underline">
+          <Link
+            to={"/inscription"}
+            className="text-foreground hover:text-primary underline-offset-4 hover:underline"
+          >
             S'inscrire
           </Link>
           <Link
