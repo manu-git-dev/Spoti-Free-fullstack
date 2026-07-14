@@ -106,7 +106,10 @@ export default function Login({ user, setUser, token, setToken }) {
         </form>
         <p className="text-sm text-muted-foreground mt-4">
           Pas encore de compte ?{" "}
-          <Link to="/inscription" className="text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/inscription"
+            className="text-foreground hover:text-primary underline-offset-4 hover:underline"
+          >
             S'inscrire
           </Link>
         </p>
