@@ -73,7 +73,51 @@ dossier `backend/uploads/` (vide mais accessible en ecriture).
 - **Ne jamais supprimer un fichier partage** : les pochettes sont mutualisees (une image sert a
   plusieurs morceaux). Toujours verifier qu'aucun autre morceau ne le reference.
 
-## Retouches UI/UX - 2026-07-14 - en cours
+## Integration continue (GitHub Actions) - 2026-07-14 - fait
+
+`.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
+base, demarre les serveurs, joue les **106 tests**, compile le build de production et verifie
+`npm audit`. Badge vert sur le README. Vert en 2 min 24.
+
+**La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
+machine. Trois defauts corriges (voir la note 55 de `NOTES-APPRENTISSAGE.md`) :
+
+1. **Le schema de la base n'etait versionne NULLE PART.** Les tables `users`, `musics`,
+   `playlists`, `likes` n'existaient que dans le MySQL de MAMP. Un recruteur qui clonait le depot
+   ne pouvait pas lancer l'app, et `DEPLOIEMENT.md` etait faux (les scripts `add-*.sql` supposaient
+   des tables inexistantes). -> `backend/scripts/schema.sql` + `seed-musics.sql`.
+2. **Les tests dependaient d'un compte fantome** : ils forgeaient un jeton pour `id_user: 10` /
+   `admin@admin.fr`, qui n'existe que dans la base de dev — et qui est justement le compte que
+   `DEPLOIEMENT.md` demande de PURGER. Ils auraient casse le jour de la purge. -> helper
+   `creerAdmin()` : les tests creent leur propre admin.
+3. **`depot.test` lisait un vrai mp3 dans `backend/public/`** (gitignore). -> `tests/fixtures/` :
+   un mp3 SILENCIEUX fabrique (vraies trames MPEG, donc accepte par `music-metadata`), 33 Ko,
+   libre de droit. `tests/preparer-medias.mjs` recree `public/` sur une machine neuve.
+
+### Installation sur une machine neuve (desormais possible)
+
+```
+mysql -u root -p spotifree < backend/scripts/schema.sql       # les 8 tables
+mysql -u root -p spotifree < backend/scripts/seed-musics.sql  # le catalogue
+node tests/preparer-medias.mjs                                # les medias de test
+```
+
+Les scripts `add-*.sql` sont des **migrations historiques** : deja incluses dans `schema.sql`.
+
+### README refait
+
+L'ancien `README.md` etait un README de **profil GitHub** ("Bonjour, je suis Manuel Mattana"), pas
+celui du projet : il n'expliquait ni l'installation, ni le lancement, et affichait encore "recherche
+actuellement un stage". Remplace par un vrai README de projet (badge CI, installation, tests,
+decisions de securite).
+
+## Retouches UI/UX - 2026-07-14 - fait
+
+Passe de finition demandee par Manuel : validation en direct a l'inscription, formulaire sur deux
+colonnes, en-tete de page unifie sur 13 pages (`composants/EnTetePage.jsx`), logo anime (egaliseur
+qui danse pendant la lecture), et page A propos reecrite. Detail ci-dessous.
+
+## Detail des retouches UI/UX - 2026-07-14
 
 Passe de finition demandee par Manuel avant la CI et le deploiement.
 

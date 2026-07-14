@@ -1551,3 +1551,49 @@ D'où un module unique, `backend/src/validation.js`, importé par les **deux** r
 **La règle à retenir** : la validation client **explique**, la validation serveur **impose**. Et une exigence de sécurité s'applique à **tous** les chemins qui mènent à la même donnée, pas seulement au plus visible.
 
 ---
+
+## 2026-07-14 — Spoti-Free (intégration continue)
+
+### 55. La CI : ce n'est pas un lanceur de tests, c'est un révélateur
+
+**Contexte** : mes 106 tests passaient. Chez moi. J'ai voulu les brancher sur une **CI** (intégration continue) : un serveur — ici GitHub Actions — qui, à chaque `push`, prend une machine **neuve**, installe le projet et lance les tests tout seul. Croix rouge sur le commit si ça casse.
+
+Je pensais que ce serait un fichier de config à écrire. En réalité, **la CI a trouvé trois défauts que je ne voyais pas** — et elle les a trouvés précisément parce qu'elle ne connaît rien de mon ordinateur.
+
+**Le mot important, c'est « neuve ».** Chez moi il y a MAMP, un `.env`, une base MySQL déjà remplie, des fichiers audio dans `backend/public/`. **Rien de tout ça n'est dans Git.** Une CI est donc une réponse à la question : *mon projet tourne-t-il ailleurs que chez moi ?* C'est exactement la question que se pose un recruteur qui clone mon dépôt.
+
+**Défaut 1 — le schéma de ma base n'était versionné nulle part.**
+
+J'avais des scripts `add-role-column.sql`, `add-submissions-table.sql`… mais **aucun `CREATE TABLE` pour `users`, `musics`, `playlists` ou `likes`**. Ces tables n'existaient que dans le MySQL de mon MAMP.
+
+Conséquences que je n'avais pas mesurées : personne d'autre ne pouvait lancer mon app ; mon `DEPLOIEMENT.md` était **faux** (il disait « rejouer les scripts SQL », mais ces scripts supposent des tables inexistantes) ; et si mon disque lâchait, le schéma partait avec.
+
+Corrigé avec un `mysqldump --no-data` versionné (`backend/scripts/schema.sql`) + un seed du catalogue. **Règle : la structure de la base est du code. Elle va dans Git.**
+
+**Défaut 2 — mes tests dépendaient d'un compte fantôme.**
+
+Premier run : **rouge**. `depots.find is not a function`.
+
+Mes tests d'admin forgeaient un jeton pour `id_user: 10` / `admin@admin.fr` — un compte de **ma** base de dev. Sur une base neuve, il n'existe pas : `adminMiddleware` répondait `403`, la route renvoyait un message d'erreur au lieu d'une liste, et `.find()` explosait dessus.
+
+Le plus savoureux : `admin@admin.fr` est **exactement le compte que mon `DEPLOIEMENT.md` me dit de purger avant la mise en production**. Mes tests auraient donc cassé le jour de la purge.
+
+Corrigé par un helper `creerAdmin()` : les tests **créent leur propre admin** au lieu d'en supposer un. **Règle : un test ne doit rien supposer qui ne soit pas dans le dépôt.**
+
+**Défaut 3 — mes tests lisaient un vrai `.mp3` dans `backend/public/`**, qui est gitignoré. Même problème : injouable ailleurs.
+
+La subtilité : mon test central vérifie qu'un `.txt` renommé en `.mp3` est **rejeté**. Il me fallait donc un fichier **réellement décodable**, pas un leurre. J'ai fabriqué un MP3 valide à la main : une suite de trames MPEG (en-tête `0xFF 0xFB 0x90 0x00`, 417 octets par trame) remplies de zéros. C'est **du vrai MP3, mais silencieux** — `music-metadata` y lit une durée, donc le backend l'accepte. 33 Ko, et libre de tout droit, au lieu de 2,8 Mo de musique que je n'ai pas le droit de redistribuer.
+
+**Deux pièges techniques rencontrés en chemin**
+
+*`mysqldump` sort les tables par ordre alphabétique.* `likes` arrivait donc **avant** `musics`, alors qu'elle porte une clé étrangère vers elle → `Failed to open the referenced table 'musics'`. Un dump normal protège ça avec `SET FOREIGN_KEY_CHECKS = 0`, que mon option `--compact` avait supprimé. À remettre en tête du fichier.
+
+*`dotenv.config()` sans chemin charge le `.env` du dossier COURANT.* Lancer `node backend/server.js` depuis la racine ne trouve donc aucune configuration. Il faut lancer **depuis** `backend/` (`working-directory` en CI). C'est le genre de détail invisible en local, où l'on est déjà dans le bon dossier.
+
+**Ce que la CI m'apporte concrètement**
+
+Un badge vert sur le README, oui. Mais surtout : je ne peux plus mettre en ligne une régression sans la voir, et **je sais désormais que mon projet s'installe ailleurs que sur mon Mac** — ce que je croyais vrai, et qui ne l'était pas.
+
+**La règle à retenir** : une CI ne teste pas que ton code. Elle teste **ton dépôt**. Tout ce qui vit seulement sur ta machine (un schéma, un compte, un fichier) est une dette invisible — et elle la rend visible du premier coup.
+
+---
