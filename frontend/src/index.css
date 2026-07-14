@@ -199,3 +199,25 @@ body {
     transition: none;
   }
 }
+
+/* Le nom "Spoti-Free" pendant la lecture : le degrade DEFILE a travers les lettres.
+   Un degrade fige ne se voit pratiquement pas — c'est son mouvement qu'on remarque.
+
+   Le degrade est symetrique (violet -> bleu -> violet) et fait 200% de large : le decaler de
+   -200% ramene donc exactement au point de depart. La boucle est invisible, sans le "saut" qu'on
+   aurait avec un degrade qui ne reviendrait pas sur sa couleur de depart. */
+@keyframes defile-degrade {
+  to {
+    background-position: -200% center;
+  }
+}
+
+.nom-logo[data-lecture="true"] {
+  animation: defile-degrade 5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nom-logo[data-lecture="true"] {
+    animation: none;
+  }
+}

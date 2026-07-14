@@ -46,10 +46,13 @@ export default function Logo({
         ))}
       </span>
 
-      {/* Le degrade fait 200% de large : au survol, on le fait GLISSER (`bg-right`) au lieu d'en
-          changer les couleurs — le nom semble alors parcouru par un reflet. */}
+      {/* Le degrade fait 200% de large, ce qui permet de le faire GLISSER a travers les lettres
+          au lieu d'en changer les couleurs. Un degrade fige ne se remarque pas — c'est son
+          MOUVEMENT qu'on voit. Il defile donc en boucle pendant la lecture (`.nom-logo`), et au
+          survol quand rien ne joue. */}
       <span
-        className={`${tailleTexte} font-serif font-bold bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] bg-clip-text text-transparent transition-[background-position] duration-700 group-hover:bg-right`}
+        data-lecture={enLecture}
+        className={`nom-logo ${tailleTexte} font-serif font-bold bg-gradient-to-r from-primary via-foreground to-primary bg-[length:200%_auto] bg-clip-text text-transparent transition-[background-position] duration-700 group-hover:bg-right`}
       >
         Spoti-Free
       </span>
