@@ -20,12 +20,17 @@ import {
   Colonnes,
 } from "../composants/graphiques/Graphiques";
 import { apiFetch } from "@/lib/api";
+import EnTetePage from "../composants/EnTetePage";
 
 // Les statuts ne sont PAS des couleurs de serie : ce sont des etats. Ils ont leur propre
 // palette reservee, et ils sortent TOUJOURS accompagnes d'une icone et d'un mot — jamais
 // identifies par la seule couleur.
 const STATUTS_DEPOT = {
-  en_attente: { label: "En attente", icone: Clock, classe: "text-muted-foreground" },
+  en_attente: {
+    label: "En attente",
+    icone: Clock,
+    classe: "text-muted-foreground",
+  },
   approuve: { label: "Approuvés", icone: Check, classe: "text-success" },
   refuse: { label: "Refusés", icone: X, classe: "text-destructive" },
 };
@@ -81,27 +86,21 @@ export default function AdminDashboard({ user }) {
 
   const { totaux } = stats;
 
-  const depotsParStatut = ["en_attente", "approuve", "refuse"].map((statut) => ({
-    statut,
-    nombre:
-      stats.repartitionDepots.find((d) => d.statut === statut)?.nombre ?? 0,
-  }));
+  const depotsParStatut = ["en_attente", "approuve", "refuse"].map(
+    (statut) => ({
+      statut,
+      nombre:
+        stats.repartitionDepots.find((d) => d.statut === statut)?.nombre ?? 0,
+    }),
+  );
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <LayoutDashboard className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold">
-            Tableau de bord
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Vue d'ensemble de Spoti-Free
-          </p>
-        </div>
-      </div>
+      <EnTetePage
+        icone={LayoutDashboard}
+        titre="Tableau de bord"
+        sousTitre="Vue d'ensemble de Spoti-Free"
+      />
 
       {/* Les totaux : des chiffres, pas des graphiques. Une valeur unique n'a pas besoin
           d'etre dessinee. */}
@@ -112,10 +111,18 @@ export default function AdminDashboard({ user }) {
           libelle="Visiteurs (30 j)"
           accent
         />
-        <Tuile icone={Users} valeur={totaux.utilisateurs} libelle="Utilisateurs" />
+        <Tuile
+          icone={Users}
+          valeur={totaux.utilisateurs}
+          libelle="Utilisateurs"
+        />
         <Tuile icone={Play} valeur={totaux.ecoutes} libelle="Écoutes totales" />
         <Tuile icone={Music} valeur={totaux.musiques} libelle="Morceaux" />
-        <Tuile icone={ListMusic} valeur={totaux.playlists} libelle="Playlists" />
+        <Tuile
+          icone={ListMusic}
+          valeur={totaux.playlists}
+          libelle="Playlists"
+        />
         <Tuile icone={Heart} valeur={totaux.likes} libelle="Likes" />
         <Tuile
           icone={Eye}
@@ -185,9 +192,13 @@ export default function AdminDashboard({ user }) {
                   key={statut}
                   className="rounded-xl border border-border bg-card/40 p-3 text-center"
                 >
-                  <Icone className={`w-4 h-4 mx-auto mb-1.5 ${config.classe}`} />
+                  <Icone
+                    className={`w-4 h-4 mx-auto mb-1.5 ${config.classe}`}
+                  />
                   <p className="text-xl font-bold tabular-nums">{nombre}</p>
-                  <p className="text-xs text-muted-foreground">{config.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {config.label}
+                  </p>
                 </li>
               );
             })}
@@ -213,7 +224,9 @@ export default function AdminDashboard({ user }) {
         {/* Pages les plus consultees : une liste suffit, la comparaison se fait sur le chiffre. */}
         <section className="rounded-2xl border border-border bg-background/50 p-5 lg:col-span-2">
           <h2 className="font-semibold mb-1">Pages les plus consultées</h2>
-          <p className="text-xs text-muted-foreground mb-4">30 derniers jours</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            30 derniers jours
+          </p>
 
           {stats.pagesVues.length === 0 ? (
             <p className="text-sm text-muted-foreground">

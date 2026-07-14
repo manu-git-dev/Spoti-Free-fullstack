@@ -14,6 +14,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { apiFetch, messageErreur, urlFichier } from "@/lib/api";
+import EnTetePage from "../composants/EnTetePage";
 
 const formatDuree = (secondes) => {
   if (!secondes) return "--:--";
@@ -32,7 +33,11 @@ export default function AdminMusiques({ user }) {
   const [recherche, setRecherche] = useState("");
   const [aModifier, setAModifier] = useState(null);
   const [aSupprimer, setASupprimer] = useState(null);
-  const [formulaire, setFormulaire] = useState({ title: "", artist: "", genre: "" });
+  const [formulaire, setFormulaire] = useState({
+    title: "",
+    artist: "",
+    genre: "",
+  });
 
   useEffect(() => {
     apiFetch("/api/musics")
@@ -96,7 +101,9 @@ export default function AdminMusiques({ user }) {
       }
 
       toast.success(donnees.message);
-      setMusiques((prev) => prev.filter((m) => m.id_music !== musique.id_music));
+      setMusiques((prev) =>
+        prev.filter((m) => m.id_music !== musique.id_music),
+      );
       setASupprimer(null);
     } catch (erreur) {
       toast.error("Impossible de contacter le serveur.");
@@ -112,36 +119,27 @@ export default function AdminMusiques({ user }) {
 
   return (
     <section className="h-full overflow-hidden flex flex-col p-4 md:p-8">
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Music className="w-6 h-6 text-white" />
+      <EnTetePage
+        icone={Music}
+        titre="Catalogue"
+        sousTitre={`${musiques.length} morceaux`}
+        actions={
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="Rechercher un titre, un artiste"
+              className="rounded-full bg-background/60 pl-9"
+            />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-serif font-bold">
-              Catalogue
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {musiques.length} morceaux
-            </p>
-          </div>
-        </div>
-
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher un titre, un artiste"
-            className="rounded-full bg-background/60 pl-9"
-          />
-        </div>
-      </div>
+        }
+      />
 
       <p className="mb-4 text-xs text-muted-foreground">
         Pour ajouter un morceau, passe par la modération des dépôts. Ici, seules
-        les métadonnées (titre, artiste, genre) sont modifiables — les fichiers ne
-        se remplacent pas.
+        les métadonnées (titre, artiste, genre) sont modifiables — les fichiers
+        ne se remplacent pas.
       </p>
 
       {chargement ? (
@@ -260,7 +258,9 @@ export default function AdminMusiques({ user }) {
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
             <Button onClick={enregistrer}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
@@ -280,7 +280,9 @@ export default function AdminMusiques({ user }) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
             <Button variant="destructive" onClick={() => supprimer(aSupprimer)}>
               Supprimer définitivement
             </Button>

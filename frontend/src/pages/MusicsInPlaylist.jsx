@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { ListMusic } from "lucide-react";
 import TrackRow from "../composants/TrackRow";
+import EnTetePage from "../composants/EnTetePage";
 import { apiFetch } from "@/lib/api";
-export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMusiquesLikee, musiquesLikee, user, currentMusic}) {
+export default function MusicsInPlaylist({
+  setCurrentMusic,
+  setCurrentQueue,
+  setMusiquesLikee,
+  musiquesLikee,
+  user,
+  currentMusic,
+}) {
   const [musicsPlaylist, setMusicsPlaylist] = useState([]);
-  const {idPlaylist} = useParams();
+  const { idPlaylist } = useParams();
 
   // Depend de `idPlaylist` : en passant d'une playlist a une autre, React Router reutilise
   // le meme composant (pas de remontage). Avec `[]`, l'effet ne se relancait pas et la page
@@ -19,10 +28,13 @@ export default function MusicsInPlaylist({setCurrentMusic,setCurrentQueue,setMus
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-serif font-bold mb-6">
-        <span className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
-        Contenu de votre playlist
-      </h1>
+      <EnTetePage
+        icone={ListMusic}
+        titre="Contenu de votre playlist"
+        sousTitre={`${musicsPlaylist.length} ${
+          musicsPlaylist.length > 1 ? "titres" : "titre"
+        }`}
+      />
       <div className="flex flex-col gap-1">
         {musicsPlaylist.length === 0 ? (
           <p className="text-muted-foreground">

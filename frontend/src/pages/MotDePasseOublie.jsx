@@ -19,10 +19,13 @@ export default function MotDePasseOublie() {
     setErreur("");
 
     try {
-      const { reponse, donnees } = await apiFetch("/api/users/mot-de-passe-oublie", {
-        method: "POST",
-        body: { email },
-      });
+      const { reponse, donnees } = await apiFetch(
+        "/api/users/mot-de-passe-oublie",
+        {
+          method: "POST",
+          body: { email },
+        },
+      );
 
       if (!reponse.ok) {
         setErreur(donnees?.message ?? "Une erreur est survenue.");
@@ -49,7 +52,8 @@ export default function MotDePasseOublie() {
           </div>
           <h1 className="text-2xl font-serif font-bold">Mot de passe oublié</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Indique ton adresse : on t'envoie un lien pour en choisir un nouveau.
+            Indique ton adresse : on t'envoie un lien pour en choisir un
+            nouveau.
           </p>
         </div>
 

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiFetch, messageErreur } from "@/lib/api";
 import { Input } from "@/components/ui/input";
+import EnTetePage from "../composants/EnTetePage";
 export default function Contact() {
   const [isSending, setIsSending] = useState(false);
   async function handleSubmit(event) {
@@ -41,10 +42,7 @@ export default function Contact() {
   return (
     <section className="flex flex-col lg:grid lg:grid-cols-2 h-full overflow-y-auto p-4 md:p-8">
       <section className="flex flex-col lg:col-start-1 lg:pr-8">
-        <h1 className="flex items-center gap-2 font-serif text-2xl md:text-3xl font-bold my-4">
-          <span className="h-7 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
-          Contact
-        </h1>
+        <EnTetePage icone={Mail} titre="Contact" />
         <h2 className="font-serif text-xl md:text-2xl mb-2">Une question ?</h2>
         <p className="text-muted-foreground md:text-lg mb-6">
           Ecris-moi, je te réponds rapidement. Que ce soit un bug, une idée de
@@ -84,12 +82,7 @@ export default function Contact() {
           <div className="flex flex-col md:flex-row gap-4 my-4 w-full">
             <fieldset className="flex flex-col gap-1.5 w-full md:w-1/2">
               <legend className="text-xl mb-1">Nom</legend>
-              <Input
-                type="text"
-                placeholder="Ton nom"
-                name="nom"
-                required
-              />
+              <Input type="text" placeholder="Ton nom" name="nom" required />
             </fieldset>
             <fieldset className="flex flex-col gap-1.5 w-full md:w-1/2">
               <legend className="text-xl mb-1">Mail</legend>
@@ -121,11 +114,7 @@ export default function Contact() {
           </fieldset>
           <Button className="my-4 w-fit" disabled={isSending}>
             Envoyer le message
-            {isSending ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Send />
-            )}
+            {isSending ? <Loader2 className="animate-spin" /> : <Send />}
           </Button>
         </form>
       </section>
