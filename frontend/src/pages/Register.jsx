@@ -128,178 +128,208 @@ export default function Register() {
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       ) : null}
-      <section className="h-full flex flex-col justify-center items-center p-4">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
-          <Music className="text-primary-foreground w-7 h-7" />
-        </div>
-        <h1 className="text-4xl font-serif">Inscription</h1>
-        <p className="text-muted-foreground text-center mb-6">
-          Crée ton compte gratuitement et commence à écouter.
-        </p>
-        <form
-          action=""
-          className="flex flex-col gap-2 w-full max-w-sm"
-          onSubmit={handleSubmit}
-          noValidate
-        >
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Pseudo</legend>
-            <div className="relative">
-              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="pseudo"
-                type="text"
-                className="pl-8"
-                placeholder="Ton pseudo"
-              />
-            </div>
-          </fieldset>
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Prénom</legend>
-            <div className="relative">
-              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="prenom"
-                type="text"
-                className="pl-8"
-                placeholder="Ton prénom"
-              />
-            </div>
-          </fieldset>
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Nom</legend>
-            <div className="relative">
-              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="nom"
-                type="text"
-                className="pl-8"
-                placeholder="Ton nom"
-              />
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Email</legend>
-            <div className="relative">
-              <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="email"
-                type="email"
-                className={cn(
-                  "pl-8 pr-8",
-                  erreurEmail && "border-destructive",
-                  emailOk && "border-success",
-                )}
-                placeholder="ton@email.fr"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                onBlur={() => marquerTouche("email")}
-                aria-invalid={erreurEmail}
-                aria-describedby={erreurEmail ? "erreur-email" : undefined}
-              />
-              <IconeEtat valide={emailOk} enErreur={erreurEmail} />
-            </div>
-            {erreurEmail ? (
-              <p id="erreur-email" className="text-xs text-destructive">
-                {email === ""
-                  ? "L'adresse email est obligatoire."
-                  : "Cette adresse email n'est pas valide."}
-              </p>
-            ) : null}
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Mot de passe</legend>
-            <div className="relative">
-              <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="password"
-                type={motDePasseVisible ? "text" : "password"}
-                className={cn(
-                  "pl-8 pr-9",
-                  erreurMotDePasse && "border-destructive",
-                  motDePasseOk && "border-success",
-                )}
-                placeholder="Ton mot de passe"
-                value={motDePasse}
-                onChange={(event) => setMotDePasse(event.target.value)}
-                onBlur={() => marquerTouche("password")}
-                aria-invalid={erreurMotDePasse}
-                aria-describedby="regles-mot-de-passe"
-              />
-              <button
-                type="button"
-                onClick={() => setMotDePasseVisible((visible) => !visible)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label={
-                  motDePasseVisible
-                    ? "Masquer le mot de passe"
-                    : "Afficher le mot de passe"
-                }
-              >
-                {motDePasseVisible ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            <ChecklistMotDePasse
-              id="regles-mot-de-passe"
-              motDePasse={motDePasse}
-              montrerErreurs={erreurMotDePasse}
-            />
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-1.5 w-full">
-            <legend className="text-sm mb-1">Confirmation du mot de passe</legend>
-            <div className="relative">
-              <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                name="confirmPassword"
-                type="password"
-                className={cn(
-                  "pl-8 pr-8",
-                  erreurConfirmation && "border-destructive",
-                  confirmationOk && "border-success",
-                )}
-                placeholder="Confirme ton mot de passe"
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                onBlur={() => marquerTouche("confirm")}
-                aria-invalid={erreurConfirmation}
-                aria-describedby={
-                  erreurConfirmation ? "erreur-confirmation" : undefined
-                }
-              />
-              <IconeEtat
-                valide={confirmationOk}
-                enErreur={erreurConfirmation}
-              />
-            </div>
-            {erreurConfirmation ? (
-              <p id="erreur-confirmation" className="text-xs text-destructive">
-                {confirmation === ""
-                  ? "Confirme ton mot de passe."
-                  : "Les deux mots de passe ne correspondent pas."}
-              </p>
-            ) : null}
-          </fieldset>
-
-          <Button className="rounded-full w-full mt-4" type="submit">
-            Inscription
-          </Button>
-        </form>
-        <p className="text-sm text-muted-foreground mt-4">
-          Déjà un compte ?{" "}
-          <Link
-            to="/connexion"
-            className="text-primary underline-offset-4 hover:underline"
+      {/* Le `main` de l'app est en `overflow-hidden` : une page trop haute n'est pas scrollee,
+          elle est COUPEE. Et un contenu simplement centre avec `justify-center` deborde des DEUX
+          cotes : son haut devient inatteignable.
+          D'ou ces deux niveaux : la section scrolle, et le wrapper interne (`min-h-full`) centre le
+          contenu tant qu'il rentre, puis le laisse grandir — et donc scroller — quand il ne rentre
+          plus (ce qui arrive sur mobile depuis l'ajout de la checklist du mot de passe). */}
+      <section className="h-full overflow-y-auto">
+        <div className="min-h-full flex flex-col justify-center items-center p-4 py-8">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4 shrink-0">
+            <Music className="text-primary-foreground w-7 h-7" />
+          </div>
+          <h1 className="text-4xl font-serif">Inscription</h1>
+          <p className="text-muted-foreground text-center mb-6">
+            Crée ton compte gratuitement et commence à écouter.
+          </p>
+          {/* Sur mobile, une seule colonne : empiler reste le bon choix sur un ecran etroit.
+            A partir de `md`, deux colonnes — l'identite a gauche, les identifiants de connexion
+            a droite. Le formulaire tenait sur une seule colonne, mais tout juste : la checklist
+            du mot de passe l'avait fait descendre jusqu'en bas de l'ecran. */}
+          <form
+            action=""
+            className="flex flex-col gap-2 w-full max-w-sm md:max-w-2xl"
+            onSubmit={handleSubmit}
+            noValidate
           >
-            Connexion
-          </Link>
-        </p>
+            <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">Pseudo</legend>
+                  <div className="relative">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="pseudo"
+                      type="text"
+                      className="pl-8"
+                      placeholder="Ton pseudo"
+                    />
+                  </div>
+                </fieldset>
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">Prénom</legend>
+                  <div className="relative">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="prenom"
+                      type="text"
+                      className="pl-8"
+                      placeholder="Ton prénom"
+                    />
+                  </div>
+                </fieldset>
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">Nom</legend>
+                  <div className="relative">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="nom"
+                      type="text"
+                      className="pl-8"
+                      placeholder="Ton nom"
+                    />
+                  </div>
+                </fieldset>
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">Email</legend>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="email"
+                      type="email"
+                      className={cn(
+                        "pl-8 pr-8",
+                        erreurEmail && "border-destructive",
+                        emailOk && "border-success",
+                      )}
+                      placeholder="ton@email.fr"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      onBlur={() => marquerTouche("email")}
+                      aria-invalid={erreurEmail}
+                      aria-describedby={
+                        erreurEmail ? "erreur-email" : undefined
+                      }
+                    />
+                    <IconeEtat valide={emailOk} enErreur={erreurEmail} />
+                  </div>
+                  {erreurEmail ? (
+                    <p id="erreur-email" className="text-xs text-destructive">
+                      {email === ""
+                        ? "L'adresse email est obligatoire."
+                        : "Cette adresse email n'est pas valide."}
+                    </p>
+                  ) : null}
+                </fieldset>
+              </div>
+
+              {/* Sans `items-start`, les deux colonnes de la grille sont etirees a la meme hauteur
+                  (c'est le comportement par defaut). `justify-between` repartit alors l'espace
+                  restant : les deux colonnes se terminent exactement au meme niveau. */}
+              <div className="flex flex-col gap-2 md:justify-between">
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">Mot de passe</legend>
+                  <div className="relative">
+                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="password"
+                      type={motDePasseVisible ? "text" : "password"}
+                      className={cn(
+                        "pl-8 pr-9",
+                        erreurMotDePasse && "border-destructive",
+                        motDePasseOk && "border-success",
+                      )}
+                      placeholder="Ton mot de passe"
+                      value={motDePasse}
+                      onChange={(event) => setMotDePasse(event.target.value)}
+                      onBlur={() => marquerTouche("password")}
+                      aria-invalid={erreurMotDePasse}
+                      aria-describedby="regles-mot-de-passe"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMotDePasseVisible((visible) => !visible)
+                      }
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={
+                        motDePasseVisible
+                          ? "Masquer le mot de passe"
+                          : "Afficher le mot de passe"
+                      }
+                    >
+                      {motDePasseVisible ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  <ChecklistMotDePasse
+                    id="regles-mot-de-passe"
+                    motDePasse={motDePasse}
+                    montrerErreurs={erreurMotDePasse}
+                  />
+                </fieldset>
+
+                <fieldset className="flex flex-col gap-1.5 w-full">
+                  <legend className="text-sm mb-1">
+                    Confirmation du mot de passe
+                  </legend>
+                  <div className="relative">
+                    <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      name="confirmPassword"
+                      type="password"
+                      className={cn(
+                        "pl-8 pr-8",
+                        erreurConfirmation && "border-destructive",
+                        confirmationOk && "border-success",
+                      )}
+                      placeholder="Confirme ton mot de passe"
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                      onBlur={() => marquerTouche("confirm")}
+                      aria-invalid={erreurConfirmation}
+                      aria-describedby={
+                        erreurConfirmation ? "erreur-confirmation" : undefined
+                      }
+                    />
+                    <IconeEtat
+                      valide={confirmationOk}
+                      enErreur={erreurConfirmation}
+                    />
+                  </div>
+                  {erreurConfirmation ? (
+                    <p
+                      id="erreur-confirmation"
+                      className="text-xs text-destructive"
+                    >
+                      {confirmation === ""
+                        ? "Confirme ton mot de passe."
+                        : "Les deux mots de passe ne correspondent pas."}
+                    </p>
+                  ) : null}
+                </fieldset>
+              </div>
+            </div>
+
+            {/* Hors de la grille : le bouton s'etend sous les deux colonnes. */}
+            <Button className="rounded-full w-full mt-4" type="submit">
+              Inscription
+            </Button>
+          </form>
+          <p className="text-sm text-muted-foreground mt-4">
+            Déjà un compte ?{" "}
+            <Link
+              to="/connexion"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Connexion
+            </Link>
+          </p>
+        </div>
       </section>
     </>
   );
