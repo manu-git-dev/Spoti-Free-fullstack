@@ -73,6 +73,38 @@ dossier `backend/uploads/` (vide mais accessible en ecriture).
 - **Ne jamais supprimer un fichier partage** : les pochettes sont mutualisees (une image sert a
   plusieurs morceaux). Toujours verifier qu'aucun autre morceau ne le reference.
 
+## Pre-deploiement : les verifications - 2026-07-14 - fait
+
+Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
+
+- **Les 106 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+  serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
+  tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
+  fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
+  NAVIGATEUR, pas le serveur** : un appel en curl passe sans probleme.
+- **Le mail part vraiment** : connexion SMTP Gmail verifiee (`transporter.verify()`) puis parcours
+  "mot de passe oublie" complet, mail recu. Rappel : la route n'envoie rien si le compte n'existe
+  pas (anti-enumeration) — un test sur une adresse inconnue ne prouve donc rien.
+- **La purge des comptes de demo n'a plus lieu d'etre** : la base de production est construite avec
+  `schema.sql` + `seed-musics.sql`, elle ne contient donc **aucun utilisateur**. Ni `admin@admin.fr`,
+  ni `patrick@test.fr`. Il faudra creer son compte admin (voir `DEPLOIEMENT.md` §8).
+
+### Hebergement retenu : un VPS
+
+Decision structurante. **Un hebergement mutualise (l'offre a quelques euros) ne convient pas** : il
+execute du PHP, pas un serveur Node en continu. Et un VPS a un **disque qui persiste** —
+indispensable, puisque les musiques deposees sont ecrites sur le disque. Sur un hebergeur a systeme
+de fichiers ephemere (Render, Railway), elles disparaitraient a chaque redeploiement.
+
+Consequence heureuse : **le code fonctionne tel quel**, aucun refactor du stockage.
+
+`DEPLOIEMENT.md` entierement reecrit pour un VPS : nginx, systemd, HTTPS, sauvegardes. Les deux
+pieges qui casseraient le site sans que le code soit en cause :
+- **`client_max_body_size 12M`** dans nginx : la limite par defaut est de **1 Mo**, or les depots
+  montent a 10 Mo. Sans cette ligne, tout depot echoue en 413.
+- **le fallback SPA** (`try_files $uri $uri/ /index.html`) : sans lui, ouvrir directement
+  `/favoris` renvoie un 404 — la navigation interne marche, mais pas un lien partage.
+
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la

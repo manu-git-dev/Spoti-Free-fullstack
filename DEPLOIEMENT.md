@@ -1,121 +1,360 @@
-# Mise en production
+# Mise en production (VPS)
 
-Checklist à dérouler **avant** d'ouvrir le site au public. Chaque point correspond à un vrai
-risque, pas à une formalité.
+Guide pour déployer Spoti-Free sur un **VPS** (Hostinger, OVH, Hetzner… — n'importe quelle machine
+Ubuntu avec un accès SSH).
+
+> **Pourquoi un VPS et pas un hébergement mutualisé ?**
+> L'hébergement mutualisé classique (l'offre à quelques euros) exécute du **PHP**, pas du Node.js
+> en continu : le backend Express ne peut pas y tourner. Et un VPS a un **disque qui persiste** —
+> indispensable ici, puisque les musiques déposées sont écrites sur le disque. Sur un hébergeur à
+> système de fichiers éphémère (Render, Railway, Heroku), elles disparaîtraient à chaque
+> redéploiement.
+
+Chaque point ci-dessous correspond à un vrai risque, pas à une formalité.
 
 ---
 
-## 1. Variables d'environnement
+## 0. Ce qu'on met en place
 
-Le `.env` de développement ne doit **jamais** partir en production. Repartir des modèles :
-`backend/.env.example` et `frontend/.env.example`.
+```
+                    ┌── / ─────────────► le build React (fichiers statiques)
+   Internet ──► nginx ── /api ─────────► Node/Express (127.0.0.1:3000)
+      (HTTPS)      └── /musiques,/images ► les fichiers audio et les pochettes
+                                          (backend/public/, sur le disque)
+```
 
-**Backend** (`backend/.env`) :
+nginx est en façade (il gère le HTTPS et sert les fichiers) ; Node ne parle qu'à lui, en local.
 
-| Variable | Valeur en production |
-|---|---|
-| `NODE_ENV` | **`production`** — active `trust proxy` (voir §2) |
-| `FRONTEND_URL` | l'URL réelle du front (ex. `https://spotifree.fr`) — c'est l'origine autorisée par CORS |
-| `JWT_SECRET` | une **nouvelle** clé aléatoire, différente de celle de dev |
-| `DB_*` | les identifiants de la base de production |
-| `MAIL_*` | le compte d'envoi et son mot de passe d'application |
+---
 
-Générer la clé JWT :
+## 1. Préparer le serveur
+
+```bash
+ssh root@<ip-du-vps>
+
+apt update && apt upgrade -y
+apt install -y nginx mysql-server git curl
+
+# Node.js 22
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+
+node -v && nginx -v && mysql --version
+```
+
+Sécuriser MySQL (mot de passe root, suppression des comptes anonymes) :
+
+```bash
+mysql_secure_installation
+```
+
+---
+
+## 2. Récupérer le code
+
+```bash
+mkdir -p /var/www && cd /var/www
+git clone https://github.com/manu-git-dev/Spoti-Free-fullstack.git spotifree
+cd spotifree
+
+npm ci --prefix backend
+npm ci --prefix frontend
+```
+
+---
+
+## 3. La base de données
+
+```bash
+mysql -u root -p
+```
+
+```sql
+CREATE DATABASE spotifree CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER 'spotifree'@'localhost' IDENTIFIED BY 'un-mot-de-passe-long-et-aleatoire';
+GRANT ALL PRIVILEGES ON spotifree.* TO 'spotifree'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+> **Ne pas utiliser `root`** pour l'application : un compte dédié, limité à cette seule base,
+> réduit les dégâts si l'application est un jour compromise.
+
+Créer les tables et le catalogue :
+
+```bash
+mysql -u spotifree -p spotifree < backend/scripts/schema.sql       # les 8 tables
+mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # les 20 morceaux
+```
+
+> Les scripts `add-*.sql` du même dossier sont des **migrations historiques** : leurs
+> modifications sont **déjà incluses** dans `schema.sql`. Ne pas les rejouer.
+
+**La base de production ne contient donc AUCUN utilisateur** — ni `admin@admin.fr`, ni les comptes
+de test. C'est voulu : voir §8 pour créer ton compte admin proprement.
+
+---
+
+## 4. Les fichiers audio ⚠️
+
+`backend/public/` **n'est pas versionné** (23 Mo, et les droits des morceaux ne permettent pas leur
+redistribution). Il faut donc les envoyer à la main, depuis ta machine :
+
+```bash
+# depuis ton Mac, pas depuis le VPS
+scp -r backend/public/musiques root@<ip>:/var/www/spotifree/backend/public/
+scp -r backend/public/images   root@<ip>:/var/www/spotifree/backend/public/
+```
+
+Et créer le dossier des dépôts en attente (vide, mais il **doit** exister) :
+
+```bash
+mkdir -p /var/www/spotifree/backend/uploads
+```
+
+> Sans les fichiers, le catalogue s'affiche mais rien ne se lit. Pour une démo sans les vraies
+> musiques : `node tests/preparer-medias.mjs` génère des médias de test (un mp3 silencieux).
+
+---
+
+## 5. Configuration
+
+**`backend/.env`** :
+
+```env
+NODE_ENV=production
+PORT=3000
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=spotifree
+DB_PASSWORD=<le mot de passe choisi au §3>
+DB_NAME=spotifree
+
+JWT_SECRET=<une NOUVELLE clé, voir ci-dessous>
+IP_HASH_SALT=<un autre sel aléatoire>
+
+FRONTEND_URL=https://ton-domaine.fr
+
+MAIL_USER=ton.adresse@gmail.com
+MAIL_PASS=<mot de passe d'application Gmail, 16 caractères>
+```
+
+Générer les deux secrets :
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-> **Pourquoi une clé différente ?** C'est elle qui **signe** tous les tokens. Si celle de dev
-> a traîné (ancien commit, machine partagée, capture d'écran), quelqu'un pourrait forger un
-> token `admin` et prendre le contrôle du site.
+> **Pourquoi un `JWT_SECRET` différent de celui de dev ?** C'est la clé qui **signe tous les
+> jetons**. Si celle de développement a traîné quelque part (ancien commit, capture d'écran,
+> machine partagée), quelqu'un pourrait forger un jeton `admin` et prendre le contrôle du site.
 
-**Frontend** (`frontend/.env`) : `VITE_API_URL` = l'URL publique de l'API. Attention, les
-variables `VITE_*` sont **injectées dans le bundle** envoyé au navigateur : n'y mettre jamais
-de secret, uniquement des valeurs publiques comme une URL.
+> **`NODE_ENV=production` n'est pas cosmétique.** Il active `trust proxy` : sans lui, derrière
+> nginx, Express verrait l'IP **du proxy** sur toutes les requêtes. `express-rate-limit` croirait
+> alors que tout le trafic vient d'un seul visiteur et **bloquerait tous les utilisateurs d'un
+> coup** au 11ᵉ échec de connexion. Il rend aussi `RATE_LIMIT_DISABLED` **sans effet** : même
+> oubliée dans le `.env`, cette variable ne peut plus désactiver les protections.
+
+**`frontend/.env`** :
+
+```env
+VITE_API_URL=https://ton-domaine.fr
+```
+
+> Les variables `VITE_*` sont **compilées dans le bundle** envoyé au navigateur : n'y mettre
+> jamais un secret, uniquement des valeurs publiques comme une URL.
+
+Puis construire le front :
+
+```bash
+npm run build --prefix frontend    # produit frontend/dist/
+```
 
 ---
 
-## 2. `trust proxy` (sinon le rate limiter bloque tout le monde)
+## 6. Lancer le backend en service (systemd)
 
-En production, l'app tourne derrière un reverse proxy (Nginx, hébergeur). Sans `trust proxy`,
-Express voit l'IP **du proxy** sur toutes les requêtes : `express-rate-limit` croit alors que
-tout le trafic vient d'un seul visiteur, et **bloque tous les utilisateurs d'un coup** au
-11ᵉ échec de connexion.
+Sans ça, le backend s'arrête dès que tu fermes ta session SSH — et ne redémarre pas après un reboot.
 
-C'est déjà géré dans `server.js`, à condition que `NODE_ENV=production` :
+`/etc/systemd/system/spotifree.service` :
 
-```js
-if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);   // 1 = un seul proxy devant nous
+```ini
+[Unit]
+Description=Spoti-Free API
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+
+# INDISPENSABLE : `dotenv.config()` et `express.static("public")` sont relatifs au DOSSIER
+# COURANT. Lancé d'ailleurs, le backend ne trouverait ni son .env ni ses fichiers audio.
+WorkingDirectory=/var/www/spotifree/backend
+ExecStart=/usr/bin/node server.js
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+chown -R www-data:www-data /var/www/spotifree/backend/public /var/www/spotifree/backend/uploads
+systemctl daemon-reload
+systemctl enable --now spotifree
+systemctl status spotifree          # doit afficher "active (running)"
+journalctl -u spotifree -f          # les logs en direct
+```
+
+---
+
+## 7. nginx
+
+`/etc/nginx/sites-available/spotifree` :
+
+```nginx
+server {
+    listen 80;
+    server_name ton-domaine.fr www.ton-domaine.fr;
+
+    # ⚠️ SANS CETTE LIGNE, LES DÉPÔTS DE MUSIQUE ÉCHOUENT.
+    # nginx limite les envois à 1 Mo par défaut ; les morceaux montent à 10 Mo. Le dépôt
+    # renverrait un 413 avant même d'atteindre Node — et rien dans le code ne serait en cause.
+    client_max_body_size 12M;
+
+    # Le build React
+    root /var/www/spotifree/frontend/dist;
+    index index.html;
+
+    # LE FALLBACK SPA. React Router gère les routes CÔTÉ NAVIGATEUR : le serveur, lui, n'a aucun
+    # fichier "/favoris" sur son disque. Sans cette ligne, ouvrir directement
+    # https://ton-domaine.fr/favoris renvoie un 404 — alors que la navigation interne fonctionne.
+    # C'est LE piège classique du déploiement d'une SPA.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # L'API
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        # Sans cet en-tête, `trust proxy` n'a rien à lire : Express verrait l'IP de nginx pour
+        # tout le monde, et le rate limiter bloquerait tous les visiteurs ensemble.
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Les fichiers audio et les pochettes, servis directement par nginx (plus rapide que de les
+    # faire transiter par Node). `root` (et non `alias`) : nginx colle simplement l'URI derrière ce
+    # chemin — /musiques/x.mp3 devient /var/www/.../public/musiques/x.mp3. C'est exactement le
+    # dossier qu'`express.static("public")` sert de son côté.
+    location ~ ^/(musiques|images)/ {
+        root /var/www/spotifree/backend/public;
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
 }
 ```
 
-> Ne jamais mettre `true` : n'importe qui pourrait alors usurper une IP en envoyant lui-même
-> un en-tête `X-Forwarded-For`, et contourner toutes les limites.
-
----
-
-## 3. Base de données
-
-Rejouer les migrations sur la base de production, dans cet ordre :
-
 ```bash
-mysql -u <user> -p <base> < backend/scripts/add-role-column.sql   # colonne users.role
-mysql -u <user> -p <base> < backend/scripts/add-play-count.sql    # colonne musics.play_count
+ln -s /etc/nginx/sites-available/spotifree /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t          # doit dire "syntax is ok"
+systemctl reload nginx
 ```
 
-Puis **backfiller les durées** des morceaux (`node scripts/backfill-duration.js`), sans quoi
-elles s'afficheront `--:--`.
+### HTTPS
+
+```bash
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d ton-domaine.fr -d www.ton-domaine.fr
+```
+
+> **Le HTTPS n'est pas optionnel.** Le jeton JWT circule dans les en-têtes de chaque requête : en
+> HTTP simple, n'importe qui sur le réseau (un wifi public) peut le lire et se faire passer pour
+> l'utilisateur. Certbot renouvelle le certificat automatiquement.
 
 ---
 
-## 4. Purger les comptes de démonstration ⚠️
+## 8. Créer ton compte administrateur
 
-La base de développement contient des comptes de test (`patrick@test.fr`, `admin@admin.fr`,
-`testshadcn…`) — **dont un administrateur**, avec des mots de passe faibles ou oubliés.
+La base de production n'a **aucun utilisateur**. Donc :
 
-Les emmener en production, c'est laisser une porte ouverte : un compte admin dont on ne
-maîtrise plus le mot de passe permet de modifier ou supprimer tout le catalogue.
-
-**En production, partir d'une base vide** (uniquement le catalogue de musiques), puis créer
-son compte admin proprement :
+1. Va sur le site et **inscris-toi normalement**, avec un vrai mot de passe fort.
+2. Promeus-toi :
 
 ```sql
--- 1. s'inscrire normalement via l'interface, avec un vrai mot de passe fort
--- 2. puis se promouvoir administrateur :
-UPDATE users SET role = 'admin' WHERE email = 'mon.vrai.email@exemple.fr';
+UPDATE users SET role = 'admin' WHERE email = 'ton.vrai.email@exemple.fr';
 
--- 3. verifier qu'il n'y a AUCUN autre admin :
+-- Puis VÉRIFIE qu'il n'y a aucun autre admin :
 SELECT id_user, email, role FROM users WHERE role = 'admin';
 ```
 
+> C'est la bonne façon de faire : le mot de passe est haché par l'application, et tu es le seul
+> admin. Ne jamais insérer un compte admin à la main en SQL avec un mot de passe en clair.
+
 ---
 
-## 5. Vérifications finales
+## 9. Vérifications, une fois en ligne
+
+- [ ] Le site s'ouvre en **HTTPS** (cadenas dans le navigateur).
+- [ ] **Ouvrir directement `https://ton-domaine.fr/favoris`** dans un nouvel onglet → l'app
+      s'affiche (et non un 404). C'est le test du fallback SPA.
+- [ ] Une musique **se lit** (les fichiers audio sont bien servis).
+- [ ] Inscription, connexion, like, playlist.
+- [ ] **Mot de passe oublié** → le mail arrive vraiment.
+- [ ] **Déposer un morceau de ~8 Mo** → accepté (et non un 413 : c'est le test de
+      `client_max_body_size`).
+- [ ] Le formulaire de contact fonctionne, et se bloque au 4ᵉ envoi (anti-spam).
+- [ ] `journalctl -u spotifree -n 50` → aucune erreur.
+
+---
+
+## 10. Sauvegardes ⚠️
+
+**Rien n'est sauvegardé automatiquement.** Deux choses à protéger, et elles vivent à deux endroits
+différents :
 
 ```bash
-cd backend && npm audit      # doit afficher : found 0 vulnerabilities
-cd frontend && npm audit
-cd frontend && npm run build # doit passer sans erreur
-cd tests && npm test         # les 44 tests doivent passer
+# La base (comptes, playlists, likes, catalogue)
+mysqldump -u spotifree -p spotifree > /var/backups/spotifree-$(date +%F).sql
+
+# Les fichiers audio et les pochettes — ils ne sont dans AUCUN dépôt Git.
+tar czf /var/backups/medias-$(date +%F).tar.gz -C /var/www/spotifree/backend public
 ```
 
-Une fois en ligne, vérifier à la main :
-
-- [ ] Le site est bien en **HTTPS** (le token JWT transite dans les en-têtes : en HTTP simple,
-      il est lisible par n'importe qui sur le réseau).
-- [ ] Une origine étrangère ne peut pas appeler l'API (CORS).
-- [ ] Le formulaire de contact fonctionne — et se bloque au 4ᵉ envoi (anti-spam).
-- [ ] Les fichiers audio et les pochettes se chargent.
+À automatiser dans un `cron` quotidien, et à **recopier hors du VPS** (une sauvegarde qui vit sur
+la machine qu'elle protège ne protège de rien).
 
 ---
 
-## Limites connues (assumées à ce stade)
+## Mettre à jour le site
 
-- **Le token est stocké dans `localStorage`.** C'est simple et suffisant ici, mais un token
-  y est lisible par du JavaScript : une faille XSS permettrait de le voler. L'alternative
-  (cookie `httpOnly` + `SameSite`) est plus sûre mais demande de revoir l'authentification.
-- **Le bundle frontend dépasse 500 kB.** Sans conséquence fonctionnelle, mais un
-  code-splitting (`import()` dynamique) accélérerait le premier chargement.
-- **Pas de sauvegarde automatique de la base.** À mettre en place côté hébergeur.
+```bash
+cd /var/www/spotifree
+git pull
+npm ci --prefix backend
+npm ci --prefix frontend
+npm run build --prefix frontend
+systemctl restart spotifree
+```
+
+> Si le `pull` amène une modification de schéma, penser à l'appliquer sur la base **avant** de
+> redémarrer.
+
+---
+
+## Limites connues (assumées)
+
+- **Le jeton est stocké dans `localStorage`** : lisible par du JavaScript, donc volable en cas de
+  faille XSS. L'alternative (cookie `httpOnly` + `SameSite`) est plus sûre mais demande de revoir
+  l'authentification.
+- **Le bundle dépasse 500 kB** : sans conséquence fonctionnelle, mais un code-splitting
+  (`import()` dynamique) accélérerait le premier chargement.
+- **Pas de CDN** : les fichiers audio sont servis par le VPS. Suffisant pour une vitrine.
