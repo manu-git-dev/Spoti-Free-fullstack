@@ -4,15 +4,16 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## ETAT DU PROJET (au 2026-07-14) — a lire en premier
+## ETAT DU PROJET (au 2026-07-14, fin de session) — a lire en premier
 
-L'application est **fonctionnellement complete et testee**. Il ne reste rien de bloquant dans le
-code : ce qui reste, c'est la mise en ligne.
+L'application est **terminee, testee, et prete a etre deployee**. Il ne reste **rien a faire dans
+le code**.
 
 - **106 tests** automatises : `cd tests && npm install && npm test`
   (26 parcours + 30 securite + 25 depot + 25 admin). Sortie en code 1 si echec.
-- **0 vulnerabilite** npm (backend et frontend).
-- Build de production OK.
+- **CI verte** (GitHub Actions) : les 106 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 106 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Ce que fait l'application
 
@@ -22,32 +23,40 @@ musique par les utilisateurs avec moderation**, et un **espace d'administration*
 (tableau de bord avec statistiques et graphiques, moderation des depots, gestion des
 utilisateurs, gestion du catalogue).
 
-### Les prochaines etapes
+### LA PROCHAINE ETAPE : le deploiement
 
-1. **Deploiement** — c'est la seule chose qui bloque une mise en ligne. Tout est detaille dans
-   `DEPLOIEMENT.md`. Les points a ne pas rater :
-   - **purger les comptes de demonstration**, en particulier `admin@admin.fr` dont le mot de
-     passe n'est plus maitrise : l'emmener en production laisserait une porte ouverte sur tout
-     le catalogue ;
-   - rejouer les **scripts SQL** (voir la liste ci-dessous) ;
-   - `NODE_ENV=production`, un **nouveau** `JWT_SECRET`, `IP_HASH_SALT`, `FRONTEND_URL`,
-     `VITE_API_URL`, et les variables `MAIL_*` (sinon le mot de passe oublie et les
-     notifications de depot n'envoient rien).
-2. Idees de Manuel pour la suite (a preciser).
+**C'est la seule chose qui reste, et elle ne depend plus du code.** Manuel doit d'abord **acheter
+un VPS (Hostinger, ~4 Go de RAM) et un nom de domaine** — il n'en a pas encore au 2026-07-14.
 
-### Scripts SQL a rejouer sur une nouvelle base (dans cet ordre)
+Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (nginx, systemd, HTTPS, sauvegardes).
+
+**Pourquoi un VPS et pas un mutualise** : le mutualise execute du PHP, pas un serveur Node en
+continu — et son disque ne persiste pas. Or les musiques deposees sont ecrites sur le disque : sur
+un hebergeur ephemere (Render, Railway), elles disparaitraient a chaque redeploiement. Le meme VPS
+hebergera aussi son portfolio, ses autres projets et un WordPress.
+
+**Les trois choses a ne pas rater** (elles casseraient le site sans que le code soit en cause) :
+1. **`client_max_body_size 12M`** dans nginx — la limite par defaut est de **1 Mo**, or les depots
+   montent a 10 Mo. Sans cette ligne, TOUT depot echoue en 413.
+2. **Le fallback SPA** (`try_files $uri $uri/ /index.html`) — sans lui, ouvrir directement
+   `/favoris` renvoie un 404. La navigation interne marche, mais pas un lien partage.
+3. **Envoyer les fichiers audio par `scp`** — `backend/public/` n'est dans aucun depot Git. C'est
+   l'etape qu'on oublie : sans elle, le catalogue s'affiche mais rien ne se lit.
+
+Note : **la purge des comptes de demo n'a plus lieu d'etre.** La base de prod est construite avec
+`schema.sql` + `seed-musics.sql`, elle ne contient donc **aucun utilisateur** (ni `admin@admin.fr`,
+ni `patrick@test.fr`). Il faudra creer son compte admin (`DEPLOIEMENT.md` §8).
+
+### Creer la base sur une machine neuve
 
 ```
-backend/scripts/add-role-column.sql              # users.role (user | admin)
-backend/scripts/add-play-count.sql               # musics.play_count + amorcage du Top 5
-backend/scripts/add-submissions-table.sql        # depots de musique
-backend/scripts/alter-submissions-image-facultative.sql
-backend/scripts/add-visites-table.sql            # frequentation
-backend/scripts/add-password-resets-table.sql    # mot de passe oublie
+mysql -u <user> -p <base> < backend/scripts/schema.sql       # les 8 tables
+mysql -u <user> -p <base> < backend/scripts/seed-musics.sql  # le catalogue (20 morceaux)
+node tests/preparer-medias.mjs                               # medias de test (mp3 silencieux)
 ```
 
-Puis `node scripts/backfill-duration.js` (sinon les durees s'affichent `--:--`), et creer le
-dossier `backend/uploads/` (vide mais accessible en ecriture).
+Les scripts `add-*.sql` sont des **migrations historiques** : leurs modifications sont **deja
+incluses** dans `schema.sql`. Ne pas les rejouer.
 
 ### Points connus, assumes
 
