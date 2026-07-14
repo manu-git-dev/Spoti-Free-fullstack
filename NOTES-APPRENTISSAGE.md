@@ -1493,3 +1493,61 @@ Résultat : le morceau devient **injouable** (plus de `src_audio`) et sa pochett
 **La règle** : une route de modification expose **la liste des champs modifiables**, jamais « toutes les colonnes de la table ». Ce qui est dérivé (une durée lue dans le fichier) ou structurel (un chemin de stockage) se calcule côté serveur et ne s'accepte jamais du client.
 
 ---
+
+## 2026-07-14 — Spoti-Free (validation en direct du formulaire d'inscription)
+
+### 54. Valider un formulaire pendant la saisie : contrôlé, indulgent, et surtout pas seulement côté client
+
+**Contexte** : sur ma page Inscription, les règles du mot de passe existaient **côté serveur** (8 caractères minimum) mais n'étaient **écrites nulle part dans l'interface**. L'utilisateur ne les découvrait qu'en se prenant l'erreur au moment de valider. Je voulais un retour visuel en direct : croix rouge tant que c'est invalide, check vert quand c'est bon.
+
+**a) Pour valider pendant la saisie, il faut un champ *contrôlé*.**
+
+Mon formulaire lisait tout d'un coup au moment de l'envoi :
+
+```jsx
+const formData = new FormData(event.currentTarget);
+const email = formData.get("email");
+```
+
+C'est un formulaire **non contrôlé** : la valeur vit dans le DOM, React ne la connaît pas. Elle n'est lue qu'au submit — donc impossible de réagir à chaque frappe. Pour valider en direct, la valeur doit vivre dans un **state** :
+
+```jsx
+const [email, setEmail] = useState("");
+// ...
+<Input value={email} onChange={(event) => setEmail(event.target.value)} />
+```
+
+Là, chaque frappe déclenche un rendu, et `emailValide(email)` est recalculé. Je n'ai converti que les **trois champs qui ont besoin d'un retour** (email, mot de passe, confirmation) : le pseudo, le prénom et le nom n'ont rien à valider en direct et restent lus par `FormData`. Ajouter un state à un champ qui n'en a pas besoin, c'est du bruit.
+
+**b) Le timing : ne pas crier sur quelqu'un qui est en train d'écrire.**
+
+Le piège de la validation en direct, c'est d'afficher « email invalide » dès la première lettre tapée — l'utilisateur voit du rouge alors qu'il n'a simplement pas fini. Le standard UX est **indulgent** : on n'affiche l'erreur qu'une fois que l'utilisateur a **quitté** le champ (`onBlur`), et ensuite seulement on met à jour en direct à chaque touche.
+
+D'où un state qui mémorise les champs déjà « touchés » :
+
+```jsx
+const [touche, setTouche] = useState({});
+// <Input onBlur={() => setTouche((p) => ({ ...p, email: true }))} />
+```
+
+Et une nuance : `touche` commande le **rouge**, pas le **vert**. Le check vert s'affiche dès que la règle est remplie — un encouragement n'a pas besoin d'attendre.
+
+**c) Ne pas désactiver le bouton d'envoi.**
+
+Le réflexe est de griser le bouton tant que le formulaire est invalide. Deux raisons de ne pas le faire : un bouton grisé **n'explique rien** (l'utilisateur ne sait pas ce qu'on lui reproche), et il est invisible pour beaucoup d'outils d'accessibilité. Le bouton reste cliquable, et c'est le `handleSubmit` qui bloque l'envoi en affichant les erreurs. Bonus inattendu : mon test Playwright **clique** sur ce bouton avec un formulaire invalide pour vérifier que le compte n'est pas créé — un bouton désactivé aurait fait partir le test en timeout.
+
+**d) Le point le plus important : le front est un miroir, pas une protection.**
+
+Ma checklist verte est du **confort**. Elle ne protège rien : un appel direct à l'API (curl, Postman) ne passe jamais par React. La règle qui protège vraiment est celle du serveur.
+
+Conséquence : durcir la règle voulait dire la durcir **côté serveur**, et le front ne fait que l'**afficher**. Les deux doivent donc rester d'accord — s'ils divergent, le symptôme est désagréable : le formulaire affiche un beau check vert, et le serveur refuse quand même.
+
+**e) Le piège que je n'avais pas vu : la règle doit être la même PARTOUT.**
+
+En durcissant l'inscription, j'ai failli oublier la route de **réinitialisation de mot de passe**, qui appliquait encore l'ancienne règle. Or elle attribue elle aussi un mot de passe. Une exigence appliquée à l'inscription mais oubliée là se **contourne en passant par « mot de passe oublié »** pour se choisir un mot de passe faible — le formulaire le plus strict ne sert alors plus à rien.
+
+D'où un module unique, `backend/src/validation.js`, importé par les **deux** routes. Une règle de sécurité dupliquée à deux endroits est une règle qui finira par diverger.
+
+**La règle à retenir** : la validation client **explique**, la validation serveur **impose**. Et une exigence de sécurité s'applique à **tous** les chemins qui mènent à la même donnée, pas seulement au plus visible.
+
+---

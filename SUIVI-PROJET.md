@@ -9,8 +9,8 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 L'application est **fonctionnellement complete et testee**. Il ne reste rien de bloquant dans le
 code : ce qui reste, c'est la mise en ligne.
 
-- **103 tests** automatises : `cd tests && npm install && npm test`
-  (26 parcours + 27 securite + 25 depot + 25 admin). Sortie en code 1 si echec.
+- **106 tests** automatises : `cd tests && npm install && npm test`
+  (26 parcours + 30 securite + 25 depot + 25 admin). Sortie en code 1 si echec.
 - **0 vulnerabilite** npm (backend et frontend).
 - Build de production OK.
 
@@ -72,6 +72,37 @@ dossier `backend/uploads/` (vide mais accessible en ecriture).
   `docs/FEATURE-depot-musique.md`).
 - **Ne jamais supprimer un fichier partage** : les pochettes sont mutualisees (une image sert a
   plusieurs morceaux). Toujours verifier qu'aucun autre morceau ne le reference.
+
+## Retouches UI/UX - 2026-07-14 - en cours
+
+Passe de finition demandee par Manuel avant la CI et le deploiement.
+
+### Inscription : validation en direct (fait)
+
+Les regles du mot de passe existaient cote serveur mais n'etaient **ecrites nulle part dans
+l'interface** : on les decouvrait en se prenant l'erreur au submit. Desormais, retour visuel
+pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la confirmation.
+
+- **Regle durcie** : 8 caracteres + **une majuscule** + **un chiffre** (avant : 8 caracteres).
+  Durcie **cote serveur** — le front ne fait que l'afficher.
+- `backend/src/validation.js` : source de verite unique, importee par l'inscription **et** la
+  reinitialisation de mot de passe. Sans ca, la nouvelle regle se contournait en passant par
+  "mot de passe oublie" pour se choisir un mot de passe faible.
+- `frontend/src/lib/validation.js` + `composants/ChecklistMotDePasse.jsx` : le miroir d'affichage,
+  partage par les pages Inscription et Reinitialisation.
+- **Timing indulgent** : le rouge n'apparait qu'apres avoir quitte le champ (`onBlur`), puis se met
+  a jour en direct. Le vert, lui, s'affiche des que la regle est remplie.
+- **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
+  n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
+- 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
+  reinitialisation). Suite : **106 tests**.
+
+Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
+
+### Reste a faire
+
+- Les autres retouches UI/UX que Manuel signalera.
+- Ensuite : brancher une **CI** (GitHub Actions), puis le **deploiement**.
 
 ## Espace d'administration, mot de passe oublie, Aside - 2026-07-14 - fait
 

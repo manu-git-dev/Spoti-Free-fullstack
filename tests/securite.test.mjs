@@ -119,6 +119,30 @@ await etape("validation de l'inscription", async () => {
     `recu ${mdpCourt.status}`,
   );
 
+  // Les deux regles ajoutees au mot de passe. Le formulaire les affiche en direct, mais c'est
+  // le serveur qui doit les IMPOSER : un appel direct a l'API ne voit jamais la checklist.
+  const mdpSansMajuscule = await inscrire({
+    ...base,
+    email: `e2e-test+maj${Date.now()}@example.com`,
+    password: "minuscule123",
+  });
+  verifier(
+    "inscription : un mot de passe sans majuscule est refuse (400)",
+    mdpSansMajuscule.status === 400,
+    `recu ${mdpSansMajuscule.status}`,
+  );
+
+  const mdpSansChiffre = await inscrire({
+    ...base,
+    email: `e2e-test+chiffre${Date.now()}@example.com`,
+    password: "SansAucunChiffre",
+  });
+  verifier(
+    "inscription : un mot de passe sans chiffre est refuse (400)",
+    mdpSansChiffre.status === 400,
+    `recu ${mdpSansChiffre.status}`,
+  );
+
   const emailInvalide = await inscrire({
     ...base,
     email: "pas-un-email",
@@ -310,6 +334,16 @@ await etape("mot de passe oublie", async () => {
     "mdp oublie : un mot de passe trop court est refuse cote serveur (400)",
     trop_court.status === 400,
     `recu ${trop_court.status}`,
+  );
+
+  // La reinitialisation doit exiger EXACTEMENT le meme mot de passe que l'inscription. Une regle
+  // appliquee a l'inscription mais oubliee ici se contournerait en passant par "mot de passe
+  // oublie" pour se choisir un mot de passe faible.
+  const faible = await reinitialiser(jeton, "sansmajuscule123");
+  verifier(
+    "mdp oublie : la reinitialisation applique les MEMES regles que l'inscription (400)",
+    faible.status === 400,
+    `recu ${faible.status}`,
   );
 
   const valide = await reinitialiser(jeton, "NouveauMdp2026");
