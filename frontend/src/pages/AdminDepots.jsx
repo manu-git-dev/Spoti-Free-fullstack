@@ -19,6 +19,7 @@ import {
   LienTelechargement,
 } from "../composants/FichierDepot";
 import { apiFetch, messageErreur } from "@/lib/api";
+import EnTetePage from "../composants/EnTetePage";
 
 export default function AdminDepots({ user }) {
   const [depots, setDepots] = useState([]);
@@ -71,19 +72,13 @@ export default function AdminDepots({ user }) {
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <ShieldCheck className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold">
-            Modération des dépôts
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {depots.length} {depots.length > 1 ? "dépôts" : "dépôt"} en attente
-          </p>
-        </div>
-      </div>
+      <EnTetePage
+        icone={ShieldCheck}
+        titre="Modération des dépôts"
+        sousTitre={`${depots.length} ${
+          depots.length > 1 ? "dépôts" : "dépôt"
+        } en attente`}
+      />
 
       {chargement ? (
         <p className="text-muted-foreground">Chargement…</p>
@@ -119,7 +114,8 @@ export default function AdminDepots({ user }) {
                   {depot.genre ? ` — ${depot.genre}` : ""}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Déposé par <span className="text-primary">{depot.pseudo}</span>
+                  Déposé par{" "}
+                  <span className="text-primary">{depot.pseudo}</span>
                   {depot.created_at
                     ? ` le ${new Date(depot.created_at).toLocaleDateString("fr-FR")}`
                     : ""}
@@ -127,8 +123,8 @@ export default function AdminDepots({ user }) {
 
                 {!depot.a_pochette ? (
                   <p className="mt-1 text-xs text-muted-foreground italic">
-                    Sans pochette — une pochette du catalogue sera tirée au hasard
-                    à l'approbation.
+                    Sans pochette — une pochette du catalogue sera tirée au
+                    hasard à l'approbation.
                   </p>
                 ) : null}
 
@@ -197,8 +193,8 @@ export default function AdminDepots({ user }) {
           <DialogHeader>
             <DialogTitle>Refuser ce dépôt</DialogTitle>
             <DialogDescription>
-              « {depotARefuser?.title} » de {depotARefuser?.artist}. Le motif sera
-              visible par la personne qui l'a déposé.
+              « {depotARefuser?.title} » de {depotARefuser?.artist}. Le motif
+              sera visible par la personne qui l'a déposé.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -207,7 +203,9 @@ export default function AdminDepots({ user }) {
             onChange={(event) => setMotif(event.target.value)}
           />
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
             <Button
               variant="destructive"
               onClick={() => traiter(depotARefuser, "refuser")}

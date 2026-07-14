@@ -1,10 +1,17 @@
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import TrackRow from "../composants/TrackRow";
+import EnTetePage from "../composants/EnTetePage";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-export default function Favoris({setCurrentMusic,setCurrentQueue,musiquesLikee,setMusiquesLikee,user,currentMusic}) {
-
+export default function Favoris({
+  setCurrentMusic,
+  setCurrentQueue,
+  musiquesLikee,
+  setMusiquesLikee,
+  user,
+  currentMusic,
+}) {
   if (user === null) {
     return (
       <section className="h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center justify-center gap-4 text-center">
@@ -39,20 +46,14 @@ export default function Favoris({setCurrentMusic,setCurrentQueue,musiquesLikee,s
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <Heart className="w-6 h-6 text-white fill-current" />
-        </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold">
-            Vos musiques likées
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {musiquesLikee.length}{" "}
-            {musiquesLikee.length > 1 ? "titres" : "titre"}
-          </p>
-        </div>
-      </div>
+      <EnTetePage
+        icone={Heart}
+        classeIcone="fill-current"
+        titre="Vos musiques likées"
+        sousTitre={`${musiquesLikee.length} ${
+          musiquesLikee.length > 1 ? "titres" : "titre"
+        }`}
+      />
       <div className="flex flex-col gap-1">
         {musiquesLikee.length === 0 ? (
           <p className="text-muted-foreground">

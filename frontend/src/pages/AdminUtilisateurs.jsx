@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { Users, Shield, ShieldOff, Trash2, ListMusic, Heart, UploadCloud } from "lucide-react";
+import {
+  Users,
+  Shield,
+  ShieldOff,
+  Trash2,
+  ListMusic,
+  Heart,
+  UploadCloud,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import EnTetePage from "../composants/EnTetePage";
 import {
   Dialog,
   DialogContent,
@@ -90,19 +99,13 @@ export default function AdminUtilisateurs({ user }) {
 
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <Users className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold">
-            Utilisateurs
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {utilisateurs.length} compte{utilisateurs.length > 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
+      <EnTetePage
+        icone={Users}
+        titre="Utilisateurs"
+        sousTitre={`${utilisateurs.length} compte${
+          utilisateurs.length > 1 ? "s" : ""
+        }`}
+      />
 
       {/* On n'edite volontairement PAS le pseudo, le nom ou l'email de quelqu'un.
           L'email est l'identifiant de connexion : pouvoir le changer reviendrait a pouvoir
@@ -154,15 +157,24 @@ export default function AdminUtilisateurs({ user }) {
                 </div>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
-                  <span className="inline-flex items-center gap-1" title="Playlists">
+                  <span
+                    className="inline-flex items-center gap-1"
+                    title="Playlists"
+                  >
                     <ListMusic className="w-3.5 h-3.5" />
                     {u.nb_playlists}
                   </span>
-                  <span className="inline-flex items-center gap-1" title="Favoris">
+                  <span
+                    className="inline-flex items-center gap-1"
+                    title="Favoris"
+                  >
                     <Heart className="w-3.5 h-3.5" />
                     {u.nb_likes}
                   </span>
-                  <span className="inline-flex items-center gap-1" title="Dépôts">
+                  <span
+                    className="inline-flex items-center gap-1"
+                    title="Dépôts"
+                  >
                     <UploadCloud className="w-3.5 h-3.5" />
                     {u.nb_depots}
                   </span>
@@ -176,9 +188,13 @@ export default function AdminUtilisateurs({ user }) {
                       className="rounded-full gap-1.5"
                       disabled={estMoi}
                       title={
-                        estMoi ? "Tu ne peux pas retirer ton propre rôle" : undefined
+                        estMoi
+                          ? "Tu ne peux pas retirer ton propre rôle"
+                          : undefined
                       }
-                      onClick={() => setChangementRole({ cible: u, role: "user" })}
+                      onClick={() =>
+                        setChangementRole({ cible: u, role: "user" })
+                      }
                     >
                       <ShieldOff className="w-3.5 h-3.5" />
                       Retirer admin
@@ -188,7 +204,9 @@ export default function AdminUtilisateurs({ user }) {
                       variant="outline"
                       size="sm"
                       className="rounded-full gap-1.5"
-                      onClick={() => setChangementRole({ cible: u, role: "admin" })}
+                      onClick={() =>
+                        setChangementRole({ cible: u, role: "admin" })
+                      }
                     >
                       <Shield className="w-3.5 h-3.5" />
                       Passer admin
@@ -202,7 +220,9 @@ export default function AdminUtilisateurs({ user }) {
                     disabled={estMoi}
                     aria-label={`Supprimer le compte de ${u.pseudo}`}
                     title={
-                      estMoi ? "Tu ne peux pas supprimer ton propre compte" : undefined
+                      estMoi
+                        ? "Tu ne peux pas supprimer ton propre compte"
+                        : undefined
                     }
                     onClick={() => setASupprimer(u)}
                   >
@@ -233,8 +253,8 @@ export default function AdminUtilisateurs({ user }) {
                 <>
                   <strong>{changementRole?.cible.pseudo}</strong> pourra alors
                   accéder au tableau de bord, modérer les dépôts, modifier et
-                  supprimer des morceaux du catalogue, et gérer les autres comptes
-                  — y compris les supprimer.
+                  supprimer des morceaux du catalogue, et gérer les autres
+                  comptes — y compris les supprimer.
                 </>
               ) : (
                 <>
@@ -246,9 +266,13 @@ export default function AdminUtilisateurs({ user }) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
             <Button
-              variant={changementRole?.role === "admin" ? "default" : "destructive"}
+              variant={
+                changementRole?.role === "admin" ? "default" : "destructive"
+              }
               onClick={() =>
                 changerRole(changementRole.cible, changementRole.role)
               }
@@ -275,16 +299,15 @@ export default function AdminUtilisateurs({ user }) {
               définitivement, ainsi que{" "}
               <strong>{aSupprimer?.nb_playlists} playlist(s)</strong>,{" "}
               <strong>{aSupprimer?.nb_likes} favori(s)</strong> et{" "}
-              <strong>{aSupprimer?.nb_depots} dépôt(s)</strong>. Cette action est
-              irréversible.
+              <strong>{aSupprimer?.nb_depots} dépôt(s)</strong>. Cette action
+              est irréversible.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Annuler</DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => supprimer(aSupprimer)}
-            >
+            <DialogClose render={<Button variant="outline" />}>
+              Annuler
+            </DialogClose>
+            <Button variant="destructive" onClick={() => supprimer(aSupprimer)}>
               Supprimer définitivement
             </Button>
           </DialogFooter>

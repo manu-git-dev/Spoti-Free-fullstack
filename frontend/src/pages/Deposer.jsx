@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { Loader2, UploadCloud, Inbox, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import ZoneDepotFichier from "../composants/ZoneDepotFichier";
+import EnTetePage from "../composants/EnTetePage";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiFetch, messageErreur } from "@/lib/api";
-
 
 export default function Deposer({ user }) {
   const [audio, setAudio] = useState(null);
@@ -92,7 +92,9 @@ export default function Deposer({ user }) {
         return;
       }
 
-      toast.success(donnees.message ?? "Dépôt envoyé, il sera examiné rapidement.");
+      toast.success(
+        donnees.message ?? "Dépôt envoyé, il sera examiné rapidement.",
+      );
       formulaire.reset();
       setAudio(null);
       setImage(null);
@@ -111,36 +113,38 @@ export default function Deposer({ user }) {
   return (
     <section className="h-full overflow-y-auto p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <UploadCloud className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-serif font-bold">
-              Déposer une musique
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Ton morceau sera publié une fois validé.
-            </p>
-          </div>
-        </div>
+        <EnTetePage
+          icone={UploadCloud}
+          titre="Déposer une musique"
+          sousTitre="Ton morceau sera publié une fois validé."
+        />
 
         <form
           onSubmit={handleSubmit}
-          className="mt-6 flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
+          className="flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
         >
           <div className="flex flex-col gap-1.5">
             <label htmlFor="title" className="text-sm font-medium">
               Titre
             </label>
-            <Input id="title" name="title" placeholder="Le titre du morceau" required />
+            <Input
+              id="title"
+              name="title"
+              placeholder="Le titre du morceau"
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="artist" className="text-sm font-medium">
               Artiste
             </label>
-            <Input id="artist" name="artist" placeholder="Le nom de l'artiste" required />
+            <Input
+              id="artist"
+              name="artist"
+              placeholder="Le nom de l'artiste"
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

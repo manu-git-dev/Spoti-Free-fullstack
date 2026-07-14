@@ -4,6 +4,7 @@ import { Clock, Check, X, Inbox, UploadCloud, ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import EnTetePage from "../composants/EnTetePage";
 
 const STATUTS = {
   en_attente: {
@@ -17,7 +18,8 @@ const STATUTS = {
     label: "Approuvé",
     icone: Check,
     classe: "text-success bg-success/10 border-success/40",
-    explication: "Le morceau est en ligne : tu le retrouves dans la Bibliothèque.",
+    explication:
+      "Le morceau est en ligne : tu le retrouves dans la Bibliothèque.",
   },
   refuse: {
     label: "Refusé",
@@ -79,20 +81,13 @@ export default function MesDepots({ user }) {
           Déposer une musique
         </Link>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Inbox className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-serif font-bold">
-              Mes demandes de dépôt
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {depots.length}{" "}
-              {depots.length > 1 ? "propositions envoyées" : "proposition envoyée"}
-            </p>
-          </div>
-        </div>
+        <EnTetePage
+          icone={Inbox}
+          titre="Mes demandes de dépôt"
+          sousTitre={`${depots.length} ${
+            depots.length > 1 ? "propositions envoyées" : "proposition envoyée"
+          }`}
+        />
 
         {chargement ? (
           <p className="text-muted-foreground">Chargement…</p>
