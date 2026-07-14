@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Music, Check, X, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  User,
+  Music,
+  Check,
+  X,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -225,9 +235,10 @@ export default function Register() {
               </div>
 
               {/* Sans `items-start`, les deux colonnes de la grille sont etirees a la meme hauteur
-                  (c'est le comportement par defaut). `justify-between` repartit alors l'espace
-                  restant : les deux colonnes se terminent exactement au meme niveau. */}
-              <div className="flex flex-col gap-2 md:justify-between">
+                  (c'est le comportement par defaut). Le mot de passe et sa confirmation restent
+                  donc COLLES — les ecarter pour remplir la hauteur separerait deux champs qui vont
+                  ensemble. C'est la note du bas, poussee par `mt-auto`, qui occupe l'espace. */}
+              <div className="flex flex-col gap-2">
                 <fieldset className="flex flex-col gap-1.5 w-full">
                   <legend className="text-sm mb-1">Mot de passe</legend>
                   <div className="relative">
@@ -312,6 +323,21 @@ export default function Register() {
                     </p>
                   ) : null}
                 </fieldset>
+
+                {/* `mt-auto` la pousse en bas de la colonne : elle occupe l'espace qui restait
+                    sous la confirmation, ce qui aligne le bas des deux colonnes sans avoir a
+                    ecarter les champs. Elle est utile, pas decorative — et elle dit vrai : le mot
+                    de passe est hashe (bcrypt) avant d'etre stocke. */}
+                <p className="hidden md:flex items-start gap-1.5 text-xs text-muted-foreground mt-auto pt-2">
+                  <ShieldCheck
+                    className="w-3.5 h-3.5 shrink-0 mt-px"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    Ton mot de passe est chiffré avant d'être enregistré :
+                    personne ne peut le lire, pas même nous.
+                  </span>
+                </p>
               </div>
             </div>
 
