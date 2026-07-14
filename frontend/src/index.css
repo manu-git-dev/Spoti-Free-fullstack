@@ -156,3 +156,46 @@ body {
     @apply font-sans;
   }
 }
+/* --- Egaliseur du logo (composants/Logo.jsx) ---------------------------------
+   Les barres dansent quand une musique joue, et retombent au repos.
+
+   L'animation joue sur `transform: scaleY` et non sur `height` : une hauteur qui change force le
+   navigateur a RECALCULER LA MISE EN PAGE a chaque image (reflow), alors qu'une transformation est
+   traitee par la carte graphique. A 60 images par seconde, ce n'est pas un detail.
+
+   `transform-origin: bottom` : sans lui, la barre se comprimerait vers son centre — elle
+   grandirait donc aussi vers le haut. Un egaliseur pousse depuis le bas. */
+@keyframes egaliseur {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.barre-egaliseur {
+  transform-origin: bottom;
+  /* Au repos, les barres retombent — mais pas jusqu'a rien : trop basses, elles ressemblaient a
+     des points et le logo n'etait plus lisible a l'arret. */
+  transform: scaleY(0.5);
+  transition: transform 400ms ease-out;
+}
+
+.barre-egaliseur[data-lecture="true"] {
+  animation: egaliseur var(--duree-barre, 600ms) ease-in-out infinite;
+  animation-delay: var(--delai-barre, 0ms);
+}
+
+/* Certaines personnes desactivent les animations au niveau du systeme (migraines, troubles
+   vestibulaires, simple preference). Ce reglage n'est pas une suggestion : on le respecte. Les
+   barres restent alors figees en position haute — le logo reste beau, il ne bouge simplement plus. */
+@media (prefers-reduced-motion: reduce) {
+  .barre-egaliseur,
+  .barre-egaliseur[data-lecture="true"] {
+    animation: none;
+    transform: scaleY(0.75);
+    transition: none;
+  }
+}

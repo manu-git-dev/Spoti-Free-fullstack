@@ -12,6 +12,7 @@ import {
   Music,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Logo from "./Logo";
 
 // Ce menu est le SEUL acces mobile aux pages absentes de la BottomNav.
 //
@@ -19,7 +20,7 @@ import { Button } from "@/components/ui/button";
 // Favoris, Profil), et l'Aside — qui contient tout le reste — est masquee sous `md`. Sans ce
 // menu, "Déposer", "Mes demandes" et TOUT l'espace d'administration etaient donc inaccessibles
 // depuis un telephone : il fallait taper l'URL a la main.
-export default function HeaderMobile({ user }) {
+export default function HeaderMobile({ user, isPlaying }) {
   const [menuOuvert, setMenuOuvert] = useState(false);
 
   const fermer = () => setMenuOuvert(false);
@@ -29,12 +30,7 @@ export default function HeaderMobile({ user }) {
 
   return (
     <header className="relative flex items-center justify-between bg-card border border-border rounded-2xl p-3 m-3 mb-0">
-      <Link
-        to="/"
-        className="text-2xl font-serif font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
-      >
-        Spoti-Free
-      </Link>
+      <Logo enLecture={isPlaying} tailleTexte="text-2xl" tailleBarres="h-5" />
 
       <Button
         variant="ghost"
@@ -80,7 +76,11 @@ export default function HeaderMobile({ user }) {
                   <ShieldCheck className="w-4 h-4" />
                   Modération
                 </Link>
-                <Link to="/admin/utilisateurs" onClick={fermer} className={lien}>
+                <Link
+                  to="/admin/utilisateurs"
+                  onClick={fermer}
+                  className={lien}
+                >
                   <Users className="w-4 h-4" />
                   Utilisateurs
                 </Link>
@@ -93,8 +93,7 @@ export default function HeaderMobile({ user }) {
             ) : null}
 
             <Link to="/a-propos" onClick={fermer} className={lien}>
-              <Info className="w-4 h-4" />
-              À propos
+              <Info className="w-4 h-4" />À propos
             </Link>
             <Link to="/contact" onClick={fermer} className={lien}>
               <Mail className="w-4 h-4" />

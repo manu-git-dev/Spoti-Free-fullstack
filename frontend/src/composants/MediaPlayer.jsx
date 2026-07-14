@@ -19,13 +19,15 @@ export default function MediaPlayer({
   setCurrentIndex,
   maxIndex,
   onEcouteComptee,
+  // `isPlaying` ne vit plus ici mais dans App : le logo de l'Aside en a besoin lui aussi, et
+  // deux composants freres ne peuvent partager un etat que via leur parent commun.
+  isPlaying,
+  setIsPlaying,
   className = "",
 }) {
   const [volume, setVolume] = useState(50);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [timeUpdate, setTimeUpdate] = useState(0);
-
 
   const audioRef = useRef(null);
 
@@ -102,7 +104,8 @@ export default function MediaPlayer({
         <div className="flex items-center justify-center gap-3 w-full h-full bg-card border border-border rounded-2xl px-6 text-muted-foreground">
           <Music className="w-5 h-5 opacity-60" />
           <p className="text-sm">
-            Aucune musique sélectionnée — choisis un titre pour lancer la lecture.
+            Aucune musique sélectionnée — choisis un titre pour lancer la
+            lecture.
           </p>
         </div>
       </section>
@@ -133,9 +136,15 @@ export default function MediaPlayer({
         />
         <div className="flex flex-col min-w-0 flex-1">
           <p className="truncate font-semibold text-sm">{music.title}</p>
-          <p className="truncate text-xs text-muted-foreground">{music.artist}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {music.artist}
+          </p>
         </div>
-        <Button size="icon-sm" onClick={handlePlay} aria-label={isPlaying ? "Pause" : "Lecture"}>
+        <Button
+          size="icon-sm"
+          onClick={handlePlay}
+          aria-label={isPlaying ? "Pause" : "Lecture"}
+        >
           {isPlaying ? (
             <Pause className="w-4 h-4 fill-current" />
           ) : (
@@ -168,7 +177,11 @@ export default function MediaPlayer({
             >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
-            <Button size="icon" onClick={handlePlay} aria-label={isPlaying ? "Pause" : "Lecture"}>
+            <Button
+              size="icon"
+              onClick={handlePlay}
+              aria-label={isPlaying ? "Pause" : "Lecture"}
+            >
               {isPlaying ? (
                 <Pause className="w-5 h-5 fill-current" />
               ) : (
