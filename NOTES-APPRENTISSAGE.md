@@ -1795,3 +1795,39 @@ Ce qui m'a sauvé : changer de mesure. Compter les résultats ne prouvait rien. 
 **Et une décision produit, pas technique** : `groupby=artist_id`, un seul morceau par artiste. Sans ça, « les 100 plus écoutés » donne une quinzaine d'artistes avec sept titres chacun. **100 artistes différents font un catalogue ; quinze font une playlist.** L'API offrait le paramètre, encore fallait-il se demander à quoi doit *ressembler* un bon catalogue plutôt que juste comment en télécharger 100.
 
 ---
+
+### 62. Lire une licence Creative Commons
+
+**Contexte** : mon catalogue importé annonce « 38 CC BY 3.0, 60 CC BY-SA 3.0, 2 CC BY-SA 2.5, zéro NC, zéro ND ». Je lisais ça comme du charabia. Ce sont pourtant les conditions auxquelles j'ai le droit de diffuser 100 morceaux.
+
+**Une licence CC n'est pas un bloc, c'est un assemblage de quatre briques** :
+
+| Brique | Nom | Ce que ça impose |
+|---|---|---|
+| **BY** | Attribution | **Créditer** l'auteur. Présente dans **toutes** les licences CC modernes. |
+| **SA** | Share Alike | Si tu **modifies**, ta version porte **la même licence**. |
+| **NC** | Non Commercial | Pas d'usage commercial. |
+| **ND** | No Derivatives | Interdit de diffuser une version **modifiée**. |
+
+D'où six combinaisons : `BY` → `BY-SA` → `BY-NC` → `BY-NC-SA` → `BY-ND` → `BY-NC-ND`, de la plus libre à la plus fermée. Mon catalogue est entièrement dans les deux premières.
+
+**Le SA ne me concerne pas, et c'est le malentendu classique du copyleft.** J'avais la crainte diffuse que « partage à l'identique » contamine tout ce qu'il touche. Mais la condition se déclenche **si on modifie l'œuvre**. Spotifree diffuse le mp3 **tel quel** : c'est une diffusion *verbatim*, pas une œuvre dérivée. **Pour mon usage, `CC BY` et `CC BY-SA` imposent donc exactement la même chose : créditer.** La différence entre mes 38 et mes 60 morceaux est nulle en pratique. Elle n'apparaîtrait que si je faisais des mashups ou publiais des remixes.
+
+**Et mon code n'est pas concerné du tout** : une licence CC porte sur l'œuvre qu'elle couvre, pas sur le logiciel qui la diffuse. Une bibliothèque ne devient pas copyleft parce qu'elle prête des livres.
+
+**Pourquoi exclure NC et ND alors qu'ils ne me gênaient pas ?** Honnêtement : un `BY-NC-ND` serait diffusable sur Spotifree **tel qu'il est aujourd'hui** — mon app est gratuite et ne modifie rien. Le problème est **demain**. Le jour où j'ajoute une pub ou un abonnement, tous mes morceaux NC deviennent illégaux d'un coup, et je ne m'en souviendrai pas. En prime, « non commercial » n'est même pas défini précisément dans la licence : c'est une zone grise reconnue. Avec BY et BY-SA, **aucune condition à revérifier** — je peux monétiser, remixer, tout faire, il faut juste créditer. **On coupe la question à la racine plutôt que de se la reposer à chaque évolution.**
+
+**Les numéros de version — et le vrai piège** : ce sont les versions du **texte juridique**, pas de la musique. 2.5 (2005) permet de créditer un tiers désigné ; 3.0 (2007) adapte le texte pays par pays ; 4.0 (2013) est un texte international unique qui couvre aussi les droits sur les bases de données.
+
+Mais surtout — **le délai de réparation** :
+
+- En **4.0**, si je viole la licence (un crédit oublié), j'ai **30 jours pour corriger** à compter du moment où je m'en aperçois : mes droits sont rétablis automatiquement.
+- En **3.0 et avant**, ce délai n'existe pas. La licence **se termine automatiquement et définitivement** dès la violation. Pour rediffuser, il faut **redemander la permission à l'artiste**.
+
+**98 % de mon catalogue est en 3.0 ou 2.5.** Traduction : si mon `Attribution.jsx` disparaissait — un refactor, une régression CSS, quelqu'un qui trouve ça moche —, je perdrais **définitivement** le droit de diffuser ces 100 morceaux. C'est pour ça que la règle est dans `CLAUDE.md` et que l'affichage du crédit n'est pas négociable. Ce n'est pas du zèle : c'est la condition du droit de diffusion.
+
+**Une licence n'est pas rétroactive** : l'artiste a choisi sa version le jour de la mise en ligne, et elle ne bouge plus. D'où le 3.0 majoritaire sur Jamendo alors que la 4.0 existe depuis 2013.
+
+**Ce qu'il ne faut jamais oublier : libre ≠ domaine public.** Une licence CC est un **contrat** : elle accorde des droits **à condition** d'en respecter les termes. Diffuser du CC BY sans créditer, c'est violer la licence — juridiquement la même infraction que de diffuser une œuvre sous copyright sans autorisation. La seule différence, c'est que la condition est facile à remplir.
+
+---
