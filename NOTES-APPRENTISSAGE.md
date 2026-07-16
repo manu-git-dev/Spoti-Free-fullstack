@@ -1831,3 +1831,29 @@ Mais surtout — **le délai de réparation** :
 **Ce qu'il ne faut jamais oublier : libre ≠ domaine public.** Une licence CC est un **contrat** : elle accorde des droits **à condition** d'en respecter les termes. Diffuser du CC BY sans créditer, c'est violer la licence — juridiquement la même infraction que de diffuser une œuvre sous copyright sans autorisation. La seule différence, c'est que la condition est facile à remplir.
 
 ---
+
+### 63. Un filtre ne vaut que ce que valent ses données
+
+**Contexte** : mes 100 morceaux importés ont maintenant un genre. Ajouter un filtre par genre dans la Bibliothèque paraissait être un petit chantier d'interface : quelques pastilles, un `useState`, un `.filter()`. J'ai voulu voir les données d'abord.
+
+**Ce que j'ai trouvé** : 100 morceaux, **25 genres**, dont **14 avec un seul morceau**. Et des libellés qui n'en étaient pas : « Rnb », « Edm », « Alternativehiphop », « Singersongwriter », « Poprock ». Mon `genreDe()` prenait le tag brut de l'API et se contentait d'y mettre une majuscule.
+
+**Le filtre aurait été techniquement parfait et humainement inutile.** Un menu de 25 entrées dont 14 mènent à un seul titre, c'est pire que pas de filtre : l'utilisateur clique sur « Filmscore », tombe sur un morceau, et repart. **Un filtre doit ouvrir des portes, pas des placards.** Le bug n'était pas dans le code que j'allais écrire — il était dans la donnée que j'avais laissée entrer trois heures plus tôt.
+
+**Mesurer avant de décider (encore).** J'allais écrire ma table de correspondance au jugé. Je suis allé compter les tags réels sur 400 morceaux : **66 tags distincts**, une longue traîne à une occurrence (`bossanova`, `8bit`, `waltz`, `manouche`, `rockabilly`…). Sans cette mesure j'aurais inventé des familles pour des genres inexistants et oublié `world` (7 occurrences), que je n'avais pas prévu. **La table est bâtie sur ce que l'API produit, pas sur ce que j'imagine de la musique.**
+
+**Jamendo n'a pas des genres, il a des tags.** La distinction n'est pas cosmétique : un genre est une case, un tag est une étiquette libre. Une même chanson porte `["rock", "metal", "hardcore"]`. Ma colonne `genre` attend **une** valeur. Il faut donc *choisir*, et ce choix est de la **curation** — pas de la technique. Que le funk aille avec la soul, le blues avec le jazz : c'est discutable, et c'est assumé.
+
+**`genres[0]` n'était pas le bon choix.** Je prenais le premier tag. Mais un morceau taggé `["indie", "pop"]` rendait « Indie » — or **indie n'est pas un son, c'est une posture** : ça ne dit pas si on a affaire à du rock ou de la pop. La solution : *parcourir* le tableau et retenir le premier tag qui tombe dans une famille, en laissant `indie` et `experimental` **volontairement hors de la table**. Ils sont alors ignorés, et on tombe sur le tag suivant, plus précis.
+
+**Ne jamais perdre de l'information en silence.** Les tags non classés sont désormais **listés en fin d'import** : `indie (4), filmscore (1)`. Ce n'est pas une erreur — la longue traîne n'a pas vocation à devenir une famille. Mais si un tag revient souvent, c'est qu'il manque une case, et **je ne peux le voir que si le script me le dit**. Un import qui jette discrètement est un import qu'on ne peut pas améliorer.
+
+**Nettoyer à l'entrée, pas à l'affichage.** Même raisonnement que pour les entités HTML (note 61) : le repliement se fait **à l'import**, pas dans le composant React. Si je mappais à l'affichage, la base contiendrait « alternativehiphop », et **chaque** endroit qui lit `genre` — la bibliothèque, une future recherche, l'admin, un export — devrait re-mapper pour son compte. L'un d'eux oubliera. **Une base contient de la donnée propre.**
+
+**Déduire la liste plutôt que l'écrire.** Les pastilles viennent d'un `useMemo` qui compte les genres **présents dans le catalogue**. Écrire la liste en dur aurait été plus rapide — et faux dès le prochain import, ou dès qu'un dépôt approuvé apporte un genre nouveau : une pastille vide, ou un genre invisible. **La donnée est la source de vérité, pas une constante que je maintiens à la main.**
+
+**Le test qui ne doit pas connaître le catalogue.** Mon test e2e ne peut pas cliquer sur « Jazz » — ce serait refaire l'erreur de « Believer » (note 61). Il prend **la première pastille venue** et vérifie le *comportement* : filtrer réduit la liste, le texte se **cumule** avec le genre (chercher dans un genre ne doit pas annuler le genre), recliquer annule. Le nom du genre n'a aucune importance.
+
+**Une dette que j'assume et que j'écris** : le formulaire de dépôt laisse le genre en **texte libre**. Un dépôt approuvé avec « Trap » créera une pastille à un morceau, et la dérive recommencera lentement. Le passer en `<select>` sur les mêmes familles réglerait ça à la source — comme je l'ai fait pour la licence. Pas fait aujourd'hui : la modération absorbe le cas. Mais c'est noté, parce qu'**une dette qu'on n'écrit pas n'est pas une dette, c'est un oubli**.
+
+---

@@ -242,23 +242,86 @@ function decoderEntites(texte) {
     .replace(/&amp;/g, "&");
 }
 
-// Le genre, tire des tags de `musicinfo`.
+// ---------------------------------------------------------------------------
+// Les familles de genres
 //
-// Jamendo renvoie `tags.genres` : un tableau, parfois vide, souvent avec plusieurs entrees
-// ("rock", "indie", "alternative"). La colonne `musics.genre` attend UNE valeur — on prend donc
-// la premiere, qui est la plus representative, et on la capitalise pour coller au reste du
-// catalogue ("Rock", pas "rock").
+// POURQUOI CETTE TABLE EXISTE
+// Jamendo n'a pas des genres, il a des TAGS : 66 valeurs distinctes rencontrees sur 400
+// morceaux, dont une longue traine a une seule occurrence (`bossanova`, `rockabilly`, `8bit`,
+// `waltz`, `manouche`…). Prendre le tag tel quel donnait un catalogue a 25 genres dont 14 avec
+// UN seul morceau, etiquetes avec des slugs bruts : « Rnb », « Edm », « Alternativehiphop »,
+// « Singersongwriter ».
 //
-// Un tableau vide reste NULL : la colonne est nullable, et un genre invente serait pire qu'un
+// Un filtre a 25 entrees dont 14 mènent a un seul titre est pire que pas de filtre : il ouvre
+// des placards, pas des portes. On replie donc les tags sur une dizaine de familles reelles.
+//
+// C'est de la CURATION, pas de la technique : les frontieres sont discutables (le funk avec la
+// soul, le blues avec le jazz). C'est assume. Ce qui compte, c'est qu'aucune famille ne soit
+// vide et qu'aucun libelle ne ressemble a un identifiant machine.
+//
+// La table est batie sur les tags REELLEMENT rencontres (mesures via l'API), pas sur ce qu'on
+// imagine du vocabulaire de Jamendo.
+// ---------------------------------------------------------------------------
+const FAMILLES_DE_GENRES = {
+  Pop: ["pop", "indiepop", "electropop", "adultcontemporary"],
+  Rock: [
+    "rock", "indierock", "alternativerock", "postrock", "surfrock",
+    "electrorock", "poprock", "punk", "postpunk", "newwave", "rockabilly",
+    "garage", "grunge", "metal", "hardcore",
+  ],
+  Electro: [
+    "electronic", "electronica", "house", "deephouse", "dance", "edm",
+    "dubstep", "futurebass", "breakbeat", "drumnbass", "techno", "trance",
+    "electrofunk", "8bit",
+  ],
+  "Hip-hop": ["hiphop", "rap", "alternativehiphop", "trap", "triphop"],
+  Jazz: ["jazz", "acidjazz", "jazzfusion", "jazzfunk", "swing", "manouche", "gypsy", "blues"],
+  Folk: ["folk", "singersongwriter", "country", "chansonfrancaise", "acoustic"],
+  Soul: ["soul", "rnb", "funk", "disco"],
+  Reggae: ["reggae", "ska", "dub"],
+  Chill: ["ambient", "chillout", "chillhop", "downtempo", "newage", "easylistening", "lounge"],
+  World: ["world", "latin", "bossanova", "samba", "bachata"],
+};
+
+// Index inverse : tag -> famille. Construit une fois, pour ne pas reparcourir la table a chaque
+// morceau.
+const FAMILLE_PAR_TAG = new Map(
+  Object.entries(FAMILLES_DE_GENRES).flatMap(([famille, tags]) =>
+    tags.map((tag) => [tag, famille]),
+  ),
+);
+
+// Les tags qu'on n'a PAS su classer, pour les afficher en fin d'import.
+// Un import qui perd de l'information en silence est un import qu'on ne peut pas ameliorer :
+// c'est en voyant « filmscore (4) » qu'on decide, en connaissance de cause, d'ajouter une
+// famille ou de laisser tomber.
+const tagsInconnus = new Map();
+
+// Le genre d'un morceau, replie sur sa famille.
+//
+// On PARCOURT le tableau au lieu de prendre `genres[0]` : le premier tag n'est pas toujours le
+// plus parlant. Un morceau tague ["indie", "pop"] rend « Pop » — alors que `genres[0]` aurait
+// rendu « Indie », qui n'est pas un genre mais une posture, et qui ne dit pas si on a affaire a
+// du rock ou de la pop. `indie` et `experimental` sont donc volontairement ABSENTS de la table :
+// on les ignore pour tomber sur le tag suivant, plus precis.
+//
+// Aucun tag reconnu -> NULL. La colonne est nullable, et un genre invente serait pire qu'un
 // genre absent.
 function genreDe(morceau) {
   const genres = morceau.musicinfo?.tags?.genres;
-  if (!Array.isArray(genres) || genres.length === 0) return null;
+  if (!Array.isArray(genres)) return null;
 
-  const premier = String(genres[0]).trim();
-  if (premier === "") return null;
+  for (const brut of genres) {
+    const tag = String(brut).trim().toLowerCase();
+    if (tag === "") continue;
 
-  return premier.charAt(0).toUpperCase() + premier.slice(1);
+    const famille = FAMILLE_PAR_TAG.get(tag);
+    if (famille) return famille;
+
+    tagsInconnus.set(tag, (tagsInconnus.get(tag) ?? 0) + 1);
+  }
+
+  return null;
 }
 
 const echapper = (valeur) =>
@@ -401,10 +464,40 @@ async function principal() {
     return compte;
   }, {});
 
+  const parGenre = retenus.reduce((compte, m) => {
+    const cle = m.genre ?? "(sans genre)";
+    compte[cle] = (compte[cle] ?? 0) + 1;
+    return compte;
+  }, {});
+
   console.log(`\n${retenus.length} morceaux retenus sur ${examines} examines.`);
+
+  console.log(`\nLicences :`);
   for (const [licence, nombre] of Object.entries(parLicence)) {
     console.log(`  ${licence.padEnd(14)} ${nombre}`);
   }
+
+  console.log(`\nGenres :`);
+  for (const [genre, nombre] of Object.entries(parGenre).sort(
+    (a, b) => b[1] - a[1],
+  )) {
+    console.log(`  ${genre.padEnd(14)} ${nombre}`);
+  }
+
+  // Les tags qu'on n'a pas su classer. Ce n'est pas une erreur : la longue traine de Jamendo
+  // (`waltz`, `8bit`, `bossanova`…) n'a pas vocation a devenir une famille. Mais si l'un d'eux
+  // revient souvent, c'est le signe qu'il en manque une — et on ne peut le voir que si le
+  // script le dit.
+  if (tagsInconnus.size > 0) {
+    const liste = [...tagsInconnus]
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag, n]) => `${tag} (${n})`)
+      .join(", ");
+    console.log(
+      `\nTags non classes, ignores — a ajouter a FAMILLES_DE_GENRES s'ils reviennent souvent :\n  ${liste}`,
+    );
+  }
+
   console.log(`\nSeed ecrit dans scripts/seed-musics.sql`);
   console.log(`Fichiers telecharges dans public/musiques et public/images`);
   console.log(`\nPour l'appliquer :`);
