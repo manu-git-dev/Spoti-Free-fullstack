@@ -335,6 +335,73 @@ await etape("lecteur", async () => {
     `${Math.round(tempsAvant)}s -> ${Math.round(tempsApres)}s`,
   );
 
+  // -------------------------------------------------------------------------
+  // Cliquer SUR LE RAIL, a cote du centre.
+  //
+  // Le geste le plus naturel avec une barre de progression — cliquer la ou on veut aller — ne
+  // marchait qu'une fois sur trois. Le `Control` (l'element qui capte les clics) n'avait aucune
+  // hauteur propre : il se reduisait a celle du trait, soit QUATRE pixels. Mesure faite a
+  // l'epoque : a 3 px du centre, le clic etait deja perdu.
+  //
+  // On clique donc volontairement DE TRAVERS (6 px sous le milieu) : au centre, le test aurait
+  // passe meme avec la bande de 4 px, et n'aurait donc rien prouve.
+  // -------------------------------------------------------------------------
+  const barre = page.locator('[data-slot="slider"]').nth(1);
+  const boite = await barre.boundingBox();
+
+  verifier(
+    "lecteur : le rail offre une zone cliquable visable (>= 16 px)",
+    boite.height >= 16,
+    `${Math.round(boite.height)} px de haut`,
+  );
+
+  await page.locator("audio").evaluate((a) => {
+    a.currentTime = 0;
+  });
+  await page.waitForTimeout(300);
+  await page.mouse.click(
+    boite.x + boite.width * 0.6,
+    boite.y + boite.height / 2 + 6,
+  );
+  await page.waitForTimeout(500);
+
+  const tempsApresClic = await page
+    .locator("audio")
+    .evaluate((a) => a.currentTime);
+  verifier(
+    "lecteur : un clic HORS du centre du rail deplace la lecture",
+    tempsApresClic > 5,
+    `${Math.round(tempsApresClic)}s apres un clic a 60 % de la barre`,
+  );
+
+  // -------------------------------------------------------------------------
+  // Le contenu du lecteur tient DANS sa carte.
+  //
+  // La carte a une hauteur imposee par la grille de l'app (`grid-rows-[...104px]`) : son contenu
+  // ne peut donc pas la faire grandir, il DEBORDE. C'est arrive deux fois dans la meme journee —
+  // en ajoutant la ligne d'attribution, puis en agrandissant la zone cliquable du rail : la barre
+  // de progression sortait sous la carte, posee sur le fond de la page.
+  //
+  // Le test « l'app tient dans l'ecran » ne le voyait pas : le debordement restait DANS la
+  // fenetre, il sortait seulement du panneau. Une capture d'ecran non plus — il faut savoir ou
+  // regarder. `scrollHeight > clientHeight` le dit, lui, sans ambiguite.
+  // -------------------------------------------------------------------------
+  const debordement = await page.evaluate(() => {
+    const hauteur = (el) => el.getBoundingClientRect().height;
+    // Le lecteur a deux blocs (mobile et bureau) ; seul l'un des deux est affiche.
+    const carte = [
+      ...document.querySelector("audio").closest("section").querySelectorAll(".bg-card"),
+    ].find((c) => hauteur(c) > 0);
+
+    return carte.scrollHeight - carte.clientHeight;
+  });
+
+  verifier(
+    "lecteur : le contenu ne deborde pas de la carte",
+    debordement <= 0,
+    `deborde de ${debordement} px`,
+  );
+
   await page.context().close();
 });
 

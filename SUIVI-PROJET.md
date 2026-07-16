@@ -11,10 +11,10 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **152 tests** automatises : `cd tests && npm install && npm test`
-  (58 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **152/152.**
-- **CI verte** (GitHub Actions) : les 152 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 152 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **155 tests** automatises : `cd tests && npm install && npm test`
+  (61 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **155/155.**
+- **CI verte** (GitHub Actions) : les 155 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 155 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -121,6 +121,26 @@ La verification globale « aucune erreur JavaScript » ne les a pas vus non plus
 attraper que les erreurs de ce qu'on exerce**. Le test du lecteur manipule maintenant les deux
 curseurs au clavier et verifie que `audio.volume` et `audio.currentTime` bougent REELLEMENT.
 
+**Puis le clic sur le rail marchait « une fois sur trois »** (signale par Manuel aussi). Deux
+causes, mesurees :
+
+1. **La zone cliquable faisait 4 pixels.** Le `Control` (l'element qui capte les clics) n'avait
+   aucune hauteur propre : il se reduisait a celle du trait, la poignee etant en
+   `position: absolute`. A 3 px du centre, le clic etait deja perdu. La poignee, elle, avait son
+   `after:-inset-2` pour agrandir sa cible — le rail n'avait rien. Corrige par
+   `data-horizontal:h-5` sur le `Control` : **20 px de zone, 4 px de trait a l'oeil**.
+2. **Le lecteur debordait de sa carte de 11 px.** La ligne de grille du lecteur valait `88px`,
+   taille au pixel pres du contenu d'alors — la ligne d'attribution ajoutee le matin meme l'a
+   fait deborder, et la barre de progression sortait SOUS la carte. Passee a **`104px`**.
+
+Le test « l'app tient dans l'ecran » ne l'a pas vu : le debordement restait **dans la fenetre**,
+il ne sortait que du **panneau**. Une capture d'ecran non plus — il faut savoir ou regarder. Un
+test verifie desormais `scrollHeight <= clientHeight` sur la carte du lecteur, et un autre clique
+volontairement **a cote du centre** du rail (au centre, il passerait meme avec 4 px).
+
+> Si le contenu du lecteur grandit encore, c'est **`104px` dans `App.jsx`** qu'il faut revoir —
+> pas l'attribution, qui n'est pas negociable.
+
 ### Suppression de compte (RGPD) — FAIT le 2026-07-16
 
 `DELETE /api/users/mon-compte` + bouton et modale dans le profil. Deux garde-fous distincts :
@@ -149,7 +169,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 152 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 155 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -174,7 +194,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 152 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 155 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
@@ -239,7 +259,7 @@ incluses** dans `schema.sql`. Ne pas les rejouer.
 
 Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
 
-- **Les 152 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+- **Les 155 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
   serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
   tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
   fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
@@ -270,7 +290,7 @@ pieges qui casseraient le site sans que le code soit en cause :
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
-base, demarre les serveurs, joue les **152 tests**, compile le build de production et verifie
+base, demarre les serveurs, joue les **155 tests**, compile le build de production et verifie
 `npm audit`. Badge vert sur le README. Vert en 2 min 24.
 
 **La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
@@ -333,7 +353,7 @@ pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la 
 - **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
   n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
 - 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
-  reinitialisation). Suite : **152 tests**.
+  reinitialisation). Suite : **155 tests**.
 
 Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
 

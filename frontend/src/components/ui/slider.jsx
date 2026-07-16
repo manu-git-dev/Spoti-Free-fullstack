@@ -46,8 +46,21 @@ function Slider({
       max={max}
       thumbAlignment="edge"
       {...props}>
+      {/* `data-horizontal:h-5` : la ZONE CLIQUABLE, et elle n'a rien de decoratif.
+
+          Le Control est l'element qui capte les clics sur le rail. Sans hauteur propre, il se
+          reduisait a celle de son contenu — c'est-a-dire au trait de 4 px, la poignee etant en
+          `position: absolute`. Cliquer sur la barre de progression demandait donc de viser une
+          bande de QUATRE PIXELS : mesure faite, a 3 px du centre le clic etait deja perdu. D'ou
+          un curseur qui « marche une fois sur trois ».
+
+          La poignee, elle, avait droit a son `after:-inset-2` pour agrandir sa cible. Le rail
+          n'avait rien : on pouvait attraper la poignee, pas cliquer a cote.
+
+          20 px de haut pour 4 px de trait : le rail reste fin a l'oeil (il est centre par
+          `items-center`), mais devient visable au doigt comme a la souris. */}
       <SliderPrimitive.Control
-        className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
+        className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-horizontal:h-5 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
         <SliderPrimitive.Track
           data-slot="slider-track"
           className="relative grow overflow-hidden rounded-full bg-muted select-none data-horizontal:h-1 data-horizontal:w-full data-vertical:h-full data-vertical:w-1">
