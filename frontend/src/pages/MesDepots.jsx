@@ -4,7 +4,7 @@ import { Clock, Check, X, Inbox, UploadCloud, ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 
 const STATUTS = {
   en_attente: {
@@ -71,24 +71,26 @@ export default function MesDepots({ user }) {
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+    <Page
+      icone={Inbox}
+      titre="Mes demandes de dépôt"
+      sousTitre={`${depots.length} ${
+        depots.length > 1 ? "propositions envoyées" : "proposition envoyée"
+      }`}
+      // Le retour vers le dépôt vivait au-dessus du titre. L'en-tête étant désormais figé, il
+      // rejoint le bloc d'actions : il reste ainsi visible en permanence, au lieu de disparaître
+      // au premier défilement.
+      actions={
         <Link
           to="/deposer"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
           Déposer une musique
         </Link>
-
-        <EnTetePage
-          icone={Inbox}
-          titre="Mes demandes de dépôt"
-          sousTitre={`${depots.length} ${
-            depots.length > 1 ? "propositions envoyées" : "proposition envoyée"
-          }`}
-        />
-
+      }
+    >
+      <div className="max-w-2xl mx-auto">
         {chargement ? (
           <p className="text-muted-foreground">Chargement…</p>
         ) : depots.length === 0 ? (
@@ -156,6 +158,6 @@ export default function MesDepots({ user }) {
           </ul>
         )}
       </div>
-    </section>
+    </Page>
   );
 }

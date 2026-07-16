@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ListMusic } from "lucide-react";
 import ButtonAddPlaylist from "../composants/ButtonAddPlaylist";
 import Playlist from "../composants/Playlist";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 export default function Playlists({ playlists, setPlaylists, user }) {
@@ -39,25 +39,24 @@ export default function Playlists({ playlists, setPlaylists, user }) {
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={ListMusic}
-        titre="Vos playlists"
-        sousTitre={`${playlists.length} ${
-          playlists.length > 1 ? "playlists" : "playlist"
-        }`}
-        actions={
-          <ButtonAddPlaylist
-            setPlaylists={setPlaylists}
-            playlists={playlists}
-            variant="default"
-            size="default"
-            className="rounded-full w-full md:w-auto"
-          >
-            Ajouter une playlist
-          </ButtonAddPlaylist>
-        }
-      />
+    <Page
+      icone={ListMusic}
+      titre="Vos playlists"
+      sousTitre={`${playlists.length} ${
+        playlists.length > 1 ? "playlists" : "playlist"
+      }`}
+      actions={
+        <ButtonAddPlaylist
+          setPlaylists={setPlaylists}
+          playlists={playlists}
+          variant="default"
+          size="default"
+          className="rounded-full w-full md:w-auto"
+        >
+          Ajouter une playlist
+        </ButtonAddPlaylist>
+      }
+    >
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {playlists.length === 0 ? (
           <div className="text-muted-foreground col-span-2 md:col-span-4 lg:col-span-5">
@@ -74,6 +73,6 @@ export default function Playlists({ playlists, setPlaylists, user }) {
           ))
         )}
       </div>
-    </section>
+    </Page>
   );
 }

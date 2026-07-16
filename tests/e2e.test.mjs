@@ -426,7 +426,70 @@ await etape("suppression de compte", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 10. Mise en page : l'app ne doit jamais depasser la hauteur de l'ecran
+// 10. Mise en page : l'en-tete de page reste FIGE, seul le contenu defile
+//
+// C'est la structure commune a toutes les pages (voir `composants/Page.jsx`). Elle etait
+// auparavant reinventee page par page, et trois comportements coexistaient — la plupart des
+// pages faisaient defiler leur titre avec le contenu, si bien qu'on ne savait plus ou on etait
+// des qu'on descendait un peu.
+//
+// Ce test verrouille les deux invariants : le titre ne bouge pas d'un pixel quand on defile, et
+// la fenetre elle-meme ne defile jamais (c'est la zone de contenu qui a l'ascenseur).
+// ---------------------------------------------------------------------------
+await etape("mise en page : l'en-tete de page ne defile pas", async () => {
+  const compte = await creerCompte("EnTeteTest");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+
+  const PAGES = [
+    ["/", "Bonjour"],
+    ["/bibliotheque", "Bibliothèque"],
+    ["/favoris", "Vos musiques likées"],
+    ["/playlists", "Vos playlists"],
+    ["/deposer", "Déposer une musique"],
+    ["/profil", "Mon profil"],
+    ["/a-propos", "À propos"],
+    ["/contact", "Contact"],
+    ["/mentions-legales", "Mentions légales"],
+  ];
+
+  for (const [chemin, titreAttendu] of PAGES) {
+    await page.goto(`${APP}${chemin}`);
+    await page.waitForTimeout(700);
+
+    const h1 = page.locator("h1").first();
+    const avant = await h1.boundingBox();
+
+    // On pousse la zone de contenu jusqu'en bas.
+    await page.evaluate(() => {
+      const zone = document.querySelector("main .overflow-y-auto");
+      if (zone) zone.scrollTop = zone.scrollHeight;
+    });
+    await page.waitForTimeout(400);
+
+    const apres = await h1.boundingBox();
+
+    verifier(
+      `en-tete : "${titreAttendu}" reste en place au defilement`,
+      avant && apres && Math.abs(avant.y - apres.y) <= 1,
+      `y ${avant?.y?.toFixed(0)} -> ${apres?.y?.toFixed(0)}`,
+    );
+
+    // Si la fenetre elle-meme defile, c'est que la page deborde : l'en-tete "fige" partirait
+    // vers le haut avec le reste, et le lecteur en bas de l'ecran serait pousse hors de vue.
+    const fenetreDefile = await page.evaluate(
+      () => document.documentElement.scrollHeight > window.innerHeight + 1,
+    );
+    verifier(
+      `en-tete : ${chemin} ne fait pas defiler la fenetre entiere`,
+      !fenetreDefile,
+    );
+  }
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
+// 11. Mise en page : l'app ne doit jamais depasser la hauteur de l'ecran
 // ---------------------------------------------------------------------------
 await etape("mise en page : l'app tient dans l'ecran", async () => {
   const compte = await creerCompte("LayoutTest");

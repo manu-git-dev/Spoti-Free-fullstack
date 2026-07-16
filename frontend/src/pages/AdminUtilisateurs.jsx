@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import {
   Dialog,
   DialogContent,
@@ -98,15 +98,13 @@ export default function AdminUtilisateurs({ user }) {
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={Users}
-        titre="Utilisateurs"
-        sousTitre={`${utilisateurs.length} compte${
-          utilisateurs.length > 1 ? "s" : ""
-        }`}
-      />
-
+    <Page
+      icone={Users}
+      titre="Utilisateurs"
+      sousTitre={`${utilisateurs.length} compte${
+        utilisateurs.length > 1 ? "s" : ""
+      }`}
+    >
       {/* On n'edite volontairement PAS le pseudo, le nom ou l'email de quelqu'un.
           L'email est l'identifiant de connexion : pouvoir le changer reviendrait a pouvoir
           s'approprier un compte. Un admin a les droits que son role exige, pas tous ceux qui
@@ -313,6 +311,6 @@ export default function AdminUtilisateurs({ user }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </Page>
   );
 }

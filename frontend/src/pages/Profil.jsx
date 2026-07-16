@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
 import SupprimerCompte from "../composants/SupprimerCompte";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import { apiFetch } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -60,9 +60,8 @@ export default function Profil({
     );
   } else {
     return (
-      <section className="h-full overflow-y-auto p-4 md:p-8">
+      <Page icone={UserIcon} titre="Mon profil">
         <div className="max-w-xl mx-auto space-y-6">
-          <EnTetePage icone={UserIcon} titre="Mon profil" />
           <div className="relative overflow-hidden flex flex-col items-center text-center gap-3 rounded-2xl border border-border bg-background/50 p-6 md:flex-row md:text-left md:items-center md:gap-6">
             <div
               aria-hidden
@@ -119,7 +118,7 @@ export default function Profil({
             <SupprimerCompte setUser={setUser} setToken={setToken} />
           </div>
         </div>
-      </section>
+      </Page>
     );
   }
 }

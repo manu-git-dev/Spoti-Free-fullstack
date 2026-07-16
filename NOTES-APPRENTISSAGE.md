@@ -1724,3 +1724,33 @@ La ligne `submissions` d'un dépôt **approuvé** porte encore le nom du fichier
 **Ce que je retiens sur les tests** : mes tests API ont validé la route, mais c'est le test **navigateur** qui a vérifié que le bouton de confirmation est bien **désactivé tant que le mot de passe est vide**. Sans lui, la modale n'aurait été qu'un clic de plus. Les deux niveaux ne testent pas la même chose : l'API teste la **barrière**, le navigateur teste le **garde-fou**.
 
 ---
+
+### 60. Le nombre magique attend son heure, et la copie finit toujours par diverger
+
+**Contexte** : en relisant l'app sur desktop, deux incohérences me sautent aux yeux. La page Mentions légales a une police plus petite que Contact et À propos. Et surtout : sur Bibliothèque, le titre reste en haut quand je fais défiler la liste — mais sur toutes les autres pages, le titre part vers le haut avec le contenu. On ne sait plus où on est dès qu'on descend.
+
+**Ce que j'ai trouvé en cherchant** : il n'y avait pas deux comportements, il y en avait **trois**.
+
+| Pattern | Où | Verdict |
+|---|---|---|
+| `h-full overflow-y-auto` sur la section | la majorité des pages | tout défile, titre compris |
+| `overflow-hidden` + enfant en `h-[calc(100%-6rem)]` | Bibliothèque | marche, mais nombre magique |
+| `overflow-hidden flex flex-col` + enfant `flex-1 min-h-0` | **AdminMusiques** | la bonne solution |
+
+**La bonne solution était déjà dans mon code.** Je m'apprêtais à généraliser Bibliothèque, qui était ma référence mentale « ça marche ». C'était l'exception bancale. `AdminMusiques`, que j'avais écrite plus tard, faisait déjà les choses correctement. Leçon : avant de généraliser un pattern, vérifier qu'on généralise **le bon** — « ça a l'air de marcher » n'est pas « c'est juste ».
+
+**Pourquoi le `calc(100%-6rem)` est un piège** : il code en dur la hauteur de l'en-tête. Or mon `EnTetePage` n'a **pas** de hauteur fixe — un sous-titre l'agrandit, et sur mobile le bloc `actions` passe **sous** le titre, ce qui l'agrandit encore. Le calcul était donc **déjà faux** dans ces cas-là : le contenu dépassait, les dernières lignes devenaient inatteignables. Personne ne l'avait vu parce que la Bibliothèque, justement, n'a pas de sous-titre. **Un nombre magique n'est pas faux tout de suite. Il attend.**
+
+**`flex-1 min-h-0`, et le piège du `min-h-0`** : c'est la solution sans nombre magique — la zone de défilement prend ce qui reste, quelle que soit la hauteur réelle de l'en-tête. Mais `min-h-0` n'est pas décoratif : **sans lui, rien ne défile**. Un enfant de flexbox a `min-height: auto` par défaut : il refuse d'être plus petit que son contenu, donc `overflow-y-auto` n'a jamais rien à faire déborder — c'est la section entière qui grandit et sort de l'écran. `min-h-0` lève cette protection. C'est le genre de détail qui fait perdre une heure quand on ne le connaît pas.
+
+**La vraie cause des deux problèmes est la même : la copie.** La police de Mentions légales n'était pas plus petite par décision — `Apropos` et `MentionsLegales` définissaient **chacune leur propre** composant `Titre`, identique en intention, différent en taille (`text-2xl` contre `text-xl`). Les deux pages ont juste été écrites à des moments différents. Pareil pour la mise en page : chaque page reconstruisait sa coquille à la main.
+
+Ironie : le commentaire en tête de mon propre `EnTetePage` dit exactement ça — « recopier le markup dans chaque page, c'est se garantir qu'il divergera à nouveau dès la prochaine page ajoutée ». J'avais compris le principe pour l'en-tête, et je ne l'avais pas appliqué à la coquille qui l'entoure. **Corriger une valeur qui a dérivé, c'est traiter le symptôme ; supprimer la copie, c'est traiter la cause.** D'où `Page.jsx` et `TitreSection.jsx`.
+
+**Un cas particulier qui n'en était pas un** : l'accueil avait son propre en-tête, plus grand et sans icône. En le regardant vraiment, il correspondait **exactement** au modèle d'`EnTetePage` : un titre (« Bonjour X »), un sous-titre, et un bloc à droite (connexion ou avatar). Il n'était pas différent — il avait juste été écrit avant que le composant existe. Beaucoup de « cas particuliers » sont des vestiges chronologiques.
+
+**Le déplacement que la structure a imposé** : sur « Mes demandes », un lien de retour vivait **au-dessus** du titre. Avec un en-tête figé, il n'avait plus de place — je l'ai passé dans le slot `actions`. C'est mieux : il reste visible en permanence au lieu de disparaître au premier défilement. Une contrainte structurelle force parfois une meilleure décision qu'on n'aurait pas prise seul.
+
+**Vérifier au lieu de croire** : j'ai écrit un test qui mesure la position du `<h1>` **avant et après** avoir poussé la zone de contenu jusqu'en bas, sur les 9 pages. Si le titre bouge d'un pixel, c'est rouge. J'ai aussi vérifié que la **fenêtre** ne défile jamais — si elle défile, c'est que la page déborde, l'en-tête « figé » partirait avec le reste et le lecteur en bas serait poussé hors de vue. Une capture d'écran m'aurait montré que « ça a l'air bien ». La mesure me dit que **c'est** bien, et le test empêchera que ça redérive.
+
+---

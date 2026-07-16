@@ -1,23 +1,21 @@
 import { Link } from "react-router-dom";
 import { Scale } from "lucide-react";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
+import TitreSection from "../composants/TitreSection";
 
 // ATTENTION — trois valeurs sont a completer avant la mise en ligne, elles sont marquees
 // A_COMPLETER ci-dessous. Elles n'ont pas ete devinees volontairement : des mentions legales
 // qui affichent une raison sociale ou un hebergeur approximatifs sont pires que pas de mentions
 // legales du tout, puisqu'elles affirment quelque chose de faux.
 
-function Titre({ children }) {
-  return (
-    <h2 className="text-xl font-serif font-bold text-primary">{children}</h2>
-  );
-}
-
+// La taille du corps de texte (`leading-relaxed`, sans `text-sm`) est celle des paragraphes de
+// la page A propos. Les deux pages sont de la prose : rien ne justifiait qu'on lise l'une plus
+// petit que l'autre — c'etait un accident, pas une decision.
 function Bloc({ titre, children }) {
   return (
     <section className="flex flex-col gap-2">
-      <Titre>{titre}</Titre>
-      <div className="text-sm leading-relaxed text-muted-foreground flex flex-col gap-2">
+      <TitreSection>{titre}</TitreSection>
+      <div className="leading-relaxed text-muted-foreground flex flex-col gap-2">
         {children}
       </div>
     </section>
@@ -26,13 +24,12 @@ function Bloc({ titre, children }) {
 
 export default function MentionsLegales() {
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
+    <Page
+      icone={Scale}
+      titre="Mentions légales"
+      sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
+    >
       <div className="max-w-3xl mx-auto flex flex-col gap-8">
-        <EnTetePage
-          icone={Scale}
-          titre="Mentions légales"
-          sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
-        />
 
         <Bloc titre="Éditeur">
           <p>
@@ -118,6 +115,6 @@ export default function MentionsLegales() {
           </p>
         </Bloc>
       </div>
-    </section>
+    </Page>
   );
 }
