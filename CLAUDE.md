@@ -32,7 +32,8 @@ frontend/
 - Les routes protégées passent par `authMiddleware` (JWT dans le header `Authorization: Bearer <token>`), qui attache le payload décodé à `req.user`.
 - Les routes d'**administration** (gestion du catalogue : `POST /api/musics/ajouter`, `PUT /api/musics/update/:id`, `DELETE /api/musics/delete/:id`, et `GET /api/users`) passent par `authMiddleware` **puis** `adminMiddleware`, qui relit le rôle en base (colonne `users.role`, valeurs `user`/`admin`) et répond `403` si l'utilisateur n'est pas admin.
 - Auth : hash des mots de passe avec `bcrypt.hash` à l'inscription (`POST /api/users/inscription`), vérif avec `bcrypt.compare` + génération JWT (expiration **24h**) à la connexion (`POST /api/users/connexion`). À l'expiration, le front purge la session automatiquement quand une route protégée répond `401` (voir `App.jsx`).
-- **Règles de saisie** (email, mot de passe) : `backend/src/validation.js` est la **source de vérité**, importée par l'inscription **et** la réinitialisation de mot de passe — une règle appliquée à l'une mais pas à l'autre se contournerait via « mot de passe oublié ». Mot de passe : **8 caractères, une majuscule, un chiffre**. `frontend/src/lib/validation.js` en est le **miroir d'affichage** (checklist en direct) : il n'impose rien, il explique. Si tu changes une règle, change les deux.
+- **Règles de saisie** (email, mot de passe, licence) : `backend/src/validation.js` est la **source de vérité**, importée par l'inscription **et** la réinitialisation de mot de passe — une règle appliquée à l'une mais pas à l'autre se contournerait via « mot de passe oublié ». Mot de passe : **8 caractères, une majuscule, un chiffre**. `frontend/src/lib/validation.js` en est le **miroir d'affichage** (checklist en direct) : il n'impose rien, il explique. Si tu changes une règle, change les deux.
+- **Droits d'auteur** : le catalogue ne diffuse que du **CC BY** ou **CC BY-SA** (`LICENCES_ACCEPTEES` dans `validation.js` — les variantes NC/ND sont exclues). `musics.licence` et `musics.licence_url` sont **NOT NULL** : tout chemin qui insère dans `musics` doit les porter, y compris les fixtures de test qui écrivent en SQL direct. L'URL du deed est **dérivée du code de licence**, jamais reçue du client. Ces licences **exigent l'attribution** : `Attribution.jsx` l'affiche dans le lecteur, ne pas la retirer — sans elle, la diffusion viole la licence.
 
 ## Lancer le projet en dev
 
@@ -81,13 +82,17 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
   `add-*.sql` du même dossier sont des **migrations historiques** — leurs modifications sont déjà
   incluses dans `schema.sql`. Sur une base neuve, celui-ci suffit, suivi de `seed-musics.sql` (le
   catalogue). Si tu modifies une table, mets `schema.sql` à jour : c'est ce fichier que rejoue la CI.
-- `backend/public/` (audio + pochettes) est **gitignoré**. `node tests/preparer-medias.mjs` recrée
-  les fichiers manquants avec un mp3 de test silencieux. Il n'écrase jamais un fichier existant.
+- `backend/public/` (audio + pochettes) est **gitignoré** (~400 Mo). `node tests/preparer-medias.mjs`
+  recrée les fichiers manquants avec un mp3 de test silencieux. Il n'écrase jamais un fichier
+  existant, et lit la liste des fichiers **dans le seed** (ne pas y recoder de liste en dur).
+- `backend/scripts/seed-musics.sql` est **généré** par `scripts/importer-jamendo.mjs` (catalogue
+  Creative Commons récupéré via l'API Jamendo, clé dans `JAMENDO_CLIENT_ID`). Ne pas l'éditer à la
+  main : relancer le script.
 
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 106 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 110 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -96,7 +101,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **106 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **110 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 

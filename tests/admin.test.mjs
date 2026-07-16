@@ -236,7 +236,13 @@ await etape("gestion du catalogue", async () => {
 
   const modification = await admin(`/api/musics/update/${cible.id_music}`, {
     method: "PUT",
-    body: { title: cible.title, artist: cible.artist, genre: "Genre de test" },
+    body: {
+      title: cible.title,
+      artist: cible.artist,
+      genre: "Genre de test",
+      licence: cible.licence,
+      sourceUrl: cible.source_url ?? "",
+    },
   });
   verifier(
     "catalogue : modification des metadonnees (200)",
@@ -261,7 +267,13 @@ await etape("gestion du catalogue", async () => {
   // On restaure le genre d'origine.
   await admin(`/api/musics/update/${cible.id_music}`, {
     method: "PUT",
-    body: { title: cible.title, artist: cible.artist, genre: cible.genre ?? "" },
+    body: {
+      title: cible.title,
+      artist: cible.artist,
+      genre: cible.genre ?? "",
+      licence: cible.licence,
+      sourceUrl: cible.source_url ?? "",
+    },
   });
 
   const sansTitre = await admin(`/api/musics/update/${cible.id_music}`, {
@@ -310,10 +322,14 @@ await etape("suppression sans casser les fichiers partages", async () => {
     "SELECT src_audio, src_image FROM musics LIMIT 1",
   );
 
+  // `licence` et `licence_url` sont en NOT NULL sans valeur par defaut : ce test ecrit en SQL
+  // direct, donc il doit les fournir lui-meme (l'API, elle, derive l'URL du code de licence).
+  // C'est le NOT NULL qui joue son role — il rend impossible de creer un morceau sans licence,
+  // y compris depuis une fixture de test.
   const [insertion] = await db.query(
-    `INSERT INTO musics (title, artist, genre, src_image, src_audio, duration)
-     VALUES ('__admin-test-a', '__admin-test', 'Test', ?, ?, 60),
-            ('__admin-test-b', '__admin-test', 'Test', ?, ?, 60)`,
+    `INSERT INTO musics (title, artist, genre, src_image, src_audio, duration, licence, licence_url)
+     VALUES ('__admin-test-a', '__admin-test', 'Test', ?, ?, 60, 'CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/'),
+            ('__admin-test-b', '__admin-test', 'Test', ?, ?, 60, 'CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/')`,
     [modele.src_image, modele.src_audio, modele.src_image, modele.src_audio],
   );
 

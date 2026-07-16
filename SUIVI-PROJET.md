@@ -4,16 +4,53 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## ETAT DU PROJET (au 2026-07-14, fin de session) — a lire en premier
+## ETAT DU PROJET (au 2026-07-16) — a lire en premier
 
-L'application est **terminee, testee, et prete a etre deployee**. Il ne reste **rien a faire dans
-le code**.
+> ⚠️ **CHANTIER EN COURS : les droits d'auteur.** Le code est ecrit et teste, mais **il manque une
+> etape manuelle bloquante** — voir "Le chantier des licences" juste en dessous. Tant qu'elle n'est
+> pas faite, **l'app ne doit PAS etre mise en ligne** : le catalogue actuel affiche de vrais titres
+> d'artistes celebres ("Blinding Lights / The Weeknd") sur des fichiers libres sans aucun rapport.
+> C'etait sans consequence sur localhost, ce ne l'est plus en public.
 
-- **106 tests** automatises : `cd tests && npm install && npm test`
-  (26 parcours + 30 securite + 25 depot + 25 admin). Sortie en code 1 si echec.
-- **CI verte** (GitHub Actions) : les 106 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 106 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **110 tests** automatises : `cd tests && npm install && npm test`
+  (26 parcours + 30 securite + 29 depot + 25 admin). Sortie en code 1 si echec.
+  **109/110 actuellement** : le dernier passe au vert des l'import du vrai catalogue (voir plus bas).
+- **CI verte** (GitHub Actions) : les 110 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 110 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
+
+### Le chantier des licences (2026-07-16)
+
+Le catalogue passe a **100 morceaux Creative Commons reels** (API Jamendo), et le depot exige
+desormais une **declaration de droits**. Ce qui est **fait** :
+
+- `musics` porte `licence` / `licence_url` (**NOT NULL**) et `source_url` ; `submissions` porte
+  `licence`, `source_url` et `droits_confirmes_at`. Migration : `scripts/add-licence-columns.sql`,
+  **deja appliquee sur la base de dev**, et repercutee dans `schema.sql`.
+- Les **trois** chemins d'ecriture dans `musics` (ajout admin, approbation d'un depot, fixture SQL
+  des tests) portent la licence. L'URL du deed est **derivee** du code, jamais recue du client.
+- Perimetre : **CC BY et CC BY-SA uniquement** (`LICENCES_ACCEPTEES` dans `validation.js`).
+- Formulaire de depot : case de certification **non pre-cochee** + licence + source. Valide **cote
+  serveur** (le `required` HTML ne protege rien).
+- `Attribution.jsx` affiche licence + lien vers l'original dans le lecteur. **CC BY l'exige.**
+- Page `/mentions-legales` (+ liens dans l'Aside et le menu mobile).
+- `scripts/importer-jamendo.mjs` : recupere les morceaux et **genere** `seed-musics.sql`.
+
+**CE QUI BLOQUE — une seule chose :**
+
+1. Creer un compte sur https://devportal.jamendo.com/ et recuperer un **`client_id`**.
+2. `cd backend && JAMENDO_CLIENT_ID=xxx node scripts/importer-jamendo.mjs --nombre 100`
+3. `mysql -u root -p spotifree < backend/scripts/seed-musics.sql` (efface le faux catalogue)
+4. Relancer les tests : le 110e passe au vert.
+
+**A FAIRE AUSSI avant la mise en ligne :**
+
+- `frontend/src/pages/MentionsLegales.jsx` contient **trois `A_COMPLETER`** (directeur de la
+  publication, contact, hebergeur). Ils n'ont pas ete devines : des mentions legales approximatives
+  sont pires que pas de mentions legales.
+- **La suppression de compte n'existe pas** (aucune route `DELETE /api/users/...`). Le RGPD donne un
+  droit a l'effacement ; en attendant, les mentions legales renvoient vers la page de contact, ce
+  qui est acceptable mais minimal.
 
 ### Ce que fait l'application
 
@@ -25,7 +62,8 @@ utilisateurs, gestion du catalogue).
 
 ### LA PROCHAINE ETAPE : le deploiement
 
-**C'est la seule chose qui reste, et elle ne depend plus du code.**
+**Le deploiement attend deux choses : la machine (paiement Hostinger), et l'import du vrai
+catalogue (ci-dessus). Ne pas mettre en ligne avant le second.**
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
 (2 vCPU, 8 Go RAM, 100 Go NVMe), 12 mois, **Ubuntu 24.04 LTS**, datacenter France. Le paiement
@@ -49,7 +87,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 106 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 110 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
@@ -113,7 +151,7 @@ incluses** dans `schema.sql`. Ne pas les rejouer.
 
 Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
 
-- **Les 106 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+- **Les 110 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
   serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
   tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
   fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
@@ -144,7 +182,7 @@ pieges qui casseraient le site sans que le code soit en cause :
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
-base, demarre les serveurs, joue les **106 tests**, compile le build de production et verifie
+base, demarre les serveurs, joue les **110 tests**, compile le build de production et verifie
 `npm audit`. Badge vert sur le README. Vert en 2 min 24.
 
 **La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
@@ -207,7 +245,7 @@ pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la 
 - **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
   n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
 - 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
-  reinitialisation). Suite : **106 tests**.
+  reinitialisation). Suite : **110 tests**.
 
 Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
 

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   LayoutDashboard,
   Music,
+  Scale,
 } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
@@ -182,6 +183,10 @@ export default function Aside({
         <NavLink to="/contact" className={lienSecondaire}>
           <Mail className="w-4 h-4 shrink-0" />
           Contact
+        </NavLink>
+        <NavLink to="/mentions-legales" className={lienSecondaire}>
+          <Scale className="w-4 h-4 shrink-0" />
+          Mentions légales
         </NavLink>
       </nav>
     </aside>

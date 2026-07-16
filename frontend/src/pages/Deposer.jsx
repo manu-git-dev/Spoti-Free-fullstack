@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiFetch, messageErreur } from "@/lib/api";
+import { LICENCES_DEPOT } from "@/lib/validation";
 
 export default function Deposer({ user }) {
   const [audio, setAudio] = useState(null);
@@ -74,6 +75,15 @@ export default function Deposer({ user }) {
     donneesEnvoi.append("title", champs.get("title"));
     donneesEnvoi.append("artist", champs.get("artist"));
     donneesEnvoi.append("genre", champs.get("genre") ?? "");
+    donneesEnvoi.append("licence", champs.get("licence"));
+    donneesEnvoi.append("sourceUrl", champs.get("sourceUrl") ?? "");
+    // Une case non cochee n'apparait pas du tout dans le FormData : `get` renvoie null. On
+    // envoie donc explicitement "true"/"false" plutot que de laisser le serveur interpreter une
+    // absence — un champ manquant peut aussi vouloir dire "bug du formulaire".
+    donneesEnvoi.append(
+      "droitsConfirmes",
+      champs.get("droitsConfirmes") === "on" ? "true" : "false",
+    );
     donneesEnvoi.append("audio", audio);
     // Pochette facultative : si l'utilisateur n'en met pas, l'admin en attribuera une du
     // catalogue a l'approbation.
@@ -154,6 +164,50 @@ export default function Deposer({ user }) {
             <Input id="genre" name="genre" placeholder="Pop, Rock, Rap…" />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="licence" className="text-sm font-medium">
+              Licence
+            </label>
+            <select
+              id="licence"
+              name="licence"
+              required
+              defaultValue=""
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+            >
+              <option value="" disabled>
+                Choisis une licence…
+              </option>
+              {LICENCES_DEPOT.map((licence) => (
+                <option key={licence.code} value={licence.code}>
+                  {licence.libelle}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Spotifree ne diffuse que des œuvres réutilisables. En déposant, tu
+              places ton morceau sous cette licence — ou tu confirmes qu'il l'est
+              déjà.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="sourceUrl" className="text-sm font-medium">
+              Lien vers l'original{" "}
+              <span className="text-muted-foreground">(facultatif)</span>
+            </label>
+            <Input
+              id="sourceUrl"
+              name="sourceUrl"
+              type="url"
+              placeholder="https://…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Si le morceau vient d'ailleurs (Jamendo, ccMixter…), indique sa
+              page d'origine. Inutile pour une création personnelle.
+            </p>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <ZoneDepotFichier
               label="Fichier audio"
@@ -174,6 +228,23 @@ export default function Deposer({ user }) {
               onFichierChange={setImage}
             />
           </div>
+
+          {/* La case n'est volontairement PAS pré-cochée : un consentement pré-coché n'est pas
+              un consentement, c'est un piège. L'utilisateur doit faire le geste. */}
+          <label className="flex items-start gap-3 rounded-xl border border-border bg-background/50 p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="droitsConfirmes"
+              required
+              className="mt-0.5 size-4 shrink-0 accent-primary cursor-pointer"
+            />
+            <span className="text-sm text-muted-foreground">
+              Je certifie être l'auteur de ce morceau et de sa pochette, ou
+              détenir les droits nécessaires pour les diffuser sous cette
+              licence. Je comprends qu'un dépôt qui ne respecte pas cette
+              condition sera refusé et pourra être retiré.
+            </span>
+          </label>
 
           <Button
             type="submit"

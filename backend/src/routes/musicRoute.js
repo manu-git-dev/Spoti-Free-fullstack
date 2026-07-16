@@ -4,6 +4,13 @@ import fs from "node:fs/promises";
 import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+import {
+  licenceValide,
+  urlDeLicence,
+  sourceUrlValide,
+  MESSAGE_LICENCE,
+  MESSAGE_SOURCE_URL,
+} from "../validation.js";
 
 const router = express.Router();
 //http://localhost:3000/api/musics
@@ -68,6 +75,11 @@ router.post("/ecoute/:id", async (req, res) => {
 });
 
 // Ajouter une musique — ADMIN UNIQUEMENT (gestion du catalogue)
+//
+// La licence est obligatoire, au meme titre que le titre ou l'artiste : le catalogue est
+// diffuse publiquement, un morceau dont on ne sait pas sous quelle licence il est diffuse n'a
+// rien a y faire. La colonne `musics.licence` est en NOT NULL pour la meme raison — cette
+// verification produit un 400 lisible la ou la base produirait un 500 opaque.
 router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
   const title = req.body.title;
   const artist = req.body.artist;
@@ -75,6 +87,8 @@ router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
   const srcImage = req.body.srcImage;
   const srcAudio = req.body.srcAudio;
   const duration = req.body.duration;
+  const licence = req.body.licence;
+  const sourceUrl = req.body.sourceUrl?.trim() || null;
 
   // Validation des données
   if (!title || !artist || !srcImage || !srcAudio) {
@@ -83,10 +97,29 @@ router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
     });
   }
 
+  if (!licenceValide(licence)) {
+    return res.status(400).json({ message: MESSAGE_LICENCE });
+  }
+
+  if (!sourceUrlValide(sourceUrl)) {
+    return res.status(400).json({ message: MESSAGE_SOURCE_URL });
+  }
+
   try {
     await db.query(
-      "INSERT INTO musics (id_music, title, artist, genre, src_image, src_audio, duration) VALUES (NULL, ?, ?, ?, ?, ?, ?)",
-      [title, artist, genre, srcImage, srcAudio, duration],
+      "INSERT INTO musics (id_music, title, artist, genre, src_image, src_audio, duration, licence, licence_url, source_url) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        title,
+        artist,
+        genre,
+        srcImage,
+        srcAudio,
+        duration,
+        licence,
+        // Derivee du code, jamais recue du client : voir le commentaire de LICENCES_ACCEPTEES.
+        urlDeLicence(licence),
+        sourceUrl,
+      ],
     );
 
     return res.status(201).json({
@@ -137,12 +170,18 @@ router.get("/info/:id", async (req, res) => {
 //    Rien n'empecherait d'y ecrire `../../.env` et de le faire servir par express.static.
 //    La duree, elle, est extraite du fichier reel : une valeur envoyee par le client pourrait
 //    simplement mentir.
+// La licence et la source font partie des metadonnees modifiables : une licence saisie de
+// travers doit pouvoir etre corrigee sans supprimer puis re-creer le morceau. C'est meme la
+// seule facon de reparer une attribution fausse — et une attribution fausse est un probleme
+// juridique, pas une coquille.
 router.put("/update/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = req.params.id;
     const title = req.body.title?.trim();
     const artist = req.body.artist?.trim();
     const genre = req.body.genre?.trim() || null;
+    const licence = req.body.licence;
+    const sourceUrl = req.body.sourceUrl?.trim() || null;
 
     if (!title || !artist) {
       return res.status(400).json({
@@ -150,9 +189,17 @@ router.put("/update/:id", authMiddleware, adminMiddleware, async (req, res) => {
       });
     }
 
+    if (!licenceValide(licence)) {
+      return res.status(400).json({ message: MESSAGE_LICENCE });
+    }
+
+    if (!sourceUrlValide(sourceUrl)) {
+      return res.status(400).json({ message: MESSAGE_SOURCE_URL });
+    }
+
     const [musics] = await db.query(
-      "UPDATE `musics` SET `title` = ?, `artist` = ?, `genre` = ? WHERE id_music = ?",
-      [title, artist, genre, id],
+      "UPDATE `musics` SET `title` = ?, `artist` = ?, `genre` = ?, `licence` = ?, `licence_url` = ?, `source_url` = ? WHERE id_music = ?",
+      [title, artist, genre, licence, urlDeLicence(licence), sourceUrl, id],
     );
 
     if (musics.affectedRows === 0) {

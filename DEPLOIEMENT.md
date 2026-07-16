@@ -135,7 +135,7 @@ Créer les tables et le catalogue :
 
 ```bash
 mysql -u spotifree -p spotifree < backend/scripts/schema.sql       # les 8 tables
-mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # les 20 morceaux
+mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # le catalogue
 ```
 
 > Les scripts `add-*.sql` du même dossier sont des **migrations historiques** : leurs
@@ -148,14 +148,31 @@ de test. C'est voulu : voir §9 pour créer ton compte admin proprement.
 
 ## 5. Les fichiers audio ⚠️
 
-`backend/public/` **n'est pas versionné** (23 Mo, et les droits des morceaux ne permettent pas leur
-redistribution). Il faut donc les envoyer à la main, depuis ta machine :
+`backend/public/` **n'est pas versionné** : le catalogue pèse plusieurs centaines de Mo, ça n'a
+rien à faire dans Git. Le seed ne contient que les *métadonnées* — après le §4, la base connaît
+les morceaux, mais le serveur n'a pas un seul fichier à servir.
+
+Deux façons de les obtenir sur le VPS. **La première est la bonne** :
 
 ```bash
-# depuis ton Mac, pas depuis le VPS
-scp -r backend/public/musiques root@<ip>:/var/www/spotifree/backend/public/
-scp -r backend/public/images   root@<ip>:/var/www/spotifree/backend/public/
+# A. Depuis ton Mac : envoyer les fichiers déjà téléchargés par le script d'import.
+#
+# rsync et pas scp : il reprend là où il s'est arrêté. Sur ~400 Mo et une connexion qui
+# lâche à 80 %, scp recommence tout depuis zéro, rsync reprend au fichier suivant.
+# Le `-z` compresse à la volée, le `--progress` évite de se demander si c'est planté.
+rsync -avz --progress backend/public/ root@<ip>:/var/www/spotifree/backend/public/
 ```
+
+```bash
+# B. Sur le VPS : re-télécharger depuis Jamendo plutôt que de transférer.
+#    Plus long, mais utile si ta connexion montante est mauvaise.
+cd /var/www/spotifree/backend
+JAMENDO_CLIENT_ID=xxx node scripts/importer-jamendo.mjs
+```
+
+> ⚠️ L'option B **régénère `seed-musics.sql`** et peut donc tomber sur d'autres morceaux que ceux
+> de ta base. Si tu la choisis, rejoue le seed qu'elle vient d'écrire (§4) — sinon la base et les
+> fichiers ne parleront pas des mêmes morceaux.
 
 Et créer le dossier des dépôts en attente (vide, mais il **doit** exister) :
 
@@ -163,8 +180,9 @@ Et créer le dossier des dépôts en attente (vide, mais il **doit** exister) :
 mkdir -p /var/www/spotifree/backend/uploads
 ```
 
-> Sans les fichiers, le catalogue s'affiche mais rien ne se lit. Pour une démo sans les vraies
-> musiques : `node tests/preparer-medias.mjs` génère des médias de test (un mp3 silencieux).
+> Sans les fichiers, le catalogue s'affiche mais rien ne se lit. Pour une démo sans télécharger
+> les vraies musiques : `node tests/preparer-medias.mjs` génère des médias de test (un mp3
+> silencieux par morceau du seed).
 
 ---
 

@@ -12,6 +12,7 @@ import MotDePasseOublie from "./pages/MotDePasseOublie";
 import ReinitialiserMotDePasse from "./pages/ReinitialiserMotDePasse";
 import Apropos from "./pages/Apropos";
 import Contact from "./pages/Contact";
+import MentionsLegales from "./pages/MentionsLegales";
 import Playlists from "./pages/Playlists";
 import Favoris from "./pages/Favoris";
 import MusicsInPlaylist from "./pages/MusicsInPlaylist";
@@ -274,6 +275,7 @@ function App() {
             />
             <Route path="/a-propos" element={<Apropos />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/mentions-legales" element={<MentionsLegales />} />
 
             <Route
               path="/playlists"

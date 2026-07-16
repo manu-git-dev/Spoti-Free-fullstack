@@ -1,14 +1,13 @@
 // Reconstitue `backend/public/` a partir des fixtures de test.
 //
 // POURQUOI CE SCRIPT EXISTE
-// `backend/public/` est gitignore : les vrais fichiers audio pesent 23 Mo, et ce sont des
-// morceaux dont on n'a pas les droits de redistribution. Une machine neuve (la CI, ou un
-// recruteur qui clone le depot) n'a donc AUCUN media — le catalogue s'affiche, mais rien ne se
-// lit, et les tests qui touchent aux fichiers echouent.
+// `backend/public/` est gitignore : les fichiers audio du catalogue pesent plusieurs centaines
+// de Mo. Une machine neuve (la CI, ou un recruteur qui clone le depot) n'a donc AUCUN media —
+// le catalogue s'affiche, mais rien ne se lit, et les tests qui touchent aux fichiers echouent.
 //
 // Ce script cree, pour chaque fichier reference par le catalogue, une copie du media de test :
 // un mp3 SILENCIEUX de 2 secondes (fabrique, donc libre de tout droit) et une pochette minimale.
-// L'app devient alors pleinement testable sans un octet de contenu sous copyright.
+// L'app devient alors pleinement testable sans telecharger un seul vrai morceau.
 //
 // Il ne REMPLACE JAMAIS un fichier existant : lance sur la machine de developpement, il ne
 // touchera pas aux vraies musiques.
@@ -20,16 +19,43 @@ import url from "node:url";
 const ICI = path.dirname(url.fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ICI, "..", "backend", "public");
 const FIXTURES = path.join(ICI, "fixtures");
+const SEED = path.join(ICI, "..", "backend", "scripts", "seed-musics.sql");
 
-// Les fichiers reellement references par `backend/scripts/seed-musics.sql`.
-const AUDIOS = [
-  "atlasaudio-sentimental-piano.mp3",
-  "bombinsound-stomp-and-claps.mp3",
-  "jonasblakewood-energetic.mp3",
-  "the_mountain-phonk-phonk-music.mp3",
-  "the_mountain-success.mp3",
-];
-const IMAGES = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"];
+// Les noms de fichiers sont LUS dans le seed, pas recopies ici.
+//
+// Ils etaient codes en dur : cinq mp3 et cinq images, ce qui tenait tant que le catalogue de
+// demonstration comptait cinq fichiers. Un catalogue de cent morceaux rendait cette liste
+// ingerable, et surtout fausse en silence — le script aurait cree cinq fichiers obsoletes et
+// ignore les cent autres, laissant la CI echouer sur des medias manquants sans dire pourquoi.
+//
+// La source de verite du catalogue, c'est le seed. Autant le lire.
+function fichiersDuSeed() {
+  const sql = fs.readFileSync(SEED, "utf8");
+
+  const audios = new Set();
+  const images = new Set();
+
+  for (const [, chemin] of sql.matchAll(/'(musiques\/[^']+)'/g)) {
+    audios.add(path.basename(chemin));
+  }
+  for (const [, chemin] of sql.matchAll(/'(images\/[^']+)'/g)) {
+    images.add(path.basename(chemin));
+  }
+
+  return { audios: [...audios], images: [...images] };
+}
+
+const { audios: AUDIOS, images: IMAGES } = fichiersDuSeed();
+
+if (AUDIOS.length === 0) {
+  // Mieux vaut s'arreter net que laisser la CI echouer vingt lignes plus loin sur un
+  // "fichier introuvable" dont l'origine serait impossible a deviner.
+  console.error(
+    `Aucun fichier audio trouve dans ${path.relative(ICI, SEED)}.\n` +
+      "Le seed est-il vide, ou son format a-t-il change ?",
+  );
+  process.exit(1);
+}
 
 const audioTest = fs.readFileSync(path.join(FIXTURES, "audio-test.mp3"));
 const imageTest = fs.readFileSync(path.join(FIXTURES, "pochette-test.jpg"));

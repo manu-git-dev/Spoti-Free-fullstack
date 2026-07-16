@@ -38,7 +38,18 @@ const VRAIE_IMAGE = fs.readFileSync(path.join(FIXTURES, "pochette-test.jpg"));
 const MARQUEUR = `__depot-test-${Date.now()}`;
 
 /** Construit un envoi multipart (comme le ferait le formulaire du navigateur). */
-function formulaireDepot(titre, { audio, nomAudio, image = VRAIE_IMAGE }) {
+function formulaireDepot(
+  titre,
+  {
+    audio,
+    nomAudio,
+    image = VRAIE_IMAGE,
+    // La declaration de droits est obligatoire : par defaut on envoie un depot conforme, et
+    // les tests qui verifient le REFUS surchargent ces deux valeurs.
+    licence = "CC BY 4.0",
+    droitsConfirmes = "true",
+  },
+) {
   const donnees = new FormData();
   donnees.append("title", titre);
   donnees.append("artist", MARQUEUR);
@@ -46,6 +57,8 @@ function formulaireDepot(titre, { audio, nomAudio, image = VRAIE_IMAGE }) {
   donnees.append("audio", new Blob([audio]), nomAudio);
   // `image: null` = depot SANS pochette (elle est facultative).
   if (image) donnees.append("image", new Blob([image]), "cover.jpg");
+  if (licence !== null) donnees.append("licence", licence);
+  donnees.append("droitsConfirmes", droitsConfirmes);
   return donnees;
 }
 
@@ -69,6 +82,72 @@ const { token: JETON_ADMIN } = await creerAdmin("DepotAdmin");
 function tokenAdmin() {
   return JETON_ADMIN;
 }
+
+// ---------------------------------------------------------------------------
+// 0. La declaration de droits
+//
+// Le formulaire React coche `required` sur la case et n'offre que des licences valides dans son
+// menu — mais ces tests passent par l'API DIRECTEMENT, comme le ferait n'importe qui avec curl.
+// C'est tout l'interet : ils verifient la barriere qui protege reellement, pas celle qui decore.
+// ---------------------------------------------------------------------------
+await etape("declaration de droits", async () => {
+  const { token } = await creerCompte("DepotDroits");
+
+  const sansCertification = await deposer(token, "Sans certification", {
+    audio: VRAI_MP3,
+    nomAudio: "audio.mp3",
+    droitsConfirmes: "false",
+  });
+  verifier(
+    "depot : un depot sans certification de droits est REJETE (400)",
+    sansCertification.reponse.status === 400,
+    `recu ${sansCertification.reponse.status}`,
+  );
+
+  const sansLicence = await deposer(token, "Sans licence", {
+    audio: VRAI_MP3,
+    nomAudio: "audio.mp3",
+    licence: null,
+  });
+  verifier(
+    "depot : un depot sans licence est REJETE (400)",
+    sansLicence.reponse.status === 400,
+    `recu ${sansLicence.reponse.status}`,
+  );
+
+  // Le perimetre est volontairement restreint a CC BY et CC BY-SA : les variantes NC et ND
+  // sont refusees meme si elles ressemblent a une licence libre.
+  const licenceHorsPerimetre = await deposer(token, "Licence ND", {
+    audio: VRAI_MP3,
+    nomAudio: "audio.mp3",
+    licence: "CC BY-NC-ND 4.0",
+  });
+  verifier(
+    "depot : une licence hors perimetre (NC/ND) est REJETEE (400)",
+    licenceHorsPerimetre.reponse.status === 400,
+    `recu ${licenceHorsPerimetre.reponse.status}`,
+  );
+
+  // `source_url` finit dans un href affiche a tous les visiteurs : une URL `javascript:`
+  // s'executerait au clic. Le refus doit venir du SERVEUR, pas du type="url" du formulaire.
+  const sourceMalveillante = await fetch(`${API}/api/submissions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: (() => {
+      const donnees = formulaireDepot("Source XSS", {
+        audio: VRAI_MP3,
+        nomAudio: "audio.mp3",
+      });
+      donnees.append("sourceUrl", "javascript:alert(document.cookie)");
+      return donnees;
+    })(),
+  });
+  verifier(
+    "depot : une source `javascript:` est REJETEE (400)",
+    sourceMalveillante.status === 400,
+    `recu ${sourceMalveillante.status}`,
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 1. LE test : un fichier qui n'est pas de l'audio doit etre rejete

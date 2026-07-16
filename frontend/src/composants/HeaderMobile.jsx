@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Users,
   Music,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "./Logo";
@@ -98,6 +99,10 @@ export default function HeaderMobile({ user, isPlaying }) {
             <Link to="/contact" onClick={fermer} className={lien}>
               <Mail className="w-4 h-4" />
               Contact
+            </Link>
+            <Link to="/mentions-legales" onClick={fermer} className={lien}>
+              <Scale className="w-4 h-4" />
+              Mentions légales
             </Link>
           </nav>
         </>
