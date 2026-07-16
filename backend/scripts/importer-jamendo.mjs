@@ -36,7 +36,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { licenceDepuisUrlCC, urlDeLicence } from "../src/validation.js";
+import { licenceDepuisUrlCC, urlDeLicence, GENRES } from "../src/validation.js";
 
 const RACINE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DOSSIER_AUDIO = path.join(RACINE, "public", "musiques");
@@ -282,6 +282,23 @@ const FAMILLES_DE_GENRES = {
   Chill: ["ambient", "chillout", "chillhop", "downtempo", "newage", "easylistening", "lounge"],
   World: ["world", "latin", "bossanova", "samba", "bachata"],
 };
+
+// La LISTE des familles vit dans `src/validation.js` : elle est partagee avec l'administration du
+// catalogue, qui propose les memes valeurs. Ce script ne possede que la CORRESPONDANCE tag ->
+// famille, qui n'interesse que lui (l'app ne voit jamais un tag Jamendo).
+//
+// Ce garde-fou attrape la faute de frappe : une famille ecrite ici mais absente de `GENRES`
+// creerait un genre que l'admin ne pourrait pas re-selectionner, et que le filtre afficherait
+// quand meme. Mieux vaut refuser de demarrer que produire un catalogue incoherent.
+const famillesInconnues = Object.keys(FAMILLES_DE_GENRES).filter(
+  (famille) => !GENRES.includes(famille),
+);
+if (famillesInconnues.length > 0) {
+  console.error(
+    `FAMILLES_DE_GENRES contient des familles absentes de GENRES (src/validation.js) : ${famillesInconnues.join(", ")}`,
+  );
+  process.exit(1);
+}
 
 // Index inverse : tag -> famille. Construit une fois, pour ne pas reparcourir la table a chaque
 // morceau.

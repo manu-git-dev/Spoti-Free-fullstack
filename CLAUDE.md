@@ -89,14 +89,20 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
   Creative Commons récupéré via l'API Jamendo, clé dans `JAMENDO_CLIENT_ID`). Ne pas l'éditer à la
   main : relancer le script.
 - **Genres** : Jamendo rend des *tags* (66 valeurs, longue traîne à 1 occurrence), pas des genres.
-  `FAMILLES_DE_GENRES` (dans le script d'import) les replie sur 10 familles, **à l'import** — une
+  `FAMILLES_DE_GENRES` (dans le script d'import) les replie sur les familles de `GENRES`
+  (`backend/src/validation.js`, miroir dans `frontend/src/lib/validation.js`), **à l'import** — une
   base contient de la donnée propre. La liste affichée par le filtre est **déduite du catalogue**
   (`genresDisponibles` dans `App.jsx`), jamais écrite en dur.
+- **Curseurs (`Slider`)** : Base UI rend un **nombre** quand on lui passe un nombre, un tableau
+  quand on lui passe un tableau (`onValueChange?: (value: Value extends number ? number : Value)`).
+  Ne pas déstructurer (`([x]) => …`) sur une valeur unique : ça lève « x is not iterable » et le
+  gestionnaire meurt **en silence**. Le `volume` d'un `<audio>` est une **propriété du DOM**, pas
+  un attribut : il ne se pose pas en JSX, il s'applique via un effet.
 
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 147 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 152 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -105,7 +111,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **147 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **152 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 

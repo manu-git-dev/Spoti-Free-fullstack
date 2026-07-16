@@ -10,11 +10,31 @@ function Slider({
   max = 100,
   ...props
 }) {
+  // Combien de poignees dessiner. `_values` ne sert QU'A CA : la valeur reelle est geree par
+  // Base UI, a qui on passe `value` tel quel.
+  //
+  // Le code d'origine (celui livre par shadcn) ne prevoyait que deux cas : un tableau -> autant
+  // de poignees, sinon `[min, max]` -> deux poignees, en supposant un curseur d'INTERVALLE. Il
+  // oubliait le cas le plus courant : `value={50}`, une valeur unique controlee.
+  //
+  // Consequence, sur nos deux curseurs (volume et progression) : DEUX poignees etaient
+  // dessinees, l'une collee a 0 et l'autre a 100, pour une seule valeur. Le glisser semblait
+  // marcher (on attrapait une poignee au hasard), mais la navigation au clavier donnait le focus
+  // a la poignee de gauche, coincee sur `min` — et les fleches ne faisaient donc rien.
+  //
+  // Le contrat de Base UI est pourtant explicite (`SliderRoot.d.ts`) :
+  //   onValueChange?: (value: Value extends number ? number : Value, …) => void
+  // une valeur nombre donne un nombre, un tableau donne un tableau. On aligne le nombre de
+  // poignees sur cette meme regle.
   const _values = Array.isArray(value)
     ? value
-    : Array.isArray(defaultValue)
-      ? defaultValue
-      : [min, max]
+    : typeof value === "number"
+      ? [value]
+      : Array.isArray(defaultValue)
+        ? defaultValue
+        : typeof defaultValue === "number"
+          ? [defaultValue]
+          : [min, max]
 
   return (
     <SliderPrimitive.Root

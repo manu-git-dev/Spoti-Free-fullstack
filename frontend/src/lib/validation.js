@@ -50,3 +50,42 @@ export const LICENCES_DEPOT = [
     libelle: "CC BY-SA 4.0 — attribution + partage à l'identique",
   },
 ];
+
+// Les licences que le CATALOGUE peut contenir. Miroir de LICENCES_ACCEPTEES (backend).
+//
+// A ne pas confondre avec LICENCES_DEPOT ci-dessus, qui est plus court : un déposant publie
+// AUJOURD'HUI, il n'a aucune raison de choisir une licence obsolète. Le catalogue, lui, contient
+// des œuvres publiées il y a quinze ans — 98 % du catalogue Jamendo est en 3.0.
+//
+// L'administration doit donc pouvoir afficher (et donc proposer) ces anciennes versions. Ne lui
+// offrir que la 4.0 forcerait à « corriger » la licence d'un morceau en 3.0 pour pouvoir
+// enregistrer une modification de titre — c'est-à-dire à RELICENCIER l'œuvre de quelqu'un
+// d'autre. On ne relicencie pas une œuvre : la licence est le choix de son auteur.
+export const LICENCES_CATALOGUE = [
+  "CC BY 2.0",
+  "CC BY 2.5",
+  "CC BY 3.0",
+  "CC BY 4.0",
+  "CC BY-SA 2.0",
+  "CC BY-SA 2.5",
+  "CC BY-SA 3.0",
+  "CC BY-SA 4.0",
+];
+
+// Les genres du catalogue. Miroir de GENRES (backend/src/validation.js).
+//
+// Une liste FERMÉE : le filtre de la Bibliothèque déduit ses pastilles des genres présents, donc
+// chaque valeur nouvelle crée une pastille. Un genre libre produirait des pastilles menant à un
+// seul morceau — et « rock » / « Rock » en feraient deux, distinctes.
+export const GENRES = [
+  "Pop",
+  "Rock",
+  "Electro",
+  "Hip-hop",
+  "Jazz",
+  "Folk",
+  "Soul",
+  "Reggae",
+  "Chill",
+  "World",
+];

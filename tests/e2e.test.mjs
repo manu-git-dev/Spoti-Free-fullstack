@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 import {
   APP,
   creerCompte,
+  creerAdmin,
   apiAuth,
   pageConnectee,
   verifier,
@@ -276,6 +277,64 @@ await etape("lecteur", async () => {
     await page.locator("audio").evaluate((a) => a.paused),
   );
 
+  // -------------------------------------------------------------------------
+  // LES CURSEURS — la partie qui manquait, et qui a laisse passer trois bugs.
+  //
+  // Ce test ne verifiait que Play/Pause. Or volume et progression etaient MORTS :
+  //
+  //   1. `onValueChange={([x]) => ...}` destructurait un tableau, alors que Base UI rend un
+  //      NOMBRE pour une valeur unique. « number 18 is not iterable » a chaque mouvement : le
+  //      gestionnaire mourait avant d'agir, sans que l'utilisateur voie autre chose qu'un
+  //      curseur qui ne bouge pas.
+  //   2. `<audio volume={...}>` posait un ATTRIBUT HTML, alors que le volume est une PROPRIETE
+  //      du DOM. Le curseur affichait 50 %, le son sortait a 100 %.
+  //   3. Le wrapper `slider.jsx` dessinait DEUX poignees pour une valeur unique : la navigation
+  //      au clavier donnait le focus a une poignee fantome bloquee sur `min`.
+  //
+  // La verification « aucune erreur JS » de fin de fichier ne les a pas vus non plus : elle ne
+  // peut attraper que les erreurs de ce qu'on EXERCE. Un test qui ne touche pas a un curseur ne
+  // prouve rien sur ce curseur.
+  //
+  // On passe par le clavier, pas par le glisser : c'est deterministe, et c'est aussi la seule
+  // facon d'utiliser le lecteur sans souris. La poignee est un <div> NON focusable qui contient
+  // un <input type="range"> — c'est lui qu'il faut viser.
+  // -------------------------------------------------------------------------
+  const poignees = page.locator('[data-slot="slider-thumb"]');
+  verifier(
+    "lecteur : une seule poignee par curseur (volume + progression = 2)",
+    (await poignees.count()) === 2,
+    `${await poignees.count()} poignees`,
+  );
+
+  const entrees = page.locator('[data-slot="slider-thumb"] input[type="range"]');
+
+  const volumeAvant = await page.locator("audio").evaluate((a) => a.volume);
+  await entrees.first().focus();
+  for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(500);
+  const volumeApres = await page.locator("audio").evaluate((a) => a.volume);
+
+  verifier(
+    "lecteur : le curseur de volume change REELLEMENT le volume de l'audio",
+    volumeApres < volumeAvant,
+    `${volumeAvant} -> ${volumeApres}`,
+  );
+
+  const tempsAvant = await page
+    .locator("audio")
+    .evaluate((a) => a.currentTime);
+  await entrees.nth(1).focus();
+  for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(500);
+  const tempsApres = await page.locator("audio").evaluate((a) => a.currentTime);
+
+  // La lecture est en pause : seul le curseur peut avoir fait bouger le temps.
+  verifier(
+    "lecteur : la barre de progression deplace REELLEMENT la lecture",
+    tempsApres > tempsAvant + 5,
+    `${Math.round(tempsAvant)}s -> ${Math.round(tempsApres)}s`,
+  );
+
   await page.context().close();
 });
 
@@ -341,6 +400,58 @@ await etape("filtre par genre", async () => {
     "genre : recliquer la pastille active remet tout le catalogue",
     (await lignes()) === total,
     `${await lignes()} sur ${total}`,
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
+// 5 ter. L'admin peut REELLEMENT modifier un morceau, depuis l'interface
+//
+// Ce test existe a cause d'un bug precis, et il ne doit pas etre supprime.
+//
+// En rendant la licence obligatoire sur `PUT /api/musics/update/:id`, on a mis a jour le test
+// d'`admin.test.mjs` pour qu'il envoie une licence — sans verifier QUI D'AUTRE appelait cette
+// route. `AdminMusiques.jsx` continuait d'envoyer `{title, artist, genre}` et se prenait un 400 :
+// le bouton « Modifier » du catalogue ne marchait plus DU TOUT, et la suite restait verte.
+//
+// La lecon : un test d'API prouve que l'API repond, pas que l'application l'appelle
+// correctement. Quand on durcit un contrat, ce sont les APPELANTS qu'il faut aller chercher —
+// pas le test qui se plaint.
+// ---------------------------------------------------------------------------
+await etape("admin : modifier un morceau depuis l'interface", async () => {
+  const admin = await creerAdmin("ModifUITest");
+  const page = await pageConnectee(navigateur, admin, BUREAU);
+  page.on("pageerror", (e) => erreursJS.push(e.message));
+
+  await page.goto(`${APP}/admin/musiques`);
+  await page.waitForTimeout(1500);
+
+  await page
+    .getByRole("button", { name: /^Modifier / })
+    .first()
+    .click();
+  await page.waitForTimeout(600);
+
+  // La modale doit arriver PRE-REMPLIE avec la licence du morceau. Si elle est vide, c'est que
+  // le formulaire ne connait pas ce champ — et l'enregistrement partira sans, donc en 400.
+  const licenceAffichee = await page.locator("#licence").inputValue();
+  verifier(
+    "admin : la modale de modification pre-remplit la licence",
+    licenceAffichee !== "",
+    `licence = ${JSON.stringify(licenceAffichee)}`,
+  );
+
+  // On n'a RIEN change : enregistrer doit fonctionner. C'est le scenario le plus banal — ouvrir,
+  // valider — et c'etait exactement celui qui echouait.
+  await page.getByRole("button", { name: "Enregistrer" }).click();
+  await page.waitForTimeout(1500);
+
+  const toasts = await page.locator("[data-sonner-toast]").allInnerTexts();
+  verifier(
+    "admin : enregistrer une modification fonctionne (pas de 400)",
+    toasts.some((t) => /modifiée/i.test(t)),
+    JSON.stringify(toasts),
   );
 
   await page.context().close();

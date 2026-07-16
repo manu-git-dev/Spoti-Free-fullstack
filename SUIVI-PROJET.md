@@ -11,10 +11,10 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **147 tests** automatises : `cd tests && npm install && npm test`
-  (53 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **147/147.**
-- **CI verte** (GitHub Actions) : les 147 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 147 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **152 tests** automatises : `cd tests && npm install && npm test`
+  (58 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **152/152.**
+- **CI verte** (GitHub Actions) : les 152 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 152 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -86,10 +86,40 @@ Une rangee de pastilles dans la Bibliotheque, cumulables avec la recherche texte
 - Le script **liste les tags non classes** en fin d'import (`indie (4)`, `filmscore (1)`) : un
   import qui perd de l'information en silence est un import qu'on ne peut pas ameliorer.
 
-**Limite connue** : le formulaire de depot laisse le genre en **texte libre**. Un depot approuve
-avec « Trap » creera une pastille a un morceau, et la derive recommencera lentement. Le passer en
-`<select>` sur les memes familles (comme la licence) reglerait le probleme a la source. Pas fait :
-la moderation absorbe le cas pour l'instant, et l'admin peut corriger le genre.
+La liste des familles (`GENRES`) vit dans **`backend/src/validation.js`**, pas dans le script
+d'import : elle est partagee par le script ET par l'administration du catalogue. Un script jetable
+ne peut pas etre la source de verite de quelque chose que l'app utilise en permanence. Le script
+verifie au demarrage que ses familles existent toutes dans `GENRES` et refuse de tourner sinon.
+
+**Limite connue** : le formulaire de **depot** laisse le genre en **texte libre**. Un depot
+approuve avec « Trap » creera une pastille a un morceau, et « rock » / « Rock » en feraient DEUX
+(le comptage des pastilles se fait en JavaScript, sensible a la casse — MySQL, lui, les considere
+egaux). Le passer en `<select>` sur `GENRES` reglerait ca a la source, comme pour la licence.
+Pas fait : la moderation absorbe le cas, et l'admin peut corriger le genre depuis le Catalogue
+(qui propose desormais la liste fermee).
+
+### Bugs trouves apres coup — 2026-07-16
+
+**Le bouton « Modifier » du Catalogue admin etait casse.** En rendant la licence obligatoire sur
+`PUT /api/musics/update/:id`, on a mis a jour le TEST pour qu'il envoie une licence, sans verifier
+qui d'autre appelait la route : `AdminMusiques.jsx` envoyait toujours `{title, artist, genre}` et
+se prenait un 400. La suite restait verte. **Un test d'API prouve que l'API repond, pas que
+l'application l'appelle correctement** — quand on durcit un contrat, ce sont les APPELANTS qu'il
+faut aller chercher. Un test e2e passe desormais par la vraie modale.
+
+**Les deux curseurs du lecteur etaient morts** (volume et progression), signale par Manuel — pas
+par les tests, qui ne verifiaient que Play/Pause. Trois causes empilees :
+1. `onValueChange={([x]) => …}` destructurait un tableau, alors que Base UI rend un **nombre**
+   pour une valeur unique. « number 18 is not iterable » a chaque mouvement.
+2. `<audio volume={…}>` posait un **attribut HTML**, alors que le volume est une **propriete du
+   DOM** : le curseur affichait 50 %, le son sortait a 100 %.
+3. Le wrapper `components/ui/slider.jsx` (livre par shadcn) dessinait **deux poignees** pour une
+   valeur unique — son repli `[min, max]` suppose un curseur d'intervalle. Le clavier donnait le
+   focus a une poignee fantome bloquee sur `min`.
+
+La verification globale « aucune erreur JavaScript » ne les a pas vus non plus : **elle ne peut
+attraper que les erreurs de ce qu'on exerce**. Le test du lecteur manipule maintenant les deux
+curseurs au clavier et verifie que `audio.volume` et `audio.currentTime` bougent REELLEMENT.
 
 ### Suppression de compte (RGPD) — FAIT le 2026-07-16
 
@@ -119,7 +149,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 147 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 152 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -144,7 +174,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 147 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 152 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
@@ -209,7 +239,7 @@ incluses** dans `schema.sql`. Ne pas les rejouer.
 
 Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
 
-- **Les 147 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+- **Les 152 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
   serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
   tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
   fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
@@ -240,7 +270,7 @@ pieges qui casseraient le site sans que le code soit en cause :
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
-base, demarre les serveurs, joue les **147 tests**, compile le build de production et verifie
+base, demarre les serveurs, joue les **152 tests**, compile le build de production et verifie
 `npm audit`. Badge vert sur le README. Vert en 2 min 24.
 
 **La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
@@ -303,7 +333,7 @@ pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la 
 - **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
   n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
 - 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
-  reinitialisation). Suite : **147 tests**.
+  reinitialisation). Suite : **152 tests**.
 
 Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
 
