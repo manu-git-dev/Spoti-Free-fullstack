@@ -1597,3 +1597,66 @@ Un badge vert sur le README, oui. Mais surtout : je ne peux plus mettre en ligne
 **La règle à retenir** : une CI ne teste pas que ton code. Elle teste **ton dépôt**. Tout ce qui vit seulement sur ta machine (un schéma, un compte, un fichier) est une dette invisible — et elle la rend visible du premier coup.
 
 ---
+
+## 2026-07-16 — Spoti-Free (mise en production)
+
+### 56. Mon hash d'IP ne servait à rien sans son sel
+
+**Contexte** : en préparant le `.env` de production, je devais générer `IP_HASH_SALT`. Je savais qu'il fallait un sel — c'est ce qu'on lit partout — mais j'aurais été incapable d'expliquer **pourquoi**. Il se trouve que c'est plus intéressant que « c'est plus sûr ».
+
+**Où ça sert chez moi** : dans `backend/src/routes/adminRoute.js`, je compte les visites en stockant `sha256(ip + sel)` dans la table `visites`, jamais l'IP elle-même. L'intention est bonne : une adresse IP est une **donnée personnelle** au sens du RGPD. Un hash **salé** n'en est plus une. Je peux donc compter mes visiteurs sans conserver de données personnelles.
+
+**Le point que je n'avais pas compris : un hash d'IP SANS sel ne protège strictement rien.**
+
+Une adresse IPv4, c'est **2³² possibilités, soit environ 4,3 milliards**. Ça paraît énorme. En réalité c'est *minuscule* : quelqu'un qui récupérerait ma table `visites` peut calculer les 4,3 milliards de `sha256()` possibles en quelques minutes sur un GPU, se construire une table de correspondance, et **retrouver toutes mes IP en clair**. Le hash seul n'est alors qu'un pseudonyme que n'importe qui peut lever. J'aurais cru mes visiteurs protégés, ils ne l'auraient pas été du tout.
+
+**C'est le sel qui fait la protection, pas le hash.** Sans connaître le sel — qui est secret, et qui n'est nulle part dans le dépôt — aucune table pré-calculée n'est réutilisable. L'attaquant devrait tout recalculer pour mon sel précis, qu'il n'a pas.
+
+**La généralisation qui m'a marqué** : hacher une donnée issue d'un **petit espace** — une IP, un numéro de téléphone, une plaque d'immatriculation, une date de naissance — sans sel, c'est une protection **décorative**. Ça ne vaut que pour les espaces immenses, comme un mot de passe long. Le hash rassure l'œil ; c'est l'espace des valeurs possibles qui décide.
+
+**Un défaut que j'ai trouvé dans mon propre code au passage** :
+
+```js
+.update(ip + (process.env.IP_HASH_SALT ?? ""))
+```
+
+Ce `?? ""` fait que si j'oublie la variable dans mon `.env` de production, **rien ne plante**. Le code hache sans sel, silencieusement, et je continue à croire mes IP protégées alors qu'elles sont triviales à retrouver. C'est le pire type de défaut : celui qui ne se voit jamais. À vérifier explicitement une fois le `.env` de prod écrit.
+
+**Une asymétrie que je n'attendais pas** — mes deux secrets ne se changent pas pareil :
+
+- `JWT_SECRET` est **rotatable à volonté**. Le coût, c'est que tout le monde est déconnecté. Pénible, pas grave.
+- `IP_HASH_SALT` **ne l'est pas**. Si je le change, le même visiteur produira un hash différent : mes statistiques historiques deviennent incomparables avec les nouvelles, et je compte les gens en double. Celui-là se fixe **une fois**, et on n'y touche plus.
+
+**La règle à retenir** : un hash ne protège que si l'espace des valeurs possibles est trop grand pour être parcouru. Quand il ne l'est pas — et une IP, c'est le cas — c'est le **sel** qui fait tout le travail. Et un secret qui a un fallback silencieux (`?? ""`) n'est pas un secret : c'est une option.
+
+---
+
+### 57. Choisir sa version d'Ubuntu, c'est choisir ses versions de paquets
+
+**Contexte** : à la création du VPS, trois images proposées — Ubuntu 22.04 LTS, 24.04 LTS, 26.04 LTS. Mon réflexe : prendre la plus récente. C'était le mauvais réflexe, et la raison m'a appris quelque chose.
+
+**Ce que je n'avais pas réalisé** : une distribution **fige un jeu de versions pour toute sa durée de vie**. `apt install mysql-server` ne me donne pas « MySQL » — il me donne **la version que cette Ubuntu-là a figée** :
+
+| Ubuntu | Support standard | `apt install mysql-server` livre |
+|---|---|---|
+| 22.04 LTS | jusqu'en **avril 2027** | MySQL 8.0 |
+| **24.04 LTS** | jusqu'en avril 2029 | **MySQL 8.0** |
+| 26.04 LTS | jusqu'en avril 2031 | **MySQL 8.4** |
+
+**Le critère qui a tranché : ma CI teste contre `mysql:8.0`.**
+
+En prenant 26.04, la commande du §2 de mon `DEPLOIEMENT.md` — la même commande — m'aurait installé **MySQL 8.4 sans rien me dire**. Ma production aurait tourné sur une version que **mes 106 tests n'ont jamais exercée**. Et 8.4 apporte de vraies ruptures : `mysql_native_password` désactivé par défaut, `default_authentication_plugin` supprimé, de nouveaux mots réservés (`MANUAL`, `PARALLEL`, `QUALIFY`, `TABLESAMPLE`).
+
+Est-ce que ça aurait cassé mon app ? **Probablement pas** : `mysql2` gère `caching_sha2_password`, mes clés sont des `INT`, et `utf8mb4_0900_ai_ci` existe toujours. Mais « probablement » n'a rien à faire dans une mise en production.
+
+**Le lien direct avec la note 55**, et c'est ce qui m'a convaincu : j'ai écrit que ma CI teste **mon dépôt**. C'est vrai. Mais elle ne teste **que l'environnement que je lui donne**. Si ma production diverge de cet environnement, le vert de la CI ne prouve plus rien sur la production — il ne prouve que quelque chose sur une machine qui n'existe nulle part. Une suite de tests verte ne vaut que si la prod ressemble à ce qui a été testé.
+
+**22.04 était exclue** pour l'autre bout du problème : fin de support standard en **avril 2027**, soit dans neuf mois. Installer un système déjà en fin de vie sur une machine neuve n'a aucun sens.
+
+**Le piège inverse, dont je me méfiais à tort** : je pensais que 26.04, sortie en avril 2026, serait « trop fraîche » et que les dépôts tiers ne suivraient pas. **Faux** — NodeSource publie sur une suite `nodistro` indépendante du nom de code, donc mon `setup_22.x` y marcherait très bien. 26.04 est une **vraie LTS**, supportée jusqu'en 2031 : récent n'est pas instable. Le vrai problème n'était pas Node, c'était MySQL — plus le fait qu'à trois mois d'existence, les réponses que je trouverai en ligne à 23h seront écrites pour 24.04.
+
+**La règle à retenir** : pour un déploiement, prendre **l'avant-dernière LTS** — assez récente pour avoir des années de support devant elle, assez ancienne pour que l'écosystème (docs, tutos, réponses, dépôts tiers) soit mûr. **Un déploiement n'est pas l'endroit où être pionnier.** Et plus largement : le choix de l'OS n'est pas un détail administratif, c'est un choix de versions qui engage toute la stack.
+
+**Dette assumée** : MySQL 8.0 est en fin de vie chez Oracle depuis avril 2026 — Ubuntu 24.04 continue d'en assurer la maintenance de sécurité sur la durée de sa LTS, donc rien d'urgent. Mais le passage de ma **CI et** de ma prod vers 8.4 devra se faire un jour : consciemment et testé, pas par accident au détour d'un `apt install`.
+
+---
