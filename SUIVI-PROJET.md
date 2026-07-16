@@ -6,15 +6,13 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ## ETAT DU PROJET (au 2026-07-16) — a lire en premier
 
-> ⚠️ **CHANTIER EN COURS : les droits d'auteur.** Le code est ecrit et teste, mais **il manque une
-> etape manuelle bloquante** — voir "Le chantier des licences" juste en dessous. Tant qu'elle n'est
-> pas faite, **l'app ne doit PAS etre mise en ligne** : le catalogue actuel affiche de vrais titres
-> d'artistes celebres ("Blinding Lights / The Weeknd") sur des fichiers libres sans aucun rapport.
-> C'etait sans consequence sur localhost, ce ne l'est plus en public.
+> ✅ **Le chantier des droits d'auteur est TERMINE** (2026-07-16). Le catalogue de demonstration
+> (de vrais titres d'artistes celebres poses sur cinq fichiers libres recycles) a ete remplace par
+> **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
+> et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
 - **142 tests** automatises : `cd tests && npm install && npm test`
-  (48 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec.
-  **141/142 actuellement** : le dernier passe au vert des l'import du vrai catalogue (voir plus bas).
+  (48 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **142/142.**
 - **CI verte** (GitHub Actions) : les 142 tests tournent aussi sur une machine neuve, a chaque push.
 - Les 142 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
@@ -36,12 +34,29 @@ desormais une **declaration de droits**. Ce qui est **fait** :
 - Page `/mentions-legales` (+ liens dans l'Aside et le menu mobile).
 - `scripts/importer-jamendo.mjs` : recupere les morceaux et **genere** `seed-musics.sql`.
 
-**CE QUI BLOQUE — une seule chose :**
+**L'import est FAIT** (2026-07-16). Le catalogue actuel : **100 morceaux, 100 artistes
+distincts, 590 Mo**. Licences obtenues : 38 CC BY 3.0, 60 CC BY-SA 3.0, 2 CC BY-SA 2.5. Zero NC,
+zero ND. `JAMENDO_CLIENT_ID` est dans `backend/.env`.
 
-1. Creer un compte sur https://devportal.jamendo.com/ et recuperer un **`client_id`**.
-2. `cd backend && JAMENDO_CLIENT_ID=xxx node scripts/importer-jamendo.mjs --nombre 100`
-3. `mysql -u root -p spotifree < backend/scripts/seed-musics.sql` (efface le faux catalogue)
-4. Relancer les tests : le dernier passe au vert.
+Pour rejouer l'import (nouvelle machine, ou plus de morceaux) :
+
+```
+cd backend && node scripts/importer-jamendo.mjs --nombre 100
+mysql -u root -p spotifree < backend/scripts/seed-musics.sql   # commence par DELETE FROM musics
+```
+
+**Ce que l'API Jamendo nous a appris** (tout est commente dans le script — ne pas "simplifier") :
+
+- `ccnd=0` **seul ne suffit pas** : il ecarte les ND mais laisse passer tout le NC. Il faut le
+  **couple** `ccnd=0 ccnc=0` pour n'avoir que `by` et `by-sa`.
+- `license_ccurl` et les genres ne sont **pas renvoyes par defaut** : il faut
+  `include=licenses musicinfo`. Avec une **espace**, pas un `+` — `URLSearchParams` encode un `+`
+  litteral en `%2B`, que l'API ignore **en silence** (elle repond "success" avec les champs vides).
+- L'API renvoie **des pages vides au hasard** (1 a 3 sur 6), avec `status: "success"` et aucune
+  erreur : impossible de les distinguer d'une vraie fin de catalogue. D'ou les 4 tentatives par
+  offset dans `recupererPage()`. **Sans ca, l'import s'arrete tot en annoncant une reussite.**
+- Les textes arrivent **encodes pour le HTML** (« Ground &amp; Leaves ») : decodes a l'entree, une
+  base contient du texte, pas du HTML.
 
 **A FAIRE AUSSI avant la mise en ligne :**
 

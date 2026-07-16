@@ -148,7 +148,7 @@ de test. C'est voulu : voir §9 pour créer ton compte admin proprement.
 
 ## 5. Les fichiers audio ⚠️
 
-`backend/public/` **n'est pas versionné** : le catalogue pèse plusieurs centaines de Mo, ça n'a
+`backend/public/` **n'est pas versionné** : le catalogue pèse ~590 Mo (100 morceaux), ça n'a
 rien à faire dans Git. Le seed ne contient que les *métadonnées* — après le §4, la base connaît
 les morceaux, mais le serveur n'a pas un seul fichier à servir.
 
@@ -157,7 +157,7 @@ Deux façons de les obtenir sur le VPS. **La première est la bonne** :
 ```bash
 # A. Depuis ton Mac : envoyer les fichiers déjà téléchargés par le script d'import.
 #
-# rsync et pas scp : il reprend là où il s'est arrêté. Sur ~400 Mo et une connexion qui
+# rsync et pas scp : il reprend là où il s'est arrêté. Sur ~590 Mo et une connexion qui
 # lâche à 80 %, scp recommence tout depuis zéro, rsync reprend au fichier suivant.
 # Le `-z` compresse à la volée, le `--progress` évite de se demander si c'est planté.
 rsync -avz --progress backend/public/ root@<ip>:/var/www/spotifree/backend/public/
@@ -166,8 +166,9 @@ rsync -avz --progress backend/public/ root@<ip>:/var/www/spotifree/backend/publi
 ```bash
 # B. Sur le VPS : re-télécharger depuis Jamendo plutôt que de transférer.
 #    Plus long, mais utile si ta connexion montante est mauvaise.
+#    Nécessite JAMENDO_CLIENT_ID dans le .env du VPS (§6).
 cd /var/www/spotifree/backend
-JAMENDO_CLIENT_ID=xxx node scripts/importer-jamendo.mjs
+node scripts/importer-jamendo.mjs --nombre 100
 ```
 
 > ⚠️ L'option B **régénère `seed-musics.sql`** et peut donc tomber sur d'autres morceaux que ceux
