@@ -198,7 +198,17 @@ function App() {
     // interdit a la ligne de descendre sous la taille de son contenu. Resultat : une longue
     // liste de playlists faisait grandir l'Aside, donc la grille, donc toute l'app au-dela de
     // l'ecran — et l'`overflow-y-auto` de la liste ne s'activait jamais, faute de contrainte.
-    <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_88px] md:gap-3 md:p-3">
+    //
+    // La DEUXIEME ligne (104px) est la hauteur du lecteur. Elle est fixe : son contenu ne peut
+    // donc pas la faire grandir, il DEBORDE. Elle valait 88px, taille au pixel pres du contenu
+    // d'alors — y ajouter la ligne d'attribution (« CC BY-SA 3.0 · original », que la licence
+    // EXIGE) l'a fait deborder de 11 px : la barre de progression sortait sous la carte, posee
+    // sur le fond de la page. Ni une capture d'ecran ni le test « l'app tient dans l'ecran » ne
+    // l'ont vu — le debordement restait DANS la fenetre, il ne sortait que du panneau.
+    //
+    // Si le contenu du lecteur grandit encore, c'est CE NOMBRE qu'il faut revoir, pas
+    // l'attribution. Le test e2e « le contenu ne deborde pas de la carte » le dira.
+    <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_104px] md:gap-3 md:p-3">
       <div className="md:hidden">
         <HeaderMobile user={user} isPlaying={isPlaying} />
       </div>

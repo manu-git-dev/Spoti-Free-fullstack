@@ -1907,3 +1907,39 @@ De même, mon test d'API admin prouvait que **l'API répond correctement** — p
 **Détail qui m'a coûté du temps, et qui vaut d'être noté** : mon premier test clavier échouait, et j'ai cru le bug plus profond. En réalité **mon test était faux** : la poignée est un `<div>` non focusable qui contient un `<input type="range">` caché. `focus()` sur le div ne fait rien, le focus restait sur `<body>`, les flèches partaient dans le vide. **Avant d'accuser le code, vérifier que la mesure mesure la bonne chose.** C'est la troisième fois de la journée que ça me sauve.
 
 ---
+
+### 65. Une cible de 4 pixels, et un débordement que personne ne regardait
+
+**Contexte** : après avoir réparé les curseurs du lecteur, Manuel me signale que le **glisser est fluide** mais que le **clic sur le rail est bancal** : « des fois ça fonctionne, des fois pas, des fois il faut cliquer plusieurs fois ».
+
+**Ce que j'avais sous les yeux et que je n'ai pas chassé.** Mon diagnostic précédent affichait `"boite": 4` pour le curseur. J'ai lu ce chiffre, j'ai enchaîné sur le clavier et le glisser, et je suis passé à autre chose. **Une mesure aberrante qu'on ne poursuit pas est une mesure gâchée.** « Des fois ça marche » était l'indice : ce n'est jamais du hasard, c'est une condition qu'on n'a pas identifiée.
+
+**La mesure qui tranche.** Plutôt que de deviner, j'ai balayé verticalement autour du rail en notant à chaque fois si le clic était pris en compte :
+
+```
+dy = -3 px -> non      dy = 0 px -> OUI      dy = +3 px -> non
+```
+
+**Quatre pixels.** Pas « bancal » : une cible de 4 px est simplement **invisable à la souris**. La loi de Fitts n'est pas une opinion — le temps pour atteindre une cible dépend de sa taille. À 4 px, on tape à côté deux fois sur trois. Le ressenti « ça marche une fois sur trois » était une **mesure exacte**, exprimée en langage humain.
+
+**La cause** : le `Control` (l'élément qui capte les clics) n'avait aucune hauteur propre. Il se réduisait à celle de son contenu — le trait de 4 px, puisque la poignée est en `position: absolute` et ne compte pas dans le flux. Ironie : la poignée avait droit à un `after:-inset-2` pour étendre sa zone de clic à 28 px. **Le rail, lui, n'avait rien.** On pouvait attraper la poignée, mais pas cliquer à côté.
+
+La correction tient en une classe : `data-horizontal:h-5` sur le `Control`. **20 px de zone cliquable, 4 px de trait à l'œil** — le rail reste fin, centré par `items-center`. Rien ne change visuellement, tout change à l'usage.
+
+**Le bug que la correction a révélé, et qui était le mien.** En mesurant, je découvre que le lecteur **débordait de sa carte de 11 px** : la barre de progression sortait sous le panneau, posée sur le fond de la page.
+
+La cause remonte au matin : la carte du lecteur vit dans une ligne de grille de **hauteur fixe** (`grid-rows-[minmax(0,1fr)_88px]`). Son contenu ne peut donc pas la faire grandir — **il déborde, silencieusement**. Et 88 px, c'était exactement la taille du contenu d'alors. En ajoutant la ligne d'attribution CC (que la licence exige), je l'ai fait déborder. **Un conteneur taillé au pixel près est un conteneur qui cassera au premier ajout.**
+
+**Pourquoi rien ne l'a vu — et c'est le vrai enseignement.** J'avais :
+- **une capture d'écran** : le débordement y était visible, mais il faut savoir où regarder. Je regardais si le rail était fin, pas s'il sortait de la carte.
+- **un test « l'app tient dans l'écran »** : il passait. Le débordement restait **dans la fenêtre** (885 px sur 900) — il ne sortait que du **panneau**. Le test vérifiait la bonne chose au mauvais niveau.
+
+Un test de mise en page qui ne regarde que la fenêtre ne dit rien des conteneurs à l'intérieur. `scrollHeight > clientHeight` sur la carte, lui, le dit sans ambiguïté — et sans qu'on ait à savoir où regarder.
+
+**Comment j'ai écrit le test pour qu'il prouve quelque chose.** Il clique **volontairement à 6 px du centre**. Au centre, il passerait même avec la bande de 4 px, et ne prouverait donc rien. Puis j'ai remis l'ancienne hauteur (`88px`) pour vérifier que le test devient rouge : « déborde de 13 px ». **Un test qu'on n'a pas vu échouer ne teste rien** — c'est la deuxième fois de la journée que je me le rappelle.
+
+**Et j'ai cassé le build en écrivant le commentaire.** J'ai mis un `{/* … */}` juste avant le `<section>` racine dans un `return (…)` : deux éléments adjacents, JSX invalide. Un commentaire JSX est une **expression**, pas une annotation flottante. Dans un `return`, avant l'élément, il faut un `//` classique — on est encore en JavaScript, le JSX n'a pas commencé.
+
+**Ce que je retiens** : trois bugs de cette journée (les curseurs, le débordement, la zone de 4 px) étaient **invisibles aux tests mais évidents à l'usage**. Manuel les a tous trouvés en cliquant. Mes tests couvrent ce que j'ai pensé à exercer ; **ils ne remplacent pas quelqu'un qui se sert vraiment de l'application**. Le bon réflexe n'est pas d'écrire plus de tests a priori — c'est de transformer chaque retour d'usage en test, une fois qu'on sait quoi regarder.
+
+---
