@@ -85,26 +85,60 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
+8. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
+   (portable) uniquement — ca passe. Sur un 27 pouces, le panneau fera ~2200 px : les champs de
+   **Deposer** (titre, artiste, genre, licence, source) s'etaleront sur toute la largeur. Un champ
+   de texte de 2000 px n'a aucun sens : l'oeil ne suit plus, et ca ne ressemble a rien.
+
+   **C'est une consequence directe du passage en pleine largeur** demande le 2026-07-16 : le
+   `max-w-2xl mx-auto` de Deposer / Mes demandes / Profil et le `max-w-3xl` d'A propos /
+   Mentions legales ont ete retires. **Meme cause que le point 3** (les lignes a 130 caracteres) —
+   les deux devraient se decider ensemble.
+
+   **La nuance a trancher** : « pleine largeur » etait le bon choix pour la Bibliotheque, le
+   Catalogue et le Tableau de bord — ce sont des **listes et des grilles**, elles gagnent
+   reellement a s'etaler (plus de cartes par rangee). Ca ne l'est pas forcement pour un
+   **formulaire** ni pour de la **prose**, ou la largeur utile est bornee par l'oeil, pas par
+   l'ecran.
+
+   **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
+   pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
+   lui-meme etait centre avec le contenu.
+9. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
+   endroits : l'Aside (`Aside.jsx:142`), le menu mobile (`HeaderMobile.jsx:57`), et une carte sur
+   la page Deposer (`Deposer.jsx:265`).
+
+   **Le detail qui compte** : la carte de Deposer est conditionnee a **`nbDepots > 0`**. Donc la
+   retirer de l'Aside ne perd personne — quelqu'un sans depot n'a rien a voir sur cette page, et
+   des qu'il en a un, la carte apparait. Le groupement est meme plus logique : « Deposer » ->
+   « Mes demandes ».
+
+   **Contre** : c'est un clic de plus pour suivre ses depots, et la carte n'existe que sur une page
+   qu'il faut deja penser a ouvrir.
+
+   Si c'est retire, **le faire aussi dans `HeaderMobile.jsx`** — sinon la navigation dit deux
+   choses differentes selon la taille de l'ecran.
+
 ### Ce qui est a faire par Manuel
 
-8. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+10. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-9. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+11. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-10. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+12. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-11. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+13. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-12. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+14. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
 
