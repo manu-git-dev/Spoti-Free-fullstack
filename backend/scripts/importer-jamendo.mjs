@@ -2,8 +2,11 @@
 //
 // Construit le catalogue de Spoti-Free depuis l'API Jamendo.
 //
-// Usage :
-//     JAMENDO_CLIENT_ID=xxxxx node scripts/importer-jamendo.mjs [--nombre 100]
+// Usage (depuis backend/, avec JAMENDO_CLIENT_ID dans le .env) :
+//     node scripts/importer-jamendo.mjs [--nombre 100]
+//
+// La cle se cree sur https://devportal.jamendo.com/. Elle vit dans `backend/.env` comme le reste
+// de la configuration — pas sur la ligne de commande, ou elle finirait dans l'historique du shell.
 //
 // Ce script est un OUTIL JETABLE, pas du code applicatif. Il ne tourne ni en dev ni en prod :
 // on le lance une fois pour fabriquer le catalogue, et son resultat (seed-musics.sql + les
@@ -28,6 +31,7 @@
 // DECOUVRIR les morceaux ; la licence CC sert a les REDIFFUSER. Ce sont deux choses distinctes.
 // ---------------------------------------------------------------------------
 
+import "dotenv/config";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,8 +56,8 @@ const NOMBRE_VOULU =
 if (!CLIENT_ID) {
   console.error(
     "JAMENDO_CLIENT_ID manquant.\n" +
-      "Cree une application sur https://devportal.jamendo.com/ puis relance :\n" +
-      "    JAMENDO_CLIENT_ID=ta_cle node scripts/importer-jamendo.mjs",
+      "Cree une application sur https://devportal.jamendo.com/, puis ajoute dans backend/.env :\n" +
+      "    JAMENDO_CLIENT_ID=ta_cle",
   );
   process.exit(1);
 }
@@ -86,6 +90,16 @@ async function recupererPage(offset) {
     ccnc: "false",
     // Un morceau sans pochette ni audio n'est pas exploitable ; on limite le bruit en amont.
     imagesize: "600",
+    // Le genre n'est PAS renvoye par defaut : sans `musicinfo`, les 100 morceaux arriveraient
+    // avec `genre` a NULL, et la colonne comme l'affichage "Artiste — Genre" resteraient vides.
+    include: "musicinfo",
+    // UN SEUL morceau par artiste.
+    //
+    // Sans ca, "les 100 plus ecoutes" donne surtout les quelques artistes les plus populaires de
+    // Jamendo, avec sept ou huit titres chacun. Un catalogue ou le meme nom revient sans arret
+    // fait pauvre — alors que 100 artistes differents donnent tout de suite l'impression d'un
+    // vrai service. C'est une decision de VITRINE, pas une contrainte technique.
+    groupby: "artist_id",
   });
 
   const reponse = await fetch(`${API}/?${parametres}`);
@@ -138,6 +152,25 @@ async function telecharger(url, destination) {
 
   await fs.writeFile(destination, Buffer.from(await reponse.arrayBuffer()));
   return true;
+}
+
+// Le genre, tire des tags de `musicinfo`.
+//
+// Jamendo renvoie `tags.genres` : un tableau, parfois vide, souvent avec plusieurs entrees
+// ("rock", "indie", "alternative"). La colonne `musics.genre` attend UNE valeur — on prend donc
+// la premiere, qui est la plus representative, et on la capitalise pour coller au reste du
+// catalogue ("Rock", pas "rock").
+//
+// Un tableau vide reste NULL : la colonne est nullable, et un genre invente serait pire qu'un
+// genre absent.
+function genreDe(morceau) {
+  const genres = morceau.musicinfo?.tags?.genres;
+  if (!Array.isArray(genres) || genres.length === 0) return null;
+
+  const premier = String(genres[0]).trim();
+  if (premier === "") return null;
+
+  return premier.charAt(0).toUpperCase() + premier.slice(1);
 }
 
 const echapper = (valeur) =>
@@ -248,9 +281,7 @@ async function principal() {
       retenus.push({
         title: morceau.name.trim().slice(0, 100),
         artist: morceau.artist_name.trim().slice(0, 100),
-        // `musicinfo` n'est renvoye que sur demande ; sans lui on n'a pas de genre fiable.
-        // NULL est plus honnete qu'un genre invente.
-        genre: null,
+        genre: genreDe(morceau),
         srcImage: `images/${nomImage}`,
         srcAudio: `musiques/${nomAudio}`,
         duration: Number(morceau.duration),
