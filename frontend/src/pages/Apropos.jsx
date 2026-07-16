@@ -19,7 +19,7 @@ export default function Apropos() {
       titre="À propos"
       sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
     >
-      <div className="max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est{" "}
           <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix

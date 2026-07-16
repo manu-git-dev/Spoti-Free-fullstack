@@ -29,16 +29,15 @@ export default function MentionsLegales() {
       titre="Mentions légales"
       sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
     >
-      <div className="max-w-3xl mx-auto flex flex-col gap-8">
-
+      <div className="flex flex-col gap-8">
         <Bloc titre="Éditeur">
           <p>
             Spotifree est un projet personnel et non commercial, réalisé dans le
             cadre d'une formation de développeur web.
           </p>
           <p>
-            Directeur de la publication : <strong>A_COMPLETER</strong> —
-            contact : <strong>A_COMPLETER</strong>.
+            Directeur de la publication : <strong>A_COMPLETER</strong> — contact
+            : <strong>A_COMPLETER</strong>.
           </p>
         </Bloc>
 
@@ -83,9 +82,9 @@ export default function MentionsLegales() {
         <Bloc titre="Données personnelles">
           <p>
             Les comptes stockent un pseudo, un nom, un prénom, une adresse email
-            et un mot de passe chiffré. Les statistiques de visite ne
-            conservent pas les adresses IP en clair : elles sont hachées avec un
-            sel, et ne permettent pas de remonter à une personne.
+            et un mot de passe chiffré. Les statistiques de visite ne conservent
+            pas les adresses IP en clair : elles sont hachées avec un sel, et ne
+            permettent pas de remonter à une personne.
           </p>
           <p>
             Vous pouvez <strong>supprimer votre compte à tout moment</strong>,

@@ -61,7 +61,7 @@ export default function Profil({
   } else {
     return (
       <Page icone={UserIcon} titre="Mon profil">
-        <div className="max-w-xl mx-auto space-y-6">
+        <div className="space-y-6">
           <div className="relative overflow-hidden flex flex-col items-center text-center gap-3 rounded-2xl border border-border bg-background/50 p-6 md:flex-row md:text-left md:items-center md:gap-6">
             <div
               aria-hidden
