@@ -15,7 +15,7 @@ on:
 
 jobs:
   tests:
-    name: Tests (110) + build
+    name: Tests (124) + build
     runs-on: ubuntu-latest
 
     # Une vraie base MySQL, jetable, montee pour la duree du job. Le `health-cmd` est important :
@@ -107,7 +107,7 @@ jobs:
           echo "Backend et frontend en ligne."
 
       # --- Verification -------------------------------------------------------------------
-      - name: Lancer les 110 tests
+      - name: Lancer les 124 tests
         run: npm test --prefix tests
 
       # Le build de production est un test a lui seul : le serveur de developpement pardonne des

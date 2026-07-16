@@ -369,7 +369,64 @@ await etape("session expiree", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 9. Mise en page : l'app ne doit jamais depasser la hauteur de l'ecran
+// 9. Suppression de compte depuis le profil (RGPD : droit a l'effacement)
+//
+// C'est la seule action IRREVERSIBLE de l'interface. Deux garde-fous la protegent, et ce test
+// verifie qu'ils sont bien la : la modale (qui confirme l'intention) et le mot de passe (qui
+// confirme l'identite — une session ouverte ne prouve pas qui est devant l'ecran).
+// ---------------------------------------------------------------------------
+await etape("suppression de compte", async () => {
+  const compte = await creerCompte("SuppressionUI");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+
+  await page.goto(`${APP}/profil`);
+  await page.waitForTimeout(1200);
+
+  await page.getByRole("button", { name: "Supprimer mon compte" }).click();
+  await page.waitForTimeout(500);
+
+  // Rien ne doit pouvoir partir tant que le mot de passe n'est pas saisi : le bouton de
+  // confirmation reste desactive. Sans ca, la modale ne serait qu'un clic de plus.
+  const boutonConfirmer = page.getByRole("button", {
+    name: "Supprimer définitivement",
+  });
+  verifier(
+    "suppression : le bouton est desactive tant que le mot de passe est vide",
+    await boutonConfirmer.isDisabled(),
+  );
+
+  // Mauvais mot de passe : l'API refuse, le compte survit, la session reste ouverte.
+  await page.getByLabel("Saisis ton mot de passe pour confirmer :").fill("Faux1234");
+  await boutonConfirmer.click();
+  await page.waitForTimeout(1500);
+
+  verifier(
+    "suppression : un mauvais mot de passe ne deconnecte pas",
+    (await page.evaluate(() => localStorage.getItem("token"))) !== null,
+  );
+
+  // Le bon mot de passe, cette fois.
+  await page
+    .getByLabel("Saisis ton mot de passe pour confirmer :")
+    .fill(compte.cred.password);
+  await boutonConfirmer.click();
+  await page.waitForTimeout(2000);
+
+  verifier(
+    "suppression : la session est purgee apres la suppression",
+    (await page.evaluate(() => localStorage.getItem("token"))) === null,
+  );
+  verifier(
+    "suppression : l'utilisateur est renvoye a l'accueil",
+    new URL(page.url()).pathname === "/",
+    page.url(),
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
+// 10. Mise en page : l'app ne doit jamais depasser la hauteur de l'ecran
 // ---------------------------------------------------------------------------
 await etape("mise en page : l'app tient dans l'ecran", async () => {
   const compte = await creerCompte("LayoutTest");

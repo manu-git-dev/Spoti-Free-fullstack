@@ -92,7 +92,7 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 110 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 124 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -101,7 +101,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **110 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **124 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 
@@ -121,8 +121,13 @@ rouge, c'est qu'une régression est réapparue.
   `docs/FEATURE-depot-musique.md`).
 - **Ne jamais supprimer un fichier partagé** : les pochettes sont mutualisées (une image sert à
   plusieurs morceaux). Toujours vérifier qu'aucun autre morceau ne le référence.
-- **Ne pas "compléter" le CRUD utilisateurs** : l'absence d'édition du pseudo/nom/email est
-  volontaire (l'email est l'identifiant de connexion → escalade de privilèges).
+- **Ne pas "compléter" le CRUD utilisateurs** : l'absence d'**édition** du pseudo/nom/email est
+  volontaire (l'email est l'identifiant de connexion → escalade de privilèges). La **suppression**,
+  elle, existe et doit rester (`DELETE /api/users/mon-compte`) : c'est le droit à l'effacement du
+  RGPD. Supprimer n'est pas modifier. Elle exige le **mot de passe** (un token prouve qu'une session
+  est ouverte, pas qui est devant l'écran), refuse le **dernier admin** (409), et n'efface que les
+  fichiers des dépôts `en_attente` — ceux des dépôts approuvés sont dans `public/`, ils
+  appartiennent au catalogue et peuvent être partagés.
 - **Surfaces** : `bg-background` = fond ; `bg-card`/`bg-sidebar` = panneaux ; `bg-background/50` =
   ce qui vit *dans* un panneau. Jamais `bg-card` sur un enfant du `main`.
 
