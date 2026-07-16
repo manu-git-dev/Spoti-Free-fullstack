@@ -46,6 +46,10 @@ const FICHIER_SEED = path.join(RACINE, "scripts", "seed-musics.sql");
 const API = "https://api.jamendo.com/v3.0/tracks";
 const PAR_PAGE = 200; // maximum autorise par l'API
 
+// Nombre d'essais sur un MEME offset avant de conclure que le catalogue est epuise.
+// Voir le commentaire de `recupererPage()` : l'API rend des pages vides au hasard.
+const TENTATIVES_PAGE = 4;
+
 const CLIENT_ID = process.env.JAMENDO_CLIENT_ID;
 
 // --nombre 100
@@ -78,7 +82,7 @@ if (!Number.isInteger(NOMBRE_VOULU) || NOMBRE_VOULU < 1) {
 // telechargement par une application tierce. Comme on rapatrie les fichiers sur notre serveur,
 // c'est bien le telechargement qui nous concerne. Le filtre de licence ne suffit donc pas.
 // ---------------------------------------------------------------------------
-async function recupererPage(offset) {
+async function appelerApi(offset) {
   const parametres = new URLSearchParams({
     client_id: CLIENT_ID,
     format: "json",
@@ -86,13 +90,39 @@ async function recupererPage(offset) {
     offset: String(offset),
     // Les plus ecoutes d'abord : a licence egale, autant prendre les meilleurs morceaux.
     order: "popularity_total",
-    ccnd: "false",
-    ccnc: "false",
+
+    // ---------------------------------------------------------------------
+    // Le filtre juridique. `0` et non `false` : les deux semblent fonctionner, mais seul `0`
+    // a ete verifie contre l'API reelle (voir plus bas).
+    //
+    // ATTENTION au sens exact de ces deux drapeaux — c'est contre-intuitif :
+    //   `ccnd=0` seul   -> ecarte les ND, mais laisse passer TOUT le NC (by-nc, by-nc-sa).
+    //   `ccnd=0 ccnc=0` -> ne laisse que `by` et `by-sa`. C'est ce qu'on veut.
+    //
+    // Verifie en interrogeant reellement l'API sur 250 morceaux : le couple ne renvoie que
+    // `by/3.0`, `by-sa/3.0` et `by-sa/2.5`. Zero NC, zero ND.
+    // ---------------------------------------------------------------------
+    ccnd: "0",
+    ccnc: "0",
+
     // Un morceau sans pochette ni audio n'est pas exploitable ; on limite le bruit en amont.
     imagesize: "600",
-    // Le genre n'est PAS renvoye par defaut : sans `musicinfo`, les 100 morceaux arriveraient
-    // avec `genre` a NULL, et la colonne comme l'affichage "Artiste — Genre" resteraient vides.
-    include: "musicinfo",
+
+    // ---------------------------------------------------------------------
+    // `include` : DEUX champs vitaux qui ne sont PAS renvoyes par defaut.
+    //
+    //   `licenses`  -> `license_ccurl`. Sans lui, la licence est absente et `utilisable()`
+    //                  rejetterait 100 % des morceaux. C'est la garantie juridique.
+    //   `musicinfo` -> `tags.genres`. Sans lui, les 100 morceaux arrivent avec `genre` a NULL.
+    //
+    // LE PIEGE : la doc note le separateur `+` (`include=licenses+musicinfo`). Mais dans une
+    // URL, `+` signifie ESPACE — et `URLSearchParams` encode un `+` litteral en `%2B`, que
+    // l'API ne comprend pas. Elle ne renvoie alors AUCUNE erreur : elle rend simplement les
+    // deux champs vides, en repondant "success". On ecrit donc une vraie espace, et
+    // `URLSearchParams` la transforme en `+` — ce que l'API attend.
+    // ---------------------------------------------------------------------
+    include: "licenses musicinfo",
+
     // UN SEUL morceau par artiste.
     //
     // Sans ca, "les 100 plus ecoutes" donne surtout les quelques artistes les plus populaires de
@@ -119,6 +149,36 @@ async function recupererPage(offset) {
   }
 
   return results ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Une page, avec insistance.
+//
+// L'API renvoie regulierement une page VIDE sans la moindre erreur : `status: "success"`,
+// `code: 0`, `error_message: ""`, `results: []`. Mesure sur des appels identiques repetes : une
+// a trois pages sur six reviennent vides, au hasard. Rien dans la reponse ne permet de
+// distinguer ce hoquet d'une vraie fin de catalogue.
+//
+// C'est le genre de defaut qui ne se voit pas : la version precedente s'arretait a la premiere
+// page vide, donc elle aurait annonce fierement "import termine" avec 12 morceaux sur 100, sans
+// erreur ni avertissement.
+//
+// On reessaie donc le MEME offset plusieurs fois avant de conclure. Si la page est encore vide
+// apres tout ca, c'est qu'on est vraiment au bout.
+// ---------------------------------------------------------------------------
+async function recupererPage(offset) {
+  for (let tentative = 1; tentative <= TENTATIVES_PAGE; tentative++) {
+    const resultats = await appelerApi(offset);
+    if (resultats.length > 0) return resultats;
+
+    if (tentative < TENTATIVES_PAGE) {
+      // Une pause qui s'allonge : si le vide vient d'une limitation de debit, insister
+      // immediatement ne ferait que l'entretenir.
+      await new Promise((resoudre) => setTimeout(resoudre, 400 * tentative));
+    }
+  }
+
+  return [];
 }
 
 function utilisable(morceau) {
@@ -152,6 +212,34 @@ async function telecharger(url, destination) {
 
   await fs.writeFile(destination, Buffer.from(await reponse.arrayBuffer()));
   return true;
+}
+
+// L'API rend ses textes ENCODES POUR LE HTML : « Ground &amp; Leaves », « Axl &amp; Arth ».
+//
+// React, lui, echappe tout ce qu'il affiche — c'est sa protection contre les injections. Il
+// afficherait donc litteralement « Ground &amp; Leaves », esperluette et point-virgule compris.
+// Le probleme n'est pas dans React : c'est la valeur qu'on lui donne qui est deja encodee, une
+// fois de trop.
+//
+// On decode donc a l'ENTREE, au moment ou la donnee quitte l'API — pas a l'affichage. Une base
+// doit contenir du texte, pas du HTML : sinon chaque endroit qui lit `artist` (le lecteur, la
+// recherche, l'export, un futur flux RSS) devrait re-decoder pour son compte, et l'un d'eux
+// oubliera.
+//
+// Le jeu d'entites est volontairement limite a ce que l'API produit reellement. Une regex
+// generique sur `&\w+;` transformerait un vrai « &amp; » tape par un artiste en autre chose.
+function decoderEntites(texte) {
+  if (typeof texte !== "string") return texte;
+
+  return texte
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    // `&amp;` EN DERNIER : sinon « &amp;lt; » (une esperluette litterale suivie de "lt;")
+    // deviendrait « &lt; » puis « < ». On decode toujours l'esperluette apres les autres.
+    .replace(/&amp;/g, "&");
 }
 
 // Le genre, tire des tags de `musicinfo`.
@@ -246,8 +334,11 @@ async function principal() {
     const page = await recupererPage(offset);
 
     if (page.length === 0) {
+      // `recupererPage` a deja insiste TENTATIVES_PAGE fois sur cet offset : le catalogue est
+      // reellement epuise, ce n'est pas un hoquet de l'API.
       console.warn(
-        `\nL'API n'a plus de resultats apres ${examines} morceaux examines.`,
+        `\nPlus de resultats apres ${examines} morceaux examines ` +
+          `(${retenus.length} retenus). Le catalogue Jamendo correspondant aux criteres est epuise.`,
       );
       break;
     }
@@ -279,8 +370,10 @@ async function principal() {
       }
 
       retenus.push({
-        title: morceau.name.trim().slice(0, 100),
-        artist: morceau.artist_name.trim().slice(0, 100),
+        // `decoder` AVANT `slice` : « &amp; » fait 5 caracteres, « & » en fait 1. Tronquer
+        // d'abord risquerait de couper une entite en deux et de laisser « &am » dans la base.
+        title: decoderEntites(morceau.name).trim().slice(0, 100),
+        artist: decoderEntites(morceau.artist_name).trim().slice(0, 100),
         genre: genreDe(morceau),
         srcImage: `images/${nomImage}`,
         srcAudio: `musiques/${nomAudio}`,

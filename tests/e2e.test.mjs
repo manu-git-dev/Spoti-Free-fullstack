@@ -242,7 +242,22 @@ await etape("lecteur", async () => {
 
   await page.goto(`${APP}/bibliotheque`);
   await page.waitForTimeout(1300);
-  await page.getByText("Believer").first().click();
+
+  // On clique le PREMIER morceau de la liste, quel qu'il soit.
+  //
+  // Ce test cliquait sur « Believer » — un titre du catalogue de demonstration. Le jour ou ce
+  // catalogue a ete remplace par de vraies oeuvres libres, le test s'est mis a chercher pendant
+  // 30 secondes un texte qui n'existait plus, puis a echouer sur un timeout illisible qui ne
+  // disait rien de la vraie cause.
+  //
+  // C'est la meme lecon que la note 55 : un test ne doit RIEN supposer du contenu de la base. Le
+  // lecteur se teste avec n'importe quel morceau — le titre du premier n'a aucune importance.
+  // On vise la pochette : son `alt` suit un motif stable ("Pochette album <titre>"), et elle vit
+  // DANS la zone cliquable de la ligne — le clic remonte donc au bon gestionnaire.
+  await page
+    .getByAltText(/^Pochette album /)
+    .first()
+    .click({ timeout: 5000 });
   await page.waitForTimeout(1800);
 
   verifier(
