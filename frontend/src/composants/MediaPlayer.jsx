@@ -10,6 +10,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { apiFetch, urlFichier } from "@/lib/api";
+import Attribution from "./Attribution";
 
 export default function MediaPlayer({
   music,
@@ -167,6 +168,7 @@ export default function MediaPlayer({
               <p className="truncate text-sm text-muted-foreground">
                 {music.artist}
               </p>
+              <Attribution musique={music} />
             </div>
           </div>
 

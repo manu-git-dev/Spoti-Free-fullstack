@@ -11,6 +11,13 @@ import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
+import {
+  licenceValide,
+  urlDeLicence,
+  sourceUrlValide,
+  MESSAGE_LICENCE,
+  MESSAGE_SOURCE_URL,
+} from "../validation.js";
 
 const router = express.Router();
 
@@ -167,6 +174,11 @@ router.post(
       const title = req.body.title?.trim();
       const artist = req.body.artist?.trim();
       const genre = req.body.genre?.trim() || null;
+      const licence = req.body.licence;
+      const sourceUrl = req.body.sourceUrl?.trim() || null;
+      // multipart/form-data ne transporte que du texte : une case cochee arrive en "true", pas
+      // en booleen. On compare donc a la chaine.
+      const droitsConfirmes = req.body.droitsConfirmes === "true";
 
       // La pochette est FACULTATIVE : si l'utilisateur n'en fournit pas, une pochette deja
       // utilisee dans le catalogue sera tiree au hasard au moment de l'approbation.
@@ -175,6 +187,34 @@ router.post(
         return res.status(400).json({
           message: "Titre, artiste et fichier audio sont obligatoires.",
         });
+      }
+
+      // ---------------------------------------------------------------------
+      // La declaration de droits.
+      //
+      // Le formulaire React coche `required` sur la case, mais ca ne protege personne : un
+      // appel direct a l'API ne passe jamais par le formulaire. C'est ici que la declaration
+      // devient une condition reelle du depot.
+      //
+      // Elle couvre l'audio ET la pochette : une image sous copyright pose exactement le meme
+      // probleme qu'un morceau sous copyright.
+      // ---------------------------------------------------------------------
+      if (!droitsConfirmes) {
+        await supprimerFichiers(audio.filename, image?.filename);
+        return res.status(400).json({
+          message:
+            "Vous devez certifier détenir les droits sur le morceau et sa pochette.",
+        });
+      }
+
+      if (!licenceValide(licence)) {
+        await supprimerFichiers(audio.filename, image?.filename);
+        return res.status(400).json({ message: MESSAGE_LICENCE });
+      }
+
+      if (!sourceUrlValide(sourceUrl)) {
+        await supprimerFichiers(audio.filename, image?.filename);
+        return res.status(400).json({ message: MESSAGE_SOURCE_URL });
       }
 
       // La limite globale de multer est celle de l'audio (10 Mo) : on affine ici pour l'image.
@@ -214,7 +254,11 @@ router.post(
       // Dans les deux cas, un vrai morceau aurait une duree. On rejette, et on ne laisse pas
       // les fichiers trainer.
       if (!duration) {
-        await supprimerFichiers(audio.filename, image.filename);
+        // `image?.` et non `image.` : la pochette est facultative. Sur un depot sans pochette
+        // ET avec un audio invalide, `image.filename` levait un TypeError, transformant un
+        // refus 400 parfaitement prevu en 500 — et laissant le fichier orphelin sur le disque,
+        // puisque le nettoyage plantait avant de s'executer.
+        await supprimerFichiers(audio.filename, image?.filename);
         return res.status(400).json({
           message:
             "Ce fichier n'est pas un fichier audio valide (ou il est corrompu).",
@@ -223,8 +267,9 @@ router.post(
 
       await db.query(
         `INSERT INTO submissions
-           (id_user, title, artist, genre, fichier_audio, fichier_image, duration)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+           (id_user, title, artist, genre, fichier_audio, fichier_image, duration,
+            licence, source_url, droits_confirmes_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           req.user.id_user,
           title,
@@ -233,6 +278,8 @@ router.post(
           audio.filename,
           image?.filename ?? null, // pochette facultative
           duration,
+          licence,
+          sourceUrl,
         ],
       );
 
@@ -298,6 +345,7 @@ router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
     const [depots] = await db.query(
       `SELECT s.id_submission, s.title, s.artist, s.genre, s.duration,
               s.statut, s.motif_refus, s.created_at, u.pseudo,
+              s.licence, s.source_url, s.droits_confirmes_at,
               (s.fichier_image IS NOT NULL) AS a_pochette
          FROM submissions s
          JOIN users u ON u.id_user = s.id_user
@@ -404,6 +452,21 @@ router.patch(
         });
       }
 
+      // Un depot sans licence exploitable ne peut pas entrer au catalogue : `musics.licence`
+      // est en NOT NULL, l'INSERT plus bas echouerait en 500 apres avoir deja deplace le
+      // fichier dans `public/` — c'est-a-dire apres l'avoir mis en ligne. Le cas se presente
+      // reellement pour les depots anterieurs a la declaration de droits (`licence` a NULL) :
+      // ils n'ont jamais fait l'objet d'une certification, on ne peut pas la leur inventer.
+      //
+      // Cette verification est AVANT le premier fs.rename() pour cette raison exacte : refuser
+      // apres avoir publie ne refuse rien du tout.
+      if (!licenceValide(depot.licence)) {
+        return res.status(409).json({
+          message:
+            "Ce dépôt ne déclare pas de licence exploitable : demandez-la au déposant avant de l'approuver.",
+        });
+      }
+
       const nomAudio = path.basename(depot.fichier_audio);
 
       // On deplace le fichier audio : c'est maintenant, et seulement maintenant, qu'il devient
@@ -451,9 +514,13 @@ router.patch(
 
       // Les chemins stockes sont RELATIFS a `public/`, comme le reste du catalogue
       // (`musiques/xxx.mp3`, `images/xxx.jpg`).
+      //
+      // La licence et la source declarees par le deposant suivent le morceau jusqu'au
+      // catalogue : c'est tout l'interet de les avoir recueillies. `source_url` peut etre NULL
+      // (une creation originale n'a pas d'origine externe a citer).
       await db.query(
-        `INSERT INTO musics (title, artist, genre, src_image, src_audio, duration)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO musics (title, artist, genre, src_image, src_audio, duration, licence, licence_url, source_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           depot.title,
           depot.artist,
@@ -461,6 +528,9 @@ router.patch(
           cheminImage,
           `musiques/${nomAudio}`,
           depot.duration,
+          depot.licence,
+          urlDeLicence(depot.licence),
+          depot.source_url,
         ],
       );
 

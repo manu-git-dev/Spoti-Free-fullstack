@@ -1660,3 +1660,37 @@ Est-ce que ça aurait cassé mon app ? **Probablement pas** : `mysql2` gère `ca
 **Dette assumée** : MySQL 8.0 est en fin de vie chez Oracle depuis avril 2026 — Ubuntu 24.04 continue d'en assurer la maintenance de sécurité sur la durée de sa LTS, donc rien d'urgent. Mais le passage de ma **CI et** de ma prod vers 8.4 devra se faire un jour : consciemment et testé, pas par accident au détour d'un `apt install`.
 
 ---
+
+### 58. Mettre en ligne, c'est changer de régime juridique
+
+**Contexte** : en attendant la validation du paiement du VPS, une idée me trotte : dans la section « déposer une musique », **à aucun moment on ne précise que le morceau et l'image doivent être libres de droit**. En creusant, j'ai découvert un problème bien plus gros que celui que je cherchais.
+
+**Le vrai problème, celui que je ne cherchais pas** : mon `seed-musics.sql` contenait 20 morceaux nommés « Blinding Lights / The Weeknd », « Bohemian Rhapsody / Queen »… pointant vers **5 fichiers libres de droit recyclés en boucle**. Sur `localhost`, c'est un jeu de données de démo tout à fait normal. En ligne, ça devient trois problèmes d'un coup : j'affiche publiquement des noms d'artistes que je n'ai pas le droit d'exploiter ; c'est **trompeur** (on clique sur Bohemian Rhapsody, on entend du piano d'ambiance) ; et un recruteur qui clique sur Play se dit « démo bricolée ».
+
+**La leçon générale** : `localhost` et la production ne sont pas le même endroit avec une adresse différente — ce sont **deux régimes juridiques différents**. Des données de démo qui n'engagent personne sur ma machine deviennent une publication dès qu'elles ont une URL. Il faut relire ses données de test avec ces yeux-là **avant** de déployer, pas après.
+
+**Hébergeur ou éditeur, et le paradoxe de la modération** : la LCEN distingue l'**hébergeur** (responsabilité limitée : il doit retirer promptement un contenu illicite qu'on lui signale) de l'**éditeur** (responsable de ce qu'il publie). Ce qui est contre-intuitif : **le fait que je modère a priori me rapproche du statut d'éditeur**, puisque j'ai validé le contenu, donc je l'endosse. Ma modération est une bonne fonctionnalité, mais elle **augmente** mon exposition. D'où l'intérêt de faire signer une déclaration au déposant : elle ne me dédouane pas, elle documente ma diligence.
+
+**TASL** : la règle d'attribution Creative Commons tient en quatre lettres — **T**itle, **A**uthor, **S**ource, **L**icense. Mes colonnes `title` et `artist` couvraient déjà T et A ; il me manquait S et L. Et le piège que je n'avais pas vu : **CC BY *exige* l'attribution**. Prendre du CC BY sans créditer viole la licence aussi sûrement que de prendre du Weeknd. **Le libre n'est pas le domaine public.** Une licence stockée en base mais jamais affichée ne m'autorise rien.
+
+**Le `NOT NULL` comme outil de conception, pas comme contrainte** : j'ai mis `musics.licence` en `NOT NULL` sans valeur par défaut. Ça a **cassé** toutes mes insertions — et c'était le but. C'est le principe *make illegal states unrepresentable* : plutôt que d'espérer ne jamais oublier la licence sur un nouveau chemin d'écriture, je rends l'oubli **impossible**. Un morceau sans licence ne peut littéralement plus exister dans ma base.
+
+Ça a immédiatement payé : je pensais avoir deux chemins d'insertion (ajout admin, approbation d'un dépôt). La base m'en a révélé **un troisième** que j'avais raté — une fixture de `admin.test.mjs` qui écrivait en SQL direct, hors API. Le test a explosé sur `Field 'licence' doesn't have a default value`. **Je ne l'aurais jamais trouvé à la lecture.**
+
+**Mais un `NOT NULL` mal placé fabrique des mensonges.** J'avais aussi mis `source_url` en `NOT NULL`. Erreur : quelqu'un qui dépose **sa propre création** n'a aucune source externe à citer, et TASL dit bien « Source, *si elle est fournie* ». La contrainte m'aurait forcé à **inventer une URL** pour la satisfaire. Même raisonnement pour `droits_confirmes_at`, laissé nullable : mes dépôts antérieurs n'ont réellement jamais fait l'objet d'une déclaration, et `NULL` est la représentation **honnête** de « aucune déclaration recueillie » — une date par défaut leur aurait inventé un consentement qui n'a jamais existé. **Le NOT NULL sert à interdire l'impossible, pas à forcer l'inconnu à ressembler à du connu.**
+
+**Deux valeurs qu'on ne reçoit jamais du client** :
+- **L'URL de la licence** est **dérivée** du code (`CC BY 4.0` → l'URL du deed), jamais envoyée par le formulaire. Sinon rien n'empêcherait d'afficher « CC BY 4.0 » en pointant vers n'importe quoi — l'attribution deviendrait un mensonge signé de ma main. C'est le même raisonnement que pour `src_audio` (note sur le CRUD catalogue).
+- **`source_url` est une faille XSS en puissance** : elle finit dans un `href` affiché à tous les visiteurs. Vérifier qu'elle « ressemble à une URL » laisserait passer `javascript:alert(...)`, qui s'exécuterait au clic. Je n'autorise que `http` et `https`, en m'appuyant sur `new URL()` — le parseur natif fait autorité sur ce qu'est une URL, pas ma regex maison.
+
+**La case à cocher qui ne protège rien** : `required` sur l'input React est du **confort d'affichage**. Un appel direct à l'API ne passe jamais par mon formulaire — mes propres tests le prouvent, ils envoient du `FormData` à `fetch` sans toucher au navigateur. La barrière qui protège est **côté serveur**, dans `validation.js`. Et une case **pré-cochée n'est pas un consentement, c'est un piège** : l'utilisateur doit faire le geste.
+
+**Un bug trouvé au passage** : dans la route de dépôt, `supprimerFichiers(audio.filename, image.filename)` — sans `?.` sur `image`. La pochette étant facultative, un dépôt **sans pochette et avec un audio invalide** levait un `TypeError`, transformant un refus 400 parfaitement prévu en **500**, et laissant le fichier orphelin sur le disque puisque le nettoyage plantait avant de s'exécuter. Deux caractères. Trouvé en relisant le fichier pour une tout autre raison.
+
+**Une liste codée en dur est une bombe à retardement** : `preparer-medias.mjs` listait mes 5 mp3 en dur. Ça tenait avec 5 morceaux ; avec 100, la liste devenait ingérable et surtout **fausse en silence** — le script aurait créé 5 fichiers obsolètes, ignoré les 100 autres, et laissé la CI échouer sur des médias manquants sans dire pourquoi. La source de vérité du catalogue, c'est le seed : autant **le lire** plutôt que le recopier.
+
+**Ce que j'ai vérifié plutôt que supposé** : ma page de mentions légales allait affirmer « vous pouvez supprimer votre compte depuis votre profil ». J'ai vérifié dans `userRoute.js` : **cette route n'existe pas**. J'aurais publié une page légale qui ment. Sur une page légale plus qu'ailleurs, **on n'écrit que ce qu'on a vérifié**.
+
+**Et une question à laquelle j'ai eu la mauvaise raison** : je voulais un vrai catalogue « pour intéresser de vrais utilisateurs ». Honnêtement : **personne ne viendra écouter de la musique libre sur Spotifree alors que Spotify existe.** Ce n'est pas grave, ce n'est pas le but. Le vrai bénéfice est ailleurs : **5 morceaux c'est une démo, 100 morceaux c'est une application**. La recherche prend un sens, les filtres se justifient, la pagination devient un vrai sujet, et les problèmes de perf apparaissent enfin. Bonne décision, mauvaise raison — et ça valait le coup de le dire.
+
+---

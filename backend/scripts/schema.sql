@@ -36,6 +36,9 @@ CREATE TABLE `musics` (
   `src_audio` varchar(255) NOT NULL,
   `duration` int DEFAULT NULL,
   `play_count` int unsigned NOT NULL DEFAULT '0',
+  `licence` varchar(50) NOT NULL COMMENT 'Code lisible, ex. "CC BY 4.0"',
+  `licence_url` varchar(255) NOT NULL COMMENT 'Lien vers le deed de la licence',
+  `source_url` varchar(255) DEFAULT NULL COMMENT 'Page d''origine, si elle existe',
   PRIMARY KEY (`id_music`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -90,6 +93,9 @@ CREATE TABLE `submissions` (
   `statut` enum('en_attente','approuve','refuse') NOT NULL DEFAULT 'en_attente',
   `motif_refus` text,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `licence` varchar(50) DEFAULT NULL COMMENT 'Licence declaree par le deposant',
+  `source_url` varchar(255) DEFAULT NULL COMMENT 'Origine declaree du morceau',
+  `droits_confirmes_at` datetime DEFAULT NULL COMMENT 'Date de la certification de droits',
   PRIMARY KEY (`id_submission`),
   KEY `fk_submissions_users` (`id_user`),
   CONSTRAINT `fk_submissions_users` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE

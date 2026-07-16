@@ -128,6 +128,40 @@ export default function AdminDepots({ user }) {
                   </p>
                 ) : null}
 
+                {/* Ce que le déposant a déclaré. Sans ce bloc, la déclaration de droits ne
+                    servirait à rien : elle serait recueillie puis jamais lue, et la modération
+                    se ferait à l'aveugle. Un dépôt sans licence ne peut pas être approuvé
+                    (l'API répond 409), d'où l'avertissement explicite. */}
+                {depot.licence ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Déclaré sous{" "}
+                    <span className="text-foreground">{depot.licence}</span>
+                    {depot.droits_confirmes_at
+                      ? `, droits certifiés le ${new Date(
+                          depot.droits_confirmes_at,
+                        ).toLocaleDateString("fr-FR")}`
+                      : ""}
+                    {depot.source_url ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={depot.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          voir l'original
+                        </a>
+                      </>
+                    ) : null}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-destructive">
+                    Aucune licence déclarée — dépôt antérieur à la déclaration de
+                    droits, il ne peut pas être approuvé en l'état.
+                  </p>
+                )}
+
                 {/* Telecharger pour verifier les droits (audio et image). */}
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
                   <LienTelechargement

@@ -32,3 +32,21 @@ export function emailValide(email) {
 export function motDePasseValide(motDePasse) {
   return REGLES_MOT_DE_PASSE.every((regle) => regle.test(motDePasse));
 }
+
+// Les licences proposees au depot. Miroir de LICENCES_ACCEPTEES dans backend/src/validation.js :
+// le serveur refuse tout ce qui n'y figure pas, cette liste ne fait que remplir le menu.
+//
+// On n'y met QUE les versions 4.0 : les versions 2.x et 3.0 restent acceptees par le serveur
+// (le catalogue importe depuis Jamendo en contient beaucoup, ce sont des morceaux anciens), mais
+// il n'y a aucune raison de proposer a quelqu'un qui publie AUJOURD'HUI une licence obsolete.
+// Accepter large, proposer etroit.
+export const LICENCES_DEPOT = [
+  {
+    code: "CC BY 4.0",
+    libelle: "CC BY 4.0 — réutilisable avec attribution",
+  },
+  {
+    code: "CC BY-SA 4.0",
+    libelle: "CC BY-SA 4.0 — attribution + partage à l'identique",
+  },
+];
