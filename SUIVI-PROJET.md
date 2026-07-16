@@ -25,10 +25,37 @@ utilisateurs, gestion du catalogue).
 
 ### LA PROCHAINE ETAPE : le deploiement
 
-**C'est la seule chose qui reste, et elle ne depend plus du code.** Manuel doit d'abord **acheter
-un VPS (Hostinger, ~4 Go de RAM) et un nom de domaine** — il n'en a pas encore au 2026-07-14.
+**C'est la seule chose qui reste, et elle ne depend plus du code.**
 
-Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (nginx, systemd, HTTPS, sauvegardes).
+**Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
+(2 vCPU, 8 Go RAM, 100 Go NVMe), 12 mois, **Ubuntu 24.04 LTS**, datacenter France. Le paiement
+etait encore bloque en "en cours de traitement" en fin de journee (controle anti-fraude sur compte
+neuf, jusqu'a 2h annoncees par le support). Domaine retenu : **`manuel-mattana.fr`** (offert avec
+l'offre, a reserver des validation). Deja fait, cote prerequis : cle SSH **ed25519**, `JWT_SECRET`
+et `IP_HASH_SALT` generes, mot de passe d'application Gmail pour `MAIL_PASS`, **2FA** active sur le
+compte hebergeur. **Il ne manque que la machine.**
+
+**L'architecture : un domaine, des sous-domaines.** Le portfolio a la racine
+(`manuel-mattana.fr`) listera les projets ; cliquer un projet mene au projet **reellement en
+ligne**, sur son sous-domaine. Spoti-Free vit donc sur **`spotifree.manuel-mattana.fr`**. Un
+sous-domaine est gratuit et illimite : chaque futur projet aura son adresse sans racheter de
+domaine. Un WordPress (`blog.manuel-mattana.fr`) viendra plus tard.
+
+**L'ordre : Spoti-Free d'abord, seul**, puis le portfolio, puis WordPress. Quand quelque chose
+casse - et quelque chose cassera -, il faut n'avoir change qu'une seule chose depuis le dernier
+etat qui marchait.
+
+Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS, sauvegardes).
+
+**Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
+mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 106 tests
+n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
+
+**Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
+passe de ~107 EUR a ~200 EUR/an. `DEPLOIEMENT.md` etant agnostique de l'hebergeur (`ssh` + `apt`),
+migrer revient a rejouer les memes commandes ailleurs (Hetzner ~63 EUR/an, prix stable). Aucun
+verrouillage - mais il faut y penser avant la reconduction.
 
 **Pourquoi un VPS et pas un mutualise** : le mutualise execute du PHP, pas un serveur Node en
 continu — et son disque ne persiste pas. Or les musiques deposees sont ecrites sur le disque : sur
@@ -45,7 +72,7 @@ hebergera aussi son portfolio, ses autres projets et un WordPress.
 
 Note : **la purge des comptes de demo n'a plus lieu d'etre.** La base de prod est construite avec
 `schema.sql` + `seed-musics.sql`, elle ne contient donc **aucun utilisateur** (ni `admin@admin.fr`,
-ni `patrick@test.fr`). Il faudra creer son compte admin (`DEPLOIEMENT.md` §8).
+ni `patrick@test.fr`). Il faudra creer son compte admin (`DEPLOIEMENT.md` §9).
 
 ### Creer la base sur une machine neuve
 
@@ -700,18 +727,23 @@ Restent :
   (effets d'`App.jsx`), mais un like effectue avec un token expire affiche "Token invalide" sans
   deconnecter. Le design cible est un **`AuthContext` + wrapper `apiFetch`** interceptant tous les
   `401` - refactor d'architecture, a faire consciemment.
-- Top 5 de `Home.jsx` : simple `.slice(0, 5)`, pas un vrai compteur d'ecoutes (aucune table de
-  comptage cote backend - fonctionnalite a part, pour plus tard).
 - `AddMusicPlaylist` : pas de filtre cote frontend pour retirer de la liste deroulante les
   playlists qui contiennent deja la musique. Le backend bloque le doublon (409, message clair),
   mais l'UX pourrait l'empecher avant meme la tentative.
 - Accessibilite : le bouton "Connexion" est un `<a role="button">` (shadcn `Button` +
   `render={<Link/>}`) - un lecteur d'ecran annonce "bouton" alors que l'element navigue.
-- Pas de limitation du nombre de tentatives de connexion (brute force) - a prevoir avant un vrai
-  deploiement public.
-- Deploiement : penser a rejouer `backend/scripts/add-role-column.sql` sur la base de production,
-  et a passer les URLs `http://localhost:3000` du frontend en variable d'environnement (elles sont
-  ecrites en dur dans les composants).
+> Nettoyage du 2026-07-16 : trois points de cette liste etaient **perimes** et ont ete retires
+> apres verification dans le code. (1) *Top 5 : simple `.slice(0, 5)`* → faux, la colonne
+> `play_count` existe (`schema.sql`), la route `/api/musics/top` fait un vrai classement, et
+> `Home.jsx:19` documente lui-meme l'ancien slice comme revolu. (2) *Pas de limitation des
+> tentatives de connexion* → faux, `express-rate-limit` est en place dans `server.js` et 3 routes.
+> (3) *Deploiement : rejouer `add-role-column.sql` + sortir les URLs `localhost` en dur* → faux
+> dans les deux cas : la colonne `role` est dans `schema.sql`, et `apiFetch` centralise tout via
+> `VITE_API_URL` (`frontend/src/lib/api.js:16`).
+>
+> **Une note de suivi perimee coute plus cher que pas de note** : en pleine mise en prod, elle fait
+> chercher un probleme inexistant — ou pire, rejouer une migration inutile sur la base de
+> production.
 
 ## Maquette Pencil
 

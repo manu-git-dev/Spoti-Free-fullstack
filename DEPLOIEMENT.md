@@ -3,6 +3,15 @@
 Guide pour déployer Spoti-Free sur un **VPS** (Hostinger, OVH, Hetzner… — n'importe quelle machine
 Ubuntu avec un accès SSH).
 
+> **Une machine, plusieurs sites.** Ce VPS héberge le **portfolio** à la racine
+> (`manuel-mattana.fr`), et **chaque projet sur son sous-domaine** — Spoti-Free vit donc sur
+> `spotifree.manuel-mattana.fr`. Un sous-domaine est gratuit et illimité : chaque futur projet
+> aura son adresse sans racheter de domaine. nginx aiguille tout ça (§8).
+>
+> **Déployer Spoti-Free en premier, seul**, avant le portfolio et le WordPress. Quand quelque
+> chose casse — et quelque chose cassera —, il faut n'avoir changé qu'une seule chose depuis le
+> dernier état qui marchait.
+
 > **Pourquoi un VPS et pas un hébergement mutualisé ?**
 > L'hébergement mutualisé classique (l'offre à quelques euros) exécute du **PHP**, pas du Node.js
 > en continu : le backend Express ne peut pas y tourner. Et un VPS a un **disque qui persiste** —
@@ -17,17 +26,59 @@ Chaque point ci-dessous correspond à un vrai risque, pas à une formalité.
 ## 0. Ce qu'on met en place
 
 ```
-                    ┌── / ─────────────► le build React (fichiers statiques)
-   Internet ──► nginx ── /api ─────────► Node/Express (127.0.0.1:3000)
-      (HTTPS)      └── /musiques,/images ► les fichiers audio et les pochettes
-                                          (backend/public/, sur le disque)
+                       manuel-mattana.fr ──────────► le portfolio
+                      /                              (plus tard)
+   Internet ──► nginx ── blog.manuel-mattana.fr ───► WordPress + PHP-FPM
+      (HTTPS)      \                                 (plus tard)
+                    \ spotifree.manuel-mattana.fr ─┬── /  ──────────────► le build React
+                                                   │                      (fichiers statiques)
+                                                   ├── /api ───────────► Node/Express
+                                                   │                      (127.0.0.1:3000)
+                                                   └── /musiques,/images ► audio et pochettes
+                                                                          (backend/public/)
 ```
 
-nginx est en façade (il gère le HTTPS et sert les fichiers) ; Node ne parle qu'à lui, en local.
+nginx est en façade : il gère le HTTPS et sert les fichiers. Il **choisit le site d'après le
+domaine demandé** (`server_name`), puis, à l'intérieur du site, route selon le chemin. Node ne
+parle qu'à nginx, en local — il n'est jamais exposé directement.
 
 ---
 
-## 1. Préparer le serveur
+## 1. Le DNS (à lancer en premier)
+
+Rien ne marchera tant que ton domaine ne pointe pas vers ton VPS. Et comme la propagation prend du
+temps, **on la lance en premier** : elle travaillera pendant que tu installes les paquets.
+
+Dans le panneau de ton registrar (ici Hostinger), zone DNS du domaine, créer des enregistrements de
+type **A** — un enregistrement `A` associe un **nom** à une **adresse IPv4** :
+
+| Type | Nom         | Valeur        | Adresse obtenue                                |
+|------|-------------|---------------|------------------------------------------------|
+| A    | `@`         | `<ip-du-vps>` | `manuel-mattana.fr` → le portfolio (plus tard) |
+| A    | `www`       | `<ip-du-vps>` | `www.manuel-mattana.fr`                        |
+| A    | `spotifree` | `<ip-du-vps>` | `spotifree.manuel-mattana.fr` → **Spoti-Free** |
+
+`@` désigne le domaine nu (la racine, ou *apex*). Les autres lignes sont des **sous-domaines** :
+gratuits et illimités, c'est ce qui permet de loger tous les projets sur une seule machine et un
+seul domaine. Un futur projet = une ligne de plus, rien à racheter.
+
+> **Pourquoi en premier ?** Un changement DNS met de quelques minutes à quelques heures à se
+> propager. Et surtout : **certbot refuse de délivrer un certificat s'il ne peut pas vérifier que
+> le domaine pointe vers cette machine** (§8). Lancer le DNS avant l'installation, c'est laisser la
+> propagation travailler pendant que tu fais autre chose — plutôt que de la découvrir en obstacle
+> au moment du HTTPS.
+
+Vérifier **depuis ton Mac** (pas depuis le VPS) :
+
+```bash
+dig +short spotifree.manuel-mattana.fr
+# doit afficher l'IP du VPS. Tant que la réponse est vide, c'est que ça propage encore :
+# attendre, et ne surtout pas passer au HTTPS (§8).
+```
+
+---
+
+## 2. Préparer le serveur
 
 ```bash
 ssh root@<ip-du-vps>
@@ -50,7 +101,7 @@ mysql_secure_installation
 
 ---
 
-## 2. Récupérer le code
+## 3. Récupérer le code
 
 ```bash
 mkdir -p /var/www && cd /var/www
@@ -63,7 +114,7 @@ npm ci --prefix frontend
 
 ---
 
-## 3. La base de données
+## 4. La base de données
 
 ```bash
 mysql -u root -p
@@ -91,11 +142,11 @@ mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # les 20 morc
 > modifications sont **déjà incluses** dans `schema.sql`. Ne pas les rejouer.
 
 **La base de production ne contient donc AUCUN utilisateur** — ni `admin@admin.fr`, ni les comptes
-de test. C'est voulu : voir §8 pour créer ton compte admin proprement.
+de test. C'est voulu : voir §9 pour créer ton compte admin proprement.
 
 ---
 
-## 4. Les fichiers audio ⚠️
+## 5. Les fichiers audio ⚠️
 
 `backend/public/` **n'est pas versionné** (23 Mo, et les droits des morceaux ne permettent pas leur
 redistribution). Il faut donc les envoyer à la main, depuis ta machine :
@@ -117,7 +168,7 @@ mkdir -p /var/www/spotifree/backend/uploads
 
 ---
 
-## 5. Configuration
+## 6. Configuration
 
 **`backend/.env`** :
 
@@ -128,13 +179,13 @@ PORT=3000
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=spotifree
-DB_PASSWORD=<le mot de passe choisi au §3>
+DB_PASSWORD=<le mot de passe choisi au §4>
 DB_NAME=spotifree
 
 JWT_SECRET=<une NOUVELLE clé, voir ci-dessous>
 IP_HASH_SALT=<un autre sel aléatoire>
 
-FRONTEND_URL=https://ton-domaine.fr
+FRONTEND_URL=https://spotifree.manuel-mattana.fr
 
 MAIL_USER=ton.adresse@gmail.com
 MAIL_PASS=<mot de passe d'application Gmail, 16 caractères>
@@ -159,7 +210,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 **`frontend/.env`** :
 
 ```env
-VITE_API_URL=https://ton-domaine.fr
+VITE_API_URL=https://spotifree.manuel-mattana.fr
 ```
 
 > Les variables `VITE_*` sont **compilées dans le bundle** envoyé au navigateur : n'y mettre
@@ -173,7 +224,7 @@ npm run build --prefix frontend    # produit frontend/dist/
 
 ---
 
-## 6. Lancer le backend en service (systemd)
+## 7. Lancer le backend en service (systemd)
 
 Sans ça, le backend s'arrête dès que tu fermes ta session SSH — et ne redémarre pas après un reboot.
 
@@ -210,14 +261,24 @@ journalctl -u spotifree -f          # les logs en direct
 
 ---
 
-## 7. nginx
+## 8. nginx
+
+nginx sert **tous** tes sites depuis la même machine. Le tri se fait sur le **`server_name`** : nginx
+lit le domaine demandé par le navigateur et sert le bloc `server { … }` correspondant. C'est ce qu'on
+appelle un *virtual host*, et c'est précisément ce pour quoi nginx est fait.
+
+**Un fichier par site** dans `/etc/nginx/sites-available/`, activé par un lien symbolique dans
+`sites-enabled/`. Celui ci-dessous est celui de Spoti-Free ; le portfolio et le WordPress auront
+chacun le leur, sans jamais se marcher dessus — et sans qu'on ait à toucher à celui-ci.
 
 `/etc/nginx/sites-available/spotifree` :
 
 ```nginx
 server {
     listen 80;
-    server_name ton-domaine.fr www.ton-domaine.fr;
+    # C'est CETTE ligne qui fait que nginx sert Spoti-Free et pas le portfolio : elle doit
+    # correspondre exactement à l'enregistrement DNS créé au §1.
+    server_name spotifree.manuel-mattana.fr;
 
     # ⚠️ SANS CETTE LIGNE, LES DÉPÔTS DE MUSIQUE ÉCHOUENT.
     # nginx limite les envois à 1 Mo par défaut ; les morceaux montent à 10 Mo. Le dépôt
@@ -230,7 +291,8 @@ server {
 
     # LE FALLBACK SPA. React Router gère les routes CÔTÉ NAVIGATEUR : le serveur, lui, n'a aucun
     # fichier "/favoris" sur son disque. Sans cette ligne, ouvrir directement
-    # https://ton-domaine.fr/favoris renvoie un 404 — alors que la navigation interne fonctionne.
+    # https://spotifree.manuel-mattana.fr/favoris renvoie un 404 — alors que la navigation interne
+    # fonctionne.
     # C'est LE piège classique du déploiement d'une SPA.
     location / {
         try_files $uri $uri/ /index.html;
@@ -273,7 +335,7 @@ systemctl reload nginx
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d ton-domaine.fr -d www.ton-domaine.fr
+certbot --nginx -d spotifree.manuel-mattana.fr
 ```
 
 > **Le HTTPS n'est pas optionnel.** Le jeton JWT circule dans les en-têtes de chaque requête : en
@@ -282,7 +344,7 @@ certbot --nginx -d ton-domaine.fr -d www.ton-domaine.fr
 
 ---
 
-## 8. Créer ton compte administrateur
+## 9. Créer ton compte administrateur
 
 La base de production n'a **aucun utilisateur**. Donc :
 
@@ -301,10 +363,10 @@ SELECT id_user, email, role FROM users WHERE role = 'admin';
 
 ---
 
-## 9. Vérifications, une fois en ligne
+## 10. Vérifications, une fois en ligne
 
 - [ ] Le site s'ouvre en **HTTPS** (cadenas dans le navigateur).
-- [ ] **Ouvrir directement `https://ton-domaine.fr/favoris`** dans un nouvel onglet → l'app
+- [ ] **Ouvrir directement `https://spotifree.manuel-mattana.fr/favoris`** dans un nouvel onglet → l'app
       s'affiche (et non un 404). C'est le test du fallback SPA.
 - [ ] Une musique **se lit** (les fichiers audio sont bien servis).
 - [ ] Inscription, connexion, like, playlist.
@@ -316,7 +378,7 @@ SELECT id_user, email, role FROM users WHERE role = 'admin';
 
 ---
 
-## 10. Sauvegardes ⚠️
+## 11. Sauvegardes ⚠️
 
 **Rien n'est sauvegardé automatiquement.** Deux choses à protéger, et elles vivent à deux endroits
 différents :
