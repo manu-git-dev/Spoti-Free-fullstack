@@ -4,7 +4,54 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## ETAT DU PROJET (au 2026-07-16) — a lire en premier
+## EN SUSPENS — a lire en premier (mis a jour le 2026-07-17)
+
+> Ce qui attend une decision ou du travail. **Rien de ce qui est fait ne figure ici** : c'est
+> dans le reste du fichier et dans les commits. Tenu a jour a chaque fin de session (protocole
+> dans `CLAUDE.md`). Manuel dit « reprenons » -> Claude restitue cette liste.
+
+### Ce qui attend une decision de Manuel
+
+1. **Le genre du depot est en TEXTE LIBRE** (`Deposer.jsx`). Un depot approuve avec « Trap »
+   creera une pastille menant a UN morceau, et « rock » / « Rock » en feraient **deux distinctes**
+   (le comptage des pastilles se fait en JavaScript, sensible a la casse ; MySQL, lui, les
+   considere egaux). Le passer en `<select>` sur `GENRES` fermerait la porte a l'entree, comme
+   pour la licence — l'admin ne ferait plus que valider. ~15 min. *Propose deux fois, sans reponse.*
+2. **Les etats « connecte-toi »** (Profil, Deposer, Mes demandes) sont restes **centres**, alors
+   que le contenu de ces pages a ete passe en pleine largeur. C'est volontaire de ma part (ce sont
+   des appels a l'action, pas du contenu), mais Manuel n'a pas tranche. *Sans reponse.*
+3. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
+   le passage en pleine largeur. La convention typographique tourne autour de 65-75 : au-dela,
+   l'oeil perd sa ligne en revenant a gauche. Compromis possible : garder la page pleine largeur
+   mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
+4. **Le mobile n'a jamais ete teste.** Toute la refonte (structure des pages, filtre par genre,
+   lecteur) a ete verifiee en 1440x900 uniquement. Proposition : passer la suite e2e en viewport
+   mobile. *Sans reponse.*
+
+### Ce qui est a faire par Manuel
+
+5. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+   publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
+   volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
+   pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
+6. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+   cote machine.
+
+### Decisions reportees (avec leur raison)
+
+7. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+   aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
+   recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
+   lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
+   lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
+   morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
+8. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+   (100 = 590 Mo, 300 = ~2 Go).
+9. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+   — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
+   souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## ETAT DU PROJET (au 2026-07-16)
 
 > ✅ **Le chantier des droits d'auteur est TERMINE** (2026-07-16). Le catalogue de demonstration
 > (de vrais titres d'artistes celebres poses sur cinq fichiers libres recycles) a ete remplace par

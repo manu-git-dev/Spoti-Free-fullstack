@@ -160,6 +160,34 @@ bugs connus, les décisions pas encore prises). À consulter en début de sessio
 où reprendre, et à tenir à jour au fil du travail plutôt que de laisser une conversation
 être la seule trace de l'état courant.
 
+### Passage de relais entre sessions (protocole)
+
+Une conversation est **jetable** : elle disparaît à chaque `/clear`. Tout ce qui doit survivre
+va dans `SUIVI-PROJET.md`, dont la **première section est `## EN SUSPENS`**.
+
+**Quand Manuel annonce qu'il s'arrête ou qu'il va vider le contexte** — « j'arrête là », « je vais
+me coucher », « je dois clear le contexte », « on s'arrête », « à demain »… — **avant de répondre** :
+
+1. Mettre `## EN SUSPENS` à jour dans `SUIVI-PROJET.md`. Y faire figurer, et **rien d'autre** :
+   - les **questions posées à Manuel restées sans réponse** (c'est le cas le plus important : elles
+     n'existent que dans la conversation, donc elles meurent avec elle) ;
+   - ce qui est **à lui** de faire (valeurs à compléter, comptes à créer, paiements à valider) ;
+   - le **travail commencé et non fini**, avec l'endroit exact où reprendre ;
+   - les **décisions reportées**, avec la raison du report.
+
+   Ne PAS y remettre ce qui est fait et testé : ça vit dans le reste du fichier et dans les
+   commits. Une liste qui contient tout ne se lit plus.
+2. Committer (`Suivi : passage de relais`).
+3. Rappeler à Manuel de relire `NOTES-APPRENTISSAGE.md` (règle du `~/.claude/CLAUDE.md` global).
+
+**Quand Manuel dit « reprenons »** (ou équivalent en début de session) : lire `SUIVI-PROJET.md` et
+lui **restituer `## EN SUSPENS`**, en distinguant ce qui attend une décision de sa part de ce qui
+attend du travail. Ne pas se lancer dans le code avant qu'il ait choisi.
+
+**Chaque entrée dit ce qui bloque et pourquoi, pas seulement son titre** : dans six semaines, « le
+select du dépôt » ne voudra plus rien dire. « Le genre du dépôt est en texte libre → un dépôt
+approuvé avec "Trap" crée une pastille à un morceau », si.
+
 ## Notes d'apprentissage (spécifique à ce projet)
 
 Contrairement à la règle "tous projets" du CLAUDE.md global (qui pointe vers `~/Documents/Notes-Dev/notes-apprentissage-dev.md`, hors Git), les notes d'apprentissage prises sur Spoti-Free vont dans `NOTES-APPRENTISSAGE.md` à la racine de ce repo et sont committées (pas de gitignore) : ce projet sert de vitrine pour la recherche de stage, et ce journal montre les difficultés rencontrées et comment elles ont été réglées. Même format que la règle globale (contexte/problème/solution, distinction cours générique vs cas réel résolu).
