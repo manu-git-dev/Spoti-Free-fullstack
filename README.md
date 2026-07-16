@@ -38,8 +38,8 @@ problèmes à régler quand ça casse.
 | **Frontend** | React 19, Vite, React Router 7, Tailwind CSS v4, shadcn/ui, lucide-react |
 | **Backend** | Node.js, Express 5 (ESM), MySQL (`mysql2/promise`) |
 | **Auth** | JWT (`jsonwebtoken`), mots de passe hachés (`bcryptjs`) |
-| **Tests** | Playwright, 142 tests (parcours, sécurité, dépôt, administration) |
-| **CI** | GitHub Actions — base reconstruite de zéro, 142 tests, build, `npm audit` |
+| **Tests** | Playwright, 147 tests (parcours, sécurité, dépôt, administration) |
+| **CI** | GitHub Actions — base reconstruite de zéro, 147 tests, build, `npm audit` |
 
 ---
 
@@ -126,7 +126,7 @@ npm run dev --prefix frontend   # http://localhost:5173
 cd tests && npm install && npm test
 ```
 
-**142 tests**, joués contre l'application réellement démarrée (base + backend + navigateur) :
+**147 tests**, joués contre l'application réellement démarrée (base + backend + navigateur) :
 
 | Suite | | |
 |---|---|---|
@@ -148,7 +148,7 @@ revenu.
 ## Intégration continue
 
 À chaque `push`, [GitHub Actions](.github/workflows/ci.yml) part d'une machine Ubuntu **vierge** :
-il reconstruit la base à partir des seuls fichiers versionnés, démarre les serveurs, joue les 142
+il reconstruit la base à partir des seuls fichiers versionnés, démarre les serveurs, joue les 147
 tests, compile le build de production et vérifie les vulnérabilités npm.
 
 L'intérêt n'est pas seulement d'exécuter les tests : c'est de prouver que le projet est

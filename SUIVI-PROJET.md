@@ -11,10 +11,10 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **142 tests** automatises : `cd tests && npm install && npm test`
-  (48 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **142/142.**
-- **CI verte** (GitHub Actions) : les 142 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 142 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **147 tests** automatises : `cd tests && npm install && npm test`
+  (53 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **147/147.**
+- **CI verte** (GitHub Actions) : les 147 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 147 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -64,6 +64,33 @@ mysql -u root -p spotifree < backend/scripts/seed-musics.sql   # commence par DE
   publication, contact, hebergeur). Ils n'ont pas ete devines : des mentions legales approximatives
   sont pires que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
 
+### Filtre par genre — FAIT le 2026-07-16
+
+Une rangee de pastilles dans la Bibliotheque, cumulables avec la recherche texte.
+
+- **La liste des genres est DEDUITE du catalogue** (`genresDisponibles` dans `App.jsx`), jamais
+  ecrite en dur : le catalogue est genere, et un depot approuve peut apporter un genre nouveau.
+  Une liste figee afficherait un jour une pastille vide, ou en oublierait une.
+- **Le vrai travail etait dans les DONNEES, pas dans l'interface.** Jamendo n'a pas des genres
+  mais des **tags** : 66 valeurs distinctes sur 400 morceaux, avec une longue traine a une seule
+  occurrence (`bossanova`, `8bit`, `waltz`, `manouche`…). Le filtre naif donnait 25 entrees dont
+  14 menant a UN morceau, etiquetees avec des slugs bruts (« Rnb », « Edm »,
+  « Alternativehiphop »). `FAMILLES_DE_GENRES` (dans le script d'import) replie tout ca sur 10
+  familles. Resultat : Pop 29, Rock 19, Electro 10, Folk 10, Soul 7, Chill 5, Jazz 5, Hip-hop 4,
+  Reggae 2, et 9 sans genre.
+- Le repliement se fait **a l'import**, pas a l'affichage — meme raison que pour les entites HTML :
+  une base contient de la donnee propre, sinon chaque lecteur devra re-mapper pour son compte.
+- `indie` et `experimental` sont **volontairement absents** de la table : ce ne sont pas des
+  genres mais des postures. On les ignore pour tomber sur le tag suivant, plus precis
+  (["indie", "pop"] -> Pop).
+- Le script **liste les tags non classes** en fin d'import (`indie (4)`, `filmscore (1)`) : un
+  import qui perd de l'information en silence est un import qu'on ne peut pas ameliorer.
+
+**Limite connue** : le formulaire de depot laisse le genre en **texte libre**. Un depot approuve
+avec « Trap » creera une pastille a un morceau, et la derive recommencera lentement. Le passer en
+`<select>` sur les memes familles (comme la licence) reglerait le probleme a la source. Pas fait :
+la moderation absorbe le cas pour l'instant, et l'admin peut corriger le genre.
+
 ### Suppression de compte (RGPD) — FAIT le 2026-07-16
 
 `DELETE /api/users/mon-compte` + bouton et modale dans le profil. Deux garde-fous distincts :
@@ -91,8 +118,9 @@ utilisateurs, gestion du catalogue).
 
 ### LA PROCHAINE ETAPE : le deploiement
 
-**Le deploiement attend deux choses : la machine (paiement Hostinger), et l'import du vrai
-catalogue (ci-dessus). Ne pas mettre en ligne avant le second.**
+**Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
+est en place, les 147 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
 (2 vCPU, 8 Go RAM, 100 Go NVMe), 12 mois, **Ubuntu 24.04 LTS**, datacenter France. Le paiement
@@ -116,7 +144,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 142 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 147 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
@@ -181,7 +209,7 @@ incluses** dans `schema.sql`. Ne pas les rejouer.
 
 Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
 
-- **Les 142 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+- **Les 147 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
   serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
   tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
   fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
@@ -212,7 +240,7 @@ pieges qui casseraient le site sans que le code soit en cause :
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
-base, demarre les serveurs, joue les **142 tests**, compile le build de production et verifie
+base, demarre les serveurs, joue les **147 tests**, compile le build de production et verifie
 `npm audit`. Badge vert sur le README. Vert en 2 min 24.
 
 **La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
@@ -275,7 +303,7 @@ pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la 
 - **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
   n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
 - 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
-  reinitialisation). Suite : **142 tests**.
+  reinitialisation). Suite : **147 tests**.
 
 Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
 

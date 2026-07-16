@@ -1,7 +1,7 @@
 import Aside from "./composants/Aside";
 import HeaderMobile from "./composants/HeaderMobile";
 import BottomNav from "./composants/BottomNav";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import MediaPlayer from "./composants/MediaPlayer";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
@@ -33,6 +33,9 @@ function App() {
   const [musiques, setMusiques] = useState([]);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [valueInput, setValueInput] = useState("");
+  // `null` = aucun filtre, on montre tout. Ce n'est pas la chaine vide : "" est un genre qui
+  // pourrait exister, `null` dit "la question n'est pas posee".
+  const [genreFiltre, setGenreFiltre] = useState(null);
   const [currentIndex, setCurrentIndex] = useState("");
   const [maxIndex, setMaxIndex] = useState(0);
   const [currentQueue, setCurrentQueue] = useState([]);
@@ -142,11 +145,37 @@ function App() {
       .catch((error) => console.error(error));
   }, [token]);
 
-  let musiquesFiltre = musiques.filter(
-    (musique) =>
+  // Les genres reellement presents dans le catalogue, tries par nombre de morceaux.
+  //
+  // La liste est DEDUITE des donnees, jamais ecrite en dur : le catalogue est genere par
+  // `scripts/importer-jamendo.mjs`, et un depôt approuve peut en apporter un nouveau. Une liste
+  // figee ici afficherait un jour un genre vide, ou en oublierait un.
+  //
+  // Les morceaux sans genre (9 sur 100 aujourd'hui) n'ont pas de pastille : ils restent
+  // accessibles via « Tous ». Une pastille « Sans genre » n'aiderait personne a trouver de la
+  // musique.
+  const genresDisponibles = useMemo(() => {
+    const compte = new Map();
+    for (const musique of musiques) {
+      if (!musique.genre) continue;
+      compte.set(musique.genre, (compte.get(musique.genre) ?? 0) + 1);
+    }
+    return [...compte]
+      .sort((a, b) => b[1] - a[1])
+      .map(([genre, nombre]) => ({ genre, nombre }));
+  }, [musiques]);
+
+  let musiquesFiltre = musiques.filter((musique) => {
+    const correspondTexte =
       musique.title.toLowerCase().includes(valueInput.toLowerCase()) ||
-      musique.artist.toLowerCase().includes(valueInput.toLowerCase()),
-  );
+      musique.artist.toLowerCase().includes(valueInput.toLowerCase());
+
+    // Les deux filtres se CUMULENT : chercher "love" dans le genre Pop ne doit pas rendre les
+    // "love" du rock. Un filtre qui s'annule au premier caractere tape n'en est pas un.
+    const correspondGenre = genreFiltre === null || musique.genre === genreFiltre;
+
+    return correspondTexte && correspondGenre;
+  });
 
   musiquesFiltre = musiquesFiltre.sort((a, b) =>
     a.title.localeCompare(b.title),
@@ -215,6 +244,9 @@ function App() {
                   setCurrentQueue={setCurrentQueue}
                   setValueInput={setValueInput}
                   valueInput={valueInput}
+                  genresDisponibles={genresDisponibles}
+                  genreFiltre={genreFiltre}
+                  setGenreFiltre={setGenreFiltre}
                   musiquesLikee={musiquesLikee}
                   setMusiquesLikee={setMusiquesLikee}
                   user={user}

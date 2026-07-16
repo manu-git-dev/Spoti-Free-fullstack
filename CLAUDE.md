@@ -88,11 +88,15 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 - `backend/scripts/seed-musics.sql` est **généré** par `scripts/importer-jamendo.mjs` (catalogue
   Creative Commons récupéré via l'API Jamendo, clé dans `JAMENDO_CLIENT_ID`). Ne pas l'éditer à la
   main : relancer le script.
+- **Genres** : Jamendo rend des *tags* (66 valeurs, longue traîne à 1 occurrence), pas des genres.
+  `FAMILLES_DE_GENRES` (dans le script d'import) les replie sur 10 familles, **à l'import** — une
+  base contient de la donnée propre. La liste affichée par le filtre est **déduite du catalogue**
+  (`genresDisponibles` dans `App.jsx`), jamais écrite en dur.
 
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 142 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 147 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -101,7 +105,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **142 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **147 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 

@@ -280,6 +280,73 @@ await etape("lecteur", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 5 bis. Le filtre par genre
+//
+// Les pastilles sont DEDUITES du catalogue (aucune liste en dur), donc ce test ne peut pas
+// nommer un genre precis sans redevenir dependant du seed — c'est le piege de « Believer ».
+// Il prend donc la premiere pastille venue et verifie le COMPORTEMENT : filtrer reduit, le
+// texte se cumule avec le genre, et recliquer annule.
+// ---------------------------------------------------------------------------
+await etape("filtre par genre", async () => {
+  const compte = await creerCompte("GenreTest");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+
+  await page.goto(`${APP}/bibliotheque`);
+  await page.waitForTimeout(1500);
+
+  const lignes = () => page.locator("img[alt^='Pochette album']").count();
+  const total = await lignes();
+
+  verifier("genre : le catalogue complet s'affiche", total > 0, `${total} morceaux`);
+
+  // La premiere pastille apres « Tous ».
+  const premierGenre = page
+    .locator("button[aria-pressed]")
+    .filter({ hasNotText: "Tous" })
+    .first();
+  const nomGenre = (await premierGenre.innerText()).split("\n")[0].trim();
+
+  await premierGenre.click();
+  await page.waitForTimeout(600);
+  const filtre = await lignes();
+
+  verifier(
+    `genre : filtrer sur « ${nomGenre} » reduit la liste`,
+    filtre > 0 && filtre < total,
+    `${filtre} sur ${total}`,
+  );
+  verifier(
+    "genre : la pastille active est signalee aux lecteurs d'ecran",
+    (await premierGenre.getAttribute("aria-pressed")) === "true",
+  );
+
+  // Le cumul : le texte NE DOIT PAS annuler le genre.
+  await page
+    .getByPlaceholder("Recherchez un titre ou un artiste")
+    .fill("zzzzzz-introuvable");
+  await page.waitForTimeout(600);
+  verifier(
+    "genre : la recherche texte se cumule avec le genre (elle ne le remplace pas)",
+    (await lignes()) === 0,
+    `${await lignes()} morceau(x) alors qu'aucun ne correspond`,
+  );
+
+  await page.getByPlaceholder("Recherchez un titre ou un artiste").fill("");
+  await page.waitForTimeout(500);
+
+  // Recliquer sur le genre actif le desactive.
+  await premierGenre.click();
+  await page.waitForTimeout(600);
+  verifier(
+    "genre : recliquer la pastille active remet tout le catalogue",
+    (await lignes()) === total,
+    `${await lignes()} sur ${total}`,
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
 // 6. Top 5 : le compteur d'ecoutes fait remonter un titre
 // ---------------------------------------------------------------------------
 await etape("top 5", async () => {
