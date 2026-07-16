@@ -1754,3 +1754,44 @@ Ironie : le commentaire en tête de mon propre `EnTetePage` dit exactement ça �
 **Vérifier au lieu de croire** : j'ai écrit un test qui mesure la position du `<h1>` **avant et après** avoir poussé la zone de contenu jusqu'en bas, sur les 9 pages. Si le titre bouge d'un pixel, c'est rouge. J'ai aussi vérifié que la **fenêtre** ne défile jamais — si elle défile, c'est que la page déborde, l'en-tête « figé » partirait avec le reste et le lecteur en bas serait poussé hors de vue. Une capture d'écran m'aurait montré que « ça a l'air bien ». La mesure me dit que **c'est** bien, et le test empêchera que ça redérive.
 
 ---
+
+### 61. Une API tierce ne fait pas ce que sa doc dit — elle fait ce qu'elle fait
+
+**Contexte** : remplacer mon faux catalogue par 100 vraies œuvres Creative Commons via l'**API Jamendo**. J'avais un script écrit d'après la documentation. Il ne marchait pas, et surtout : **il ne marchait pas en silence**.
+
+**Le réflexe qui a tout sauvé : un essai à 5 morceaux avant les 100.** Télécharger 590 Mo pour découvrir ensuite que les genres sont vides, c'est 590 Mo à retélécharger. Sur toute opération longue et coûteuse, **faire d'abord tourner la chaîne complète en miniature**. Ça n'a coûté que 30 secondes et ça a révélé quatre bugs.
+
+**Défaut 1 — un filtre qui filtre à moitié.** Je croyais que `ccnd=0` me donnait du libre. Faux : il écarte les ND (pas de modification) mais **laisse passer tout le NC**. Il faut le **couple** `ccnd=0 ccnc=0` pour n'avoir que `by` et `by-sa`.
+
+**Défaut 2 — les champs qui n'existent que si on les demande.** `license_ccurl` et les genres ne sont **pas renvoyés par défaut**. Sans `include=licenses musicinfo`, ma vérification de licence aurait rejeté 100 % des morceaux — et mes 100 titres seraient arrivés sans genre.
+
+**Défaut 3 — le `+` qui n'en est pas un.** La doc écrit `include=licenses+musicinfo`. Mais dans une URL, `+` **signifie espace**, et `URLSearchParams` encode un `+` littéral en `%2B`. L'API recevait `licenses%2Bmusicinfo`, ne comprenait pas — et **ne disait rien** : elle répondait `success` avec les deux champs vides. La solution : écrire une vraie **espace**, que `URLSearchParams` transforme en `+`. Une heure de perdue sur un caractère.
+
+**Défaut 4 — le pire : des pages vides au hasard.** Le même appel renvoyait tantôt 2 résultats, tantôt 0. La réponse vide :
+
+```json
+{ "headers": { "status": "success", "code": 0, "error_message": "", "results_count": 0 },
+  "results": [] }
+```
+
+**Rien** ne la distingue d'une vraie fin de catalogue. Pas d'erreur, pas d'en-tête de quota. Une à trois pages sur six. Or mon script faisait `if (page.length === 0) break;` — il aurait donc annoncé fièrement **« import terminé »** avec 12 morceaux sur 100, sans un avertissement. **Le pire bug n'est pas celui qui plante : c'est celui qui réussit avec un mauvais résultat.** Correctif : réessayer le même offset 4 fois, avec une pause qui s'allonge, avant de conclure.
+
+**La leçon de méthode, celle que je retiens vraiment.** Mes premiers tests montraient `ccnd=false → 0 résultats`. J'allais en conclure « ce paramètre est invalide ». **C'était le bruit des pages vides.** J'ai failli tirer une conclusion technique d'un artefact.
+
+Ce qui m'a sauvé : changer de mesure. Compter les résultats ne prouvait rien. **Regarder les licences réellement renvoyées** sur 250 morceaux, oui — et là, la vérité saute aux yeux :
+
+| Filtre | Ce qui revient vraiment |
+|---|---|
+| aucun | licence absente (!) |
+| `ccnd=0` | by, by-sa… **et by-nc, by-nc-sa** |
+| `ccnd=0 ccnc=0` | **by et by-sa uniquement** ✅ |
+
+**Mesurer la bonne chose vaut mieux que mesurer beaucoup.** Face à une API instable, une seule observation ne prouve rien : il faut répéter, et surtout observer **la propriété qui compte** (ici : la licence), pas une approximation commode (le nombre de résultats).
+
+**Défaut 5, trouvé à l'œil sur une capture** : l'affichage montrait « Ground **&amp;** Leaves ». L'API rend ses textes **encodés pour le HTML**. React échappe systématiquement ce qu'il affiche — c'est sa protection contre les injections —, donc il rendait l'esperluette littéralement. Le bug n'est pas dans React : la valeur qu'on lui donnait était **déjà encodée, une fois de trop**. Je décode donc **à l'entrée**, quand la donnée quitte l'API. Une base doit contenir **du texte, pas du HTML** : sinon chaque lecteur (le player, la recherche, un futur export) devrait re-décoder pour son compte, et l'un d'eux oubliera. Détail d'implémentation : décoder `&amp;` **en dernier**, sinon `&amp;lt;` devient `<` au lieu de `&lt;`.
+
+**Le piège du test qui connaissait trop de choses.** Mon test du lecteur cliquait sur « Believer ». Le catalogue remplacé, il a cherché 30 secondes un texte disparu puis échoué sur un timeout illisible. La tentation : y mettre le nom du nouveau premier morceau. **Ça aurait refermé le même piège au prochain import.** Le test vise maintenant la première pochette venue — le titre du morceau n'a aucune importance pour tester un lecteur. **Même leçon que la note 55 : un test ne suppose rien du contenu de la base.**
+
+**Et une décision produit, pas technique** : `groupby=artist_id`, un seul morceau par artiste. Sans ça, « les 100 plus écoutés » donne une quinzaine d'artistes avec sept titres chacun. **100 artistes différents font un catalogue ; quinze font une playlist.** L'API offrait le paramètre, encore fallait-il se demander à quoi doit *ressembler* un bon catalogue plutôt que juste comment en télécharger 100.
+
+---
