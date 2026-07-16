@@ -24,30 +24,47 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    le passage en pleine largeur. La convention typographique tourne autour de 65-75 : au-dela,
    l'oeil perd sa ligne en revenant a gauche. Compromis possible : garder la page pleine largeur
    mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
-4. **Le mobile n'a jamais ete teste.** Toute la refonte (structure des pages, filtre par genre,
-   lecteur) a ete verifiee en 1440x900 uniquement. Proposition : passer la suite e2e en viewport
-   mobile. *Sans reponse.*
+### A PENSER (demandes par Manuel le 2026-07-17)
+
+4. **L'icone de « Mes playlists » dans la sidebar.** C'est la **seule** entree de navigation sans
+   icone : Accueil, Bibliotheque, Favoris, Profil, Deposer, Mes demandes, A propos, Contact et
+   Mentions legales en ont toutes une (`Aside.jsx` ~ligne 94 : le `NavLink` n'a que du texte).
+   `ListMusic` est le choix naturel — c'est deja l'icone de l'en-tete de la page Playlists. Penser
+   au **menu mobile** (`HeaderMobile.jsx`) et a la **bottom nav** (`BottomNav.jsx`) en meme temps.
+5. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+   genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
+   ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
+   `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
+   cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
+   compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
+   Moyen : rejouer la suite e2e en viewport mobile.
+6. **Une passe de tests ultra complete AVANT le deploiement.** Les 155 tests sont verts, mais la
+   journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
+   etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
+   debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
+   Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
+   bouton — et transformer chaque trouvaille en test.
 
 ### Ce qui est a faire par Manuel
 
-5. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+7. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-6. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+8. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-7. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+9. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-8. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+10. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-9. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+11. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
 

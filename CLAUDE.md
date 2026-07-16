@@ -171,6 +171,8 @@ me coucher », « je dois clear le contexte », « on s'arrête », « à demain
 1. Mettre `## EN SUSPENS` à jour dans `SUIVI-PROJET.md`. Y faire figurer, et **rien d'autre** :
    - les **questions posées à Manuel restées sans réponse** (c'est le cas le plus important : elles
      n'existent que dans la conversation, donc elles meurent avec elle) ;
+   - les **« à penser »** qu'il dicte en passant — ils arrivent souvent en une ligne (« icône mes
+     playlists »), à charge de les étoffer assez pour qu'ils restent compréhensibles ;
    - ce qui est **à lui** de faire (valeurs à compléter, comptes à créer, paiements à valider) ;
    - le **travail commencé et non fini**, avec l'endroit exact où reprendre ;
    - les **décisions reportées**, avec la raison du report.
