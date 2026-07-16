@@ -12,11 +12,11 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > d'artistes celebres ("Blinding Lights / The Weeknd") sur des fichiers libres sans aucun rapport.
 > C'etait sans consequence sur localhost, ce ne l'est plus en public.
 
-- **124 tests** automatises : `cd tests && npm install && npm test`
-  (30 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec.
-  **123/124 actuellement** : le dernier passe au vert des l'import du vrai catalogue (voir plus bas).
-- **CI verte** (GitHub Actions) : les 124 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 124 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **142 tests** automatises : `cd tests && npm install && npm test`
+  (48 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec.
+  **141/142 actuellement** : le dernier passe au vert des l'import du vrai catalogue (voir plus bas).
+- **CI verte** (GitHub Actions) : les 142 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 142 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -101,7 +101,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 124 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 142 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
@@ -166,7 +166,7 @@ incluses** dans `schema.sql`. Ne pas les rejouer.
 
 Passe avant mise en ligne. Verdict : **plus aucun bloquant**.
 
-- **Les 124 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
+- **Les 142 tests passent contre le BUILD DE PRODUCTION** (`vite preview`), pas seulement contre le
   serveur de dev. Le build est sain. Au passage, le premier essai a echoue sur **CORS** (le build
   tournait sur le port 4173, non declare dans `FRONTEND_URL`) — ce qui prouve que la protection
   fonctionne. A noter : le serveur avait quand meme cree le compte (201). **CORS protege le
@@ -197,7 +197,7 @@ pieges qui casseraient le site sans que le code soit en cause :
 ## Integration continue (GitHub Actions) - 2026-07-14 - fait
 
 `.github/workflows/ci.yml` : a chaque push sur `main`, une machine Ubuntu **neuve** reconstruit la
-base, demarre les serveurs, joue les **124 tests**, compile le build de production et verifie
+base, demarre les serveurs, joue les **142 tests**, compile le build de production et verifie
 `npm audit`. Badge vert sur le README. Vert en 2 min 24.
 
 **La CI a surtout servi de REVELATEUR** : le projet n'etait pas installable ailleurs que sur cette
@@ -260,7 +260,7 @@ pendant la saisie (croix rouge / check vert) sur l'email, le mot de passe et la 
 - **Le bouton d'envoi n'est PAS desactive** quand le formulaire est invalide (un bouton grise
   n'explique rien, et le test e2e clique dessus pour verifier que le compte n'est pas cree).
 - 3 tests de non-regression ajoutes (sans majuscule / sans chiffre / meme regle sur la
-  reinitialisation). Suite : **124 tests**.
+  reinitialisation). Suite : **142 tests**.
 
 Voir la note 54 de `NOTES-APPRENTISSAGE.md`.
 

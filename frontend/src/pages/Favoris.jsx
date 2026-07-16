@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import TrackRow from "../composants/TrackRow";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 export default function Favoris({
@@ -45,15 +45,14 @@ export default function Favoris({
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={Heart}
-        classeIcone="fill-current"
-        titre="Vos musiques likées"
-        sousTitre={`${musiquesLikee.length} ${
-          musiquesLikee.length > 1 ? "titres" : "titre"
-        }`}
-      />
+    <Page
+      icone={Heart}
+      classeIcone="fill-current"
+      titre="Vos musiques likées"
+      sousTitre={`${musiquesLikee.length} ${
+        musiquesLikee.length > 1 ? "titres" : "titre"
+      }`}
+    >
       <div className="flex flex-col gap-1">
         {musiquesLikee.length === 0 ? (
           <p className="text-muted-foreground">
@@ -76,6 +75,6 @@ export default function Favoris({
           ))
         )}
       </div>
-    </section>
+    </Page>
   );
 }

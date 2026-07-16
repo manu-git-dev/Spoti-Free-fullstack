@@ -20,7 +20,7 @@ import {
   Colonnes,
 } from "../composants/graphiques/Graphiques";
 import { apiFetch } from "@/lib/api";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 
 // Les statuts ne sont PAS des couleurs de serie : ce sont des etats. Ils ont leur propre
 // palette reservee, et ils sortent TOUJOURS accompagnes d'une icone et d'un mot — jamais
@@ -95,13 +95,11 @@ export default function AdminDashboard({ user }) {
   );
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={LayoutDashboard}
-        titre="Tableau de bord"
-        sousTitre="Vue d'ensemble de Spoti-Free"
-      />
-
+    <Page
+      icone={LayoutDashboard}
+      titre="Tableau de bord"
+      sousTitre="Vue d'ensemble de Spoti-Free"
+    >
       {/* Les totaux : des chiffres, pas des graphiques. Une valeur unique n'a pas besoin
           d'etre dessinee. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -251,6 +249,6 @@ export default function AdminDashboard({ user }) {
           )}
         </section>
       </div>
-    </section>
+    </Page>
   );
 }

@@ -92,7 +92,7 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 124 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 142 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -101,7 +101,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **124 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **142 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 
@@ -130,6 +130,18 @@ rouge, c'est qu'une régression est réapparue.
   appartiennent au catalogue et peuvent être partagés.
 - **Surfaces** : `bg-background` = fond ; `bg-card`/`bg-sidebar` = panneaux ; `bg-background/50` =
   ce qui vit *dans* un panneau. Jamais `bg-card` sur un enfant du `main`.
+- **Structure des pages** : toute page de contenu passe par `composants/Page.jsx` — jamais de
+  `<section className="h-full overflow-y-auto">` écrit à la main. L'en-tête (icône + titre) reste
+  **figé**, seul le contenu défile. La coquille est `h-full flex flex-col overflow-hidden` + un
+  enfant en `flex-1 min-h-0 overflow-y-auto` ; **pas** de `h-[calc(100%-Xrem)]`, qui code en dur
+  une hauteur d'en-tête qui varie (sous-titre, `actions` qui passe à la ligne sur mobile). Le
+  `min-h-0` n'est pas décoratif : sans lui rien ne défile. Verrouillé par les tests e2e "en-tête".
+  Les pages d'authentification (`Login`, `Register`, `MotDePasseOublie`, `ReinitialiserMotDePasse`)
+  et les états « connecte-toi » sont des formulaires centrés, sans en-tête : ils n'utilisent pas
+  `Page`.
+- **Typographie** : `EnTetePage` = le `<h1>` de la page (avec son icône) ; `TitreSection` = un
+  `<h2>` dans une page de prose (À propos, Mentions légales). Ne pas redéfinir un composant `Titre`
+  local dans une page — c'est exactement comme ça que les tailles ont divergé.
 
 ## Suivi du projet
 

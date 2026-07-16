@@ -19,7 +19,7 @@ import {
   LienTelechargement,
 } from "../composants/FichierDepot";
 import { apiFetch, messageErreur } from "@/lib/api";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 
 export default function AdminDepots({ user }) {
   const [depots, setDepots] = useState([]);
@@ -71,15 +71,13 @@ export default function AdminDepots({ user }) {
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={ShieldCheck}
-        titre="Modération des dépôts"
-        sousTitre={`${depots.length} ${
-          depots.length > 1 ? "dépôts" : "dépôt"
-        } en attente`}
-      />
-
+    <Page
+      icone={ShieldCheck}
+      titre="Modération des dépôts"
+      sousTitre={`${depots.length} ${
+        depots.length > 1 ? "dépôts" : "dépôt"
+      } en attente`}
+    >
       {chargement ? (
         <p className="text-muted-foreground">Chargement…</p>
       ) : depots.length === 0 ? (
@@ -249,6 +247,6 @@ export default function AdminDepots({ user }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </Page>
   );
 }

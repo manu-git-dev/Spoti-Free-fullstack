@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiFetch, messageErreur } from "@/lib/api";
 import { Input } from "@/components/ui/input";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 export default function Contact() {
   const [isSending, setIsSending] = useState(false);
   async function handleSubmit(event) {
@@ -40,9 +40,15 @@ export default function Contact() {
     }
   }
   return (
-    <section className="flex flex-col lg:grid lg:grid-cols-2 h-full overflow-y-auto p-4 md:p-8">
+    <Page
+      icone={Mail}
+      titre="Contact"
+      // L'en-tete vivait DANS la colonne de gauche de la grille : il defilait avec elle, et
+      // n'etait pas aligne sur celui des autres pages. Il coiffe maintenant la page entiere, et
+      // la grille ne contient plus que ce qu'elle doit contenir.
+      classeContenu="flex flex-col lg:grid lg:grid-cols-2"
+    >
       <section className="flex flex-col lg:col-start-1 lg:pr-8">
-        <EnTetePage icone={Mail} titre="Contact" />
         <h2 className="font-serif text-xl md:text-2xl mb-2">Une question ?</h2>
         <p className="text-muted-foreground md:text-lg mb-6">
           Ecris-moi, je te réponds rapidement. Que ce soit un bug, une idée de
@@ -118,6 +124,6 @@ export default function Contact() {
           </Button>
         </form>
       </section>
-    </section>
+    </Page>
   );
 }

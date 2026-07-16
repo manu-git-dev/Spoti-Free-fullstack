@@ -14,7 +14,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { apiFetch, messageErreur, urlFichier } from "@/lib/api";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 
 const formatDuree = (secondes) => {
   if (!secondes) return "--:--";
@@ -118,24 +118,22 @@ export default function AdminMusiques({ user }) {
   );
 
   return (
-    <section className="h-full overflow-hidden flex flex-col p-4 md:p-8">
-      <EnTetePage
-        icone={Music}
-        titre="Catalogue"
-        sousTitre={`${musiques.length} morceaux`}
-        actions={
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher un titre, un artiste"
-              className="rounded-full bg-background/60 pl-9"
-            />
-          </div>
-        }
-      />
-
+    <Page
+      icone={Music}
+      titre="Catalogue"
+      sousTitre={`${musiques.length} morceaux`}
+      actions={
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher un titre, un artiste"
+            className="rounded-full bg-background/60 pl-9"
+          />
+        </div>
+      }
+    >
       <p className="mb-4 text-xs text-muted-foreground">
         Pour ajouter un morceau, passe par la modération des dépôts. Ici, seules
         les métadonnées (titre, artiste, genre) sont modifiables — les fichiers
@@ -145,7 +143,7 @@ export default function AdminMusiques({ user }) {
       {chargement ? (
         <p className="text-muted-foreground">Chargement…</p>
       ) : (
-        <ul className="flex flex-col gap-1.5 overflow-y-auto min-h-0">
+        <ul className="flex flex-col gap-1.5">
           {filtrees.map((m) => (
             <li
               key={m.id_music}
@@ -289,6 +287,6 @@ export default function AdminMusiques({ user }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </Page>
   );
 }

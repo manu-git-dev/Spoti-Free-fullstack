@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { ListMusic } from "lucide-react";
 import TrackRow from "../composants/TrackRow";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import { apiFetch } from "@/lib/api";
 export default function MusicsInPlaylist({
   setCurrentMusic,
@@ -27,14 +27,13 @@ export default function MusicsInPlaylist({
   }, [idPlaylist]);
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <EnTetePage
-        icone={ListMusic}
-        titre="Contenu de votre playlist"
-        sousTitre={`${musicsPlaylist.length} ${
-          musicsPlaylist.length > 1 ? "titres" : "titre"
-        }`}
-      />
+    <Page
+      icone={ListMusic}
+      titre="Contenu de votre playlist"
+      sousTitre={`${musicsPlaylist.length} ${
+        musicsPlaylist.length > 1 ? "titres" : "titre"
+      }`}
+    >
       <div className="flex flex-col gap-1">
         {musicsPlaylist.length === 0 ? (
           <p className="text-muted-foreground">
@@ -59,6 +58,6 @@ export default function MusicsInPlaylist({
           ))
         )}
       </div>
-    </section>
+    </Page>
   );
 }

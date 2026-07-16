@@ -2,15 +2,10 @@ import { Link } from "react-router-dom";
 import { Info, Code2, Mail, Play, NotebookPen } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
+import TitreSection from "../composants/TitreSection";
 
 const DEPOT = "https://github.com/manu-git-dev/Spoti-Free-fullstack";
-
-function Titre({ children }) {
-  return (
-    <h2 className="text-2xl font-serif font-bold text-primary">{children}</h2>
-  );
-}
 
 // Met en valeur sans crier : gras + encre normale, sur un fond attenue.
 function Fort({ children }) {
@@ -19,14 +14,12 @@ function Fort({ children }) {
 
 export default function Apropos() {
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
+    <Page
+      icone={Info}
+      titre="À propos"
+      sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
+    >
       <div className="max-w-3xl mx-auto flex flex-col gap-6">
-        <EnTetePage
-          icone={Info}
-          titre="À propos"
-          sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
-        />
-
         <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est{" "}
           <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix
@@ -39,7 +32,7 @@ export default function Apropos() {
         </p>
 
         <div className="flex flex-col gap-3">
-          <Titre>D'où vient Spoti-Free</Titre>
+          <TitreSection>D'où vient Spoti-Free</TitreSection>
           <p className="leading-relaxed text-muted-foreground">
             En tout début de formation, notre formateur nous a mis au défi de
             reproduire un lecteur audio dans l'esprit de Spotify. Le projet ne
@@ -55,7 +48,7 @@ export default function Apropos() {
         {/* Le passage le plus important de la page : il est donc place tot, et encadre. Si un
             recruteur ne lit qu'une seule chose, c'est celle-ci qu'il doit lire. */}
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-6">
-          <Titre>Comprendre, pas seulement faire marcher</Titre>
+          <TitreSection>Comprendre, pas seulement faire marcher</TitreSection>
           <p className="leading-relaxed text-muted-foreground">
             Autant être honnête : avec les outils d'IA d'aujourd'hui, une erreur
             trouve rarement plus de quelques minutes de résistance. J'ai
@@ -96,7 +89,7 @@ export default function Apropos() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <Titre>Ce que contient l'application</Titre>
+          <TitreSection>Ce que contient l'application</TitreSection>
           <ul className="flex flex-col gap-2 text-muted-foreground">
             <li>
               <Fort>Frontend :</Fort> React, React Router, Tailwind CSS,
@@ -123,7 +116,7 @@ export default function Apropos() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <Titre>Et maintenant</Titre>
+          <TitreSection>Et maintenant</TitreSection>
           <p className="leading-relaxed text-muted-foreground">
             Je suis{" "}
             <Fort>ouvert à toute opportunité dans le développement web</Fort>.
@@ -171,6 +164,6 @@ export default function Apropos() {
           </Link>
         </div>
       </div>
-    </section>
+    </Page>
   );
 }

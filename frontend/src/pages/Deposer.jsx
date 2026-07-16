@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Loader2, UploadCloud, Inbox, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import ZoneDepotFichier from "../composants/ZoneDepotFichier";
-import EnTetePage from "../composants/EnTetePage";
+import Page from "../composants/Page";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -121,14 +121,12 @@ export default function Deposer({ user }) {
   }
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
+    <Page
+      icone={UploadCloud}
+      titre="Déposer une musique"
+      sousTitre="Ton morceau sera publié une fois validé."
+    >
       <div className="max-w-2xl mx-auto">
-        <EnTetePage
-          icone={UploadCloud}
-          titre="Déposer une musique"
-          sousTitre="Ton morceau sera publié une fois validé."
-        />
-
         <form
           onSubmit={handleSubmit}
           className="flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
@@ -282,6 +280,6 @@ export default function Deposer({ user }) {
           </Link>
         ) : null}
       </div>
-    </section>
+    </Page>
   );
 }

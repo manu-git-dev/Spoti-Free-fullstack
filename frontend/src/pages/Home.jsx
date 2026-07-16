@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { Home as IconeAccueil } from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
 import TrackRow from "../composants/TrackRow";
+import Page from "../composants/Page";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -20,18 +22,15 @@ export default function Home({
   const topCinq = top5;
 
   return (
-    <section className="h-full overflow-y-auto p-4 md:p-8">
-      <div className="flex flex-col-reverse md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-serif font-bold">
-            {user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Prêt à écouter quelque chose ?
-          </p>
-        </div>
-
-        {user === null ? (
+    <Page
+      icone={IconeAccueil}
+      titre={user === null ? "Bonjour" : `Bonjour ${user.pseudo}`}
+      sousTitre="Prêt à écouter quelque chose ?"
+      // L'accueil avait son propre en-tete, plus grand que celui des autres pages et sans icone.
+      // Il correspondait pourtant exactement au modele d'`EnTetePage` : un titre, un sous-titre,
+      // et un bloc a droite. Le cas particulier n'en etait pas un.
+      actions={
+        user === null ? (
           <div className="flex items-center justify-end gap-4 shrink-0">
             <Link
               to={"/inscription"}
@@ -56,9 +55,9 @@ export default function Home({
               {user.pseudo?.charAt(0).toUpperCase()}
             </Link>
           </div>
-        )}
-      </div>
-
+        )
+      }
+    >
       <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
         <span className="h-5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
         Top 5 des titres les plus écoutés
@@ -79,6 +78,6 @@ export default function Home({
           />
         ))}
       </div>
-    </section>
+    </Page>
   );
 }
