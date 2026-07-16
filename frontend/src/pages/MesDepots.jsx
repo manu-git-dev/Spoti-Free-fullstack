@@ -90,74 +90,72 @@ export default function MesDepots({ user }) {
         </Link>
       }
     >
-      <div className="max-w-2xl mx-auto">
-        {chargement ? (
-          <p className="text-muted-foreground">Chargement…</p>
-        ) : depots.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="w-14 h-14 rounded-full bg-background/60 border border-border flex items-center justify-center">
-              <UploadCloud className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <p className="font-semibold">Aucune demande pour le moment</p>
-            <p className="text-sm text-muted-foreground">
-              Propose un morceau : il sera publié après validation.
-            </p>
-            <Link
-              to="/deposer"
-              className={cn(buttonVariants(), "rounded-full px-6 mt-2")}
-            >
-              Déposer une musique
-            </Link>
+      {chargement ? (
+        <p className="text-muted-foreground">Chargement…</p>
+      ) : depots.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <div className="w-14 h-14 rounded-full bg-background/60 border border-border flex items-center justify-center">
+            <UploadCloud className="w-6 h-6 text-muted-foreground" />
           </div>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {depots.map((depot) => {
-              const statut = STATUTS[depot.statut] ?? STATUTS.en_attente;
-              const Icone = statut.icone;
+          <p className="font-semibold">Aucune demande pour le moment</p>
+          <p className="text-sm text-muted-foreground">
+            Propose un morceau : il sera publié après validation.
+          </p>
+          <Link
+            to="/deposer"
+            className={cn(buttonVariants(), "rounded-full px-6 mt-2")}
+          >
+            Déposer une musique
+          </Link>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {depots.map((depot) => {
+            const statut = STATUTS[depot.statut] ?? STATUTS.en_attente;
+            const Icone = statut.icone;
 
-              return (
-                <li
-                  key={depot.id_submission}
-                  className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-4 sm:flex-row sm:items-start sm:justify-between"
+            return (
+              <li
+                key={depot.id_submission}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{depot.title}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {depot.artist}
+                    {depot.genre ? ` — ${depot.genre}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Envoyé le{" "}
+                    {new Date(depot.created_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+
+                  {depot.statut === "refuse" && depot.motif_refus ? (
+                    <p className="mt-2 text-sm text-destructive">
+                      Motif : {depot.motif_refus}
+                    </p>
+                  ) : statut.explication ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {statut.explication}
+                    </p>
+                  ) : null}
+                </div>
+
+                <span
+                  className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs self-start ${statut.classe}`}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{depot.title}</p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {depot.artist}
-                      {depot.genre ? ` — ${depot.genre}` : ""}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Envoyé le{" "}
-                      {new Date(depot.created_at).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
-
-                    {depot.statut === "refuse" && depot.motif_refus ? (
-                      <p className="mt-2 text-sm text-destructive">
-                        Motif : {depot.motif_refus}
-                      </p>
-                    ) : statut.explication ? (
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {statut.explication}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <span
-                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs self-start ${statut.classe}`}
-                  >
-                    <Icone className="w-3.5 h-3.5" />
-                    {statut.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                  <Icone className="w-3.5 h-3.5" />
+                  {statut.label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Page>
   );
 }
