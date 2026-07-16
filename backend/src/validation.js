@@ -94,6 +94,44 @@ export function licenceDepuisUrlCC(url) {
 }
 
 // ---------------------------------------------------------------------------
+// Les genres du catalogue
+//
+// Une liste FERMEE, et c'est le coeur de l'affaire. Le filtre de la Bibliotheque deduit ses
+// pastilles des genres reellement presents : chaque valeur nouvelle cree donc une pastille. Un
+// genre saisi librement ("Trap", "trap", "musique de fou") produit une pastille menant a UN
+// morceau — et un filtre qui ouvre des placards plutot que des portes ne sert a rien.
+//
+// C'est aussi ce qui evite les doublons de casse : "rock" et "Rock" seraient DEUX pastilles
+// distinctes (le comptage se fait en JavaScript, ou les chaines sont sensibles a la casse), alors
+// que MySQL, lui, les considere egaux. Deux pastilles pour le meme genre, et personne ne comprend.
+//
+// La liste vit ICI et non dans le script d'import : elle est partagee par le script (qui replie
+// les tags de Jamendo dessus) ET par l'administration du catalogue. Un script jetable ne peut pas
+// etre la source de verite de quelque chose que l'app utilise en permanence.
+// ---------------------------------------------------------------------------
+export const GENRES = Object.freeze([
+  "Pop",
+  "Rock",
+  "Electro",
+  "Hip-hop",
+  "Jazz",
+  "Folk",
+  "Soul",
+  "Reggae",
+  "Chill",
+  "World",
+]);
+
+export const MESSAGE_GENRE = `Le genre doit être l'un des suivants : ${GENRES.join(", ")}.`;
+
+// Le genre est FACULTATIF : 9 morceaux du catalogue n'en ont pas, et c'est tres bien. Une valeur
+// vide est donc valide — ce qui ne l'est pas, c'est une valeur inventee.
+export function genreValide(genre) {
+  if (genre === null || genre === undefined || genre === "") return true;
+  return GENRES.includes(genre);
+}
+
+// ---------------------------------------------------------------------------
 // URL de source
 //
 // Cette valeur finit dans un `href` affiche a tous les visiteurs. Se contenter de verifier

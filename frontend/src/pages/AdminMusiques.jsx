@@ -14,6 +14,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { apiFetch, messageErreur, urlFichier } from "@/lib/api";
+import { GENRES, LICENCES_CATALOGUE } from "@/lib/validation";
 import Page from "../composants/Page";
 
 const formatDuree = (secondes) => {
@@ -33,10 +34,16 @@ export default function AdminMusiques({ user }) {
   const [recherche, setRecherche] = useState("");
   const [aModifier, setAModifier] = useState(null);
   const [aSupprimer, setASupprimer] = useState(null);
+  // `licence` et `sourceUrl` font partie du formulaire, et ce n'est pas cosmetique : la route
+  // les EXIGE (le catalogue est diffuse publiquement, un morceau sans licence n'a rien a y
+  // faire). Les omettre faisait repondre 400 a chaque modification — le bouton « Modifier » ne
+  // marchait plus du tout.
   const [formulaire, setFormulaire] = useState({
     title: "",
     artist: "",
     genre: "",
+    licence: "",
+    sourceUrl: "",
   });
 
   useEffect(() => {
@@ -57,6 +64,8 @@ export default function AdminMusiques({ user }) {
       title: musique.title,
       artist: musique.artist,
       genre: musique.genre ?? "",
+      licence: musique.licence ?? "",
+      sourceUrl: musique.source_url ?? "",
     });
     setAModifier(musique);
   }
@@ -245,11 +254,76 @@ export default function AdminMusiques({ user }) {
               <label htmlFor="genre" className="text-sm font-medium">
                 Genre
               </label>
-              <Input
+              <select
                 id="genre"
                 value={formulaire.genre}
                 onChange={(e) =>
                   setFormulaire((f) => ({ ...f, genre: e.target.value }))
+                }
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+              >
+                <option value="">Sans genre</option>
+                {/* Le genre actuel s'il sort de la liste — cas d'un dépôt approuvé avec un genre
+                    libre. Sans cette option, le <select> retomberait sur « Sans genre » et
+                    enregistrer une simple correction de titre EFFACERAIT le genre en silence. */}
+                {formulaire.genre && !GENRES.includes(formulaire.genre) ? (
+                  <option value={formulaire.genre}>
+                    {formulaire.genre} (hors liste)
+                  </option>
+                ) : null}
+                {GENRES.map((genre) => (
+                  <option key={genre} value={genre}>
+                    {genre}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Une liste fermée, et non un champ libre : le filtre de la
+                Bibliothèque déduit ses pastilles des genres présents. Un
+                « Trap » saisi ici créerait une pastille menant à un seul
+                morceau.
+              </p>
+            </div>
+
+            {/* La licence est OBLIGATOIRE cote serveur. Elle est affichee ici pour pouvoir
+                corriger une attribution fausse — ce qui est un probleme juridique, pas une
+                coquille — et parce qu'un formulaire qui envoie un champ invisible est un
+                formulaire qui echouera un jour sans qu'on comprenne pourquoi. */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="licence" className="text-sm font-medium">
+                Licence
+              </label>
+              <select
+                id="licence"
+                value={formulaire.licence}
+                onChange={(e) =>
+                  setFormulaire((f) => ({ ...f, licence: e.target.value }))
+                }
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+              >
+                <option value="" disabled>
+                  Choisis une licence…
+                </option>
+                {LICENCES_CATALOGUE.map((licence) => (
+                  <option key={licence} value={licence}>
+                    {licence}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="sourceUrl" className="text-sm font-medium">
+                Lien vers l'original{" "}
+                <span className="text-muted-foreground">(facultatif)</span>
+              </label>
+              <Input
+                id="sourceUrl"
+                type="url"
+                placeholder="https://…"
+                value={formulaire.sourceUrl}
+                onChange={(e) =>
+                  setFormulaire((f) => ({ ...f, sourceUrl: e.target.value }))
                 }
               />
             </div>

@@ -32,6 +32,15 @@ export default function MediaPlayer({
 
   const audioRef = useRef(null);
 
+  // Le volume de l'element <audio> suit l'etat React, et UNIQUEMENT ici.
+  //
+  // Avant, il etait ecrit a deux endroits : dans le JSX (sans effet, voir plus bas) et dans le
+  // gestionnaire du curseur. Deux endroits qui ecrivent la meme chose, c'est deux endroits qui
+  // finissent par ne plus etre d'accord. L'etat decide, l'effet applique.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume / 100;
+  }, [volume, music?.id_music]);
+
   // Compte une ecoute a chaque NOUVELLE piste lancee (alimente le Top 5).
   // La dependance est `music?.id_music` et non `music` : reprendre la lecture apres une pause
   // ne relance pas l'effet, donc une meme piste n'est comptee qu'une fois par lancement.
@@ -115,10 +124,13 @@ export default function MediaPlayer({
 
   return (
     <section className={className}>
+      {/* Pas de `volume={...}` ici : le volume d'un <audio> est une PROPRIETE du DOM, pas un
+          attribut HTML. React ecrivait donc sagement `volume="0.5"` dans le balisage, et le
+          navigateur l'ignorait — le curseur affichait 50 % pendant que le son sortait a 100 %.
+          C'est l'effet ci-dessus qui l'applique, sur la propriete. */}
       <audio
         src={urlFichier(music.src_audio)}
         ref={audioRef}
-        volume={volume / 100}
         onLoadedMetadata={() => {
           setDuration(audioRef.current.duration);
           audioRef.current.play();
@@ -200,15 +212,19 @@ export default function MediaPlayer({
 
           <div className="flex items-center gap-2 w-64 justify-end">
             <Volume2 className="w-5 h-5 opacity-70" />
+            {/* `value={volume}` et non `value={[volume]}`, et le gestionnaire recoit un NOMBRE.
+                Le curseur de Base UI rend un tableau quand on lui donne un tableau (curseur a
+                deux poignees, pour un intervalle), et un nombre sinon. On lui passait un tableau
+                d'une seule valeur, il rendait un nombre — et `([newVolume]) => ...` tentait de
+                destructurer 18 comme un tableau. « number 18 is not iterable » : le gestionnaire
+                mourait a chaque mouvement, en silence pour l'utilisateur. */}
             <Slider
-              value={[volume]}
+              value={volume}
               min={0}
               max={100}
               className="w-24"
-              onValueChange={([newVolume]) => {
-                setVolume(newVolume);
-                audioRef.current.volume = newVolume / 100;
-              }}
+              aria-label="Volume"
+              onValueChange={(nouveauVolume) => setVolume(nouveauVolume)}
             />
           </div>
         </div>
@@ -217,14 +233,18 @@ export default function MediaPlayer({
           <span className="text-xs text-muted-foreground">
             {affichageCurrentTime}
           </span>
+          {/* Le deplacement dans le morceau reste imperatif : on ECRIT `currentTime`, on ne le
+              declare pas. `setTimeUpdate` n'est la que pour que la poignee suive le doigt sans
+              attendre le prochain `onTimeUpdate` de l'element audio. */}
           <Slider
-            value={[timeUpdate || 0]}
+            value={timeUpdate || 0}
             min={0}
             max={duration || 0}
             className="flex-1"
-            onValueChange={([newTime]) => {
-              setTimeUpdate(newTime);
-              audioRef.current.currentTime = newTime;
+            aria-label="Position dans le morceau"
+            onValueChange={(nouveauTemps) => {
+              setTimeUpdate(nouveauTemps);
+              if (audioRef.current) audioRef.current.currentTime = nouveauTemps;
             }}
           />
           <span className="text-xs text-muted-foreground">

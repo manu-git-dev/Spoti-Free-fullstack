@@ -1857,3 +1857,53 @@ Mais surtout — **le délai de réparation** :
 **Une dette que j'assume et que j'écris** : le formulaire de dépôt laisse le genre en **texte libre**. Un dépôt approuvé avec « Trap » créera une pastille à un morceau, et la dérive recommencera lentement. Le passer en `<select>` sur les mêmes familles réglerait ça à la source — comme je l'ai fait pour la licence. Pas fait aujourd'hui : la modération absorbe le cas. Mais c'est noté, parce qu'**une dette qu'on n'écrit pas n'est pas une dette, c'est un oubli**.
 
 ---
+
+### 64. Trois façons de casser en silence (et pourquoi mes tests étaient verts)
+
+**Contexte** : Manuel me signale que le lecteur ne marche « pas vraiment » — play, précédent et suivant fonctionnent, mais **impossible de toucher au volume ni de se déplacer dans le morceau**. Mes 147 tests étaient verts, dont un test « lecteur ». Deux heures plus tôt, j'avais aussi cassé le bouton « Modifier » du Catalogue admin sans que rien ne bronche.
+
+**Quatre bugs, un point commun : aucun ne fait de bruit.**
+
+**1. Déstructurer une valeur qui n'est pas un tableau.**
+```js
+onValueChange={([nouvelleValeur]) => ...}   // Base UI rend un NOMBRE
+```
+`const [x] = 18` lève `number 18 is not iterable`. Le gestionnaire meurt **avant d'agir**. Pour l'utilisateur : un curseur qui ne bouge pas. Aucun message, aucun symptôme, sauf dans la console.
+
+La signature de la bibliothèque le disait pourtant :
+```ts
+onValueChange?: ((value: Value extends number ? number : Value, …) => void)
+```
+Une valeur nombre → un nombre. Un tableau → un tableau. **Le contrat était écrit dans les types que j'avais sous la main.**
+
+**2. Un attribut HTML qui n'existe pas.**
+```jsx
+<audio volume={volume / 100} />   // ne fait RIEN
+```
+Le `volume` d'un `<audio>` est une **propriété du DOM**, pas un attribut HTML. React écrit donc sagement `volume="0.5"` dans le balisage et le navigateur l'ignore poliment. Résultat : le curseur affichait 50 %, le son sortait à 100 %. **React ne prévient pas** — il pose l'attribut et passe à autre chose. Vérifié en le mesurant : `getAttribute("volume")` → `"0.5"`, `audio.volume` → `1`. **L'attribut existait, la propriété non.**
+
+La correction n'est pas de l'écrire ailleurs, c'est un `useEffect` : *l'état décide, l'effet applique*. Avant, le volume était écrit à deux endroits (le JSX et le gestionnaire du curseur). **Deux endroits qui écrivent la même chose finissent toujours par ne plus être d'accord.**
+
+**3. Un composant tiers qui devine mal.** Le wrapper `slider.jsx` livré par shadcn :
+```js
+const _values = Array.isArray(value) ? value : ... : [min, max]
+```
+Il ne prévoit que deux cas : un tableau → autant de poignées, sinon `[min, max]` → deux poignées, en supposant un curseur d'**intervalle**. Il oublie le cas le plus courant : `value={50}`, une valeur unique contrôlée. Mes deux curseurs dessinaient donc **deux poignées** pour une seule valeur — l'une collée à 0, l'autre à 100. Le glisser semblait marcher (on attrapait une poignée au hasard) ; le clavier donnait le focus à la poignée fantôme bloquée sur `min`, et les flèches ne faisaient rien. **Le code qu'on n'a pas écrit reste du code dont on est responsable.**
+
+**4. Durcir un contrat sans chercher ses appelants.** En rendant la licence obligatoire sur `PUT /api/musics/update/:id`, mon test admin est devenu rouge. Je l'ai « réparé » en lui faisant envoyer une licence. **Je n'ai pas cherché qui d'autre appelait cette route.** `AdminMusiques.jsx` continuait d'envoyer `{title, artist, genre}` et se prenait un 400 : le bouton « Modifier » ne marchait plus **du tout**, et la suite était verte.
+
+**La leçon** : quand un test devient rouge après un durcissement, il ne se plaint pas pour lui — il annonce que **le contrat a changé**. Ce sont les **appelants** qu'il faut aller chercher, pas le test qu'il faut faire taire. `grep` sur la route aurait suffi.
+
+**Pourquoi mes tests ne voyaient rien, et c'est LE vrai sujet.**
+
+Mon test « lecteur » vérifiait : un seul `<audio>`, la lecture démarre, Pause fonctionne. Trois assertions justes — et **il ne touchait jamais aux curseurs**. J'avais même une assertion globale « aucune erreur JavaScript dans la console », qui passait : **elle ne peut attraper que les erreurs de ce qu'on exerce.** Un test qui ne touche pas à un curseur ne prouve rien sur ce curseur, et l'absence d'erreur ne prouve que l'absence d'erreur *sur le chemin parcouru*.
+
+De même, mon test d'API admin prouvait que **l'API répond correctement** — pas que **l'application l'appelle correctement**. Ce sont deux affirmations différentes, et je les avais confondues.
+
+**Un test vert ne dit pas « ça marche ». Il dit « ce que j'exerce marche ».** Toute la question est de savoir ce qu'il exerce — et j'avais arrêté de me la poser.
+
+**Ce que j'ai fait ensuite, et qui compte autant que la correction** : j'ai **remis le bug** pour vérifier que le nouveau test devient rouge. Il l'est devenu, en pointant la cause exacte (`number 49 is not iterable`). **Un test de non-régression qu'on n'a jamais vu échouer n'est pas un test : c'est une décoration.**
+
+**Détail qui m'a coûté du temps, et qui vaut d'être noté** : mon premier test clavier échouait, et j'ai cru le bug plus profond. En réalité **mon test était faux** : la poignée est un `<div>` non focusable qui contient un `<input type="range">` caché. `focus()` sur le div ne fait rien, le focus restait sur `<body>`, les flèches partaient dans le vide. **Avant d'accuser le code, vérifier que la mesure mesure la bonne chose.** C'est la troisième fois de la journée que ça me sauve.
+
+---
