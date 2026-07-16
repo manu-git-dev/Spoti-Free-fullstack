@@ -320,19 +320,27 @@ await etape("lecteur", async () => {
     `${volumeAvant} -> ${volumeApres}`,
   );
 
-  const tempsAvant = await page
-    .locator("audio")
-    .evaluate((a) => a.currentTime);
+  // On repart de zero : la piste peut avoir avance, voire s'etre terminee.
+  await page.locator("audio").evaluate((a) => {
+    a.currentTime = 0;
+  });
+  await page.waitForTimeout(200);
+
   await entrees.nth(1).focus();
-  for (let i = 0; i < 10; i += 1) await page.keyboard.press("ArrowRight");
+  for (let i = 0; i < 5; i += 1) await page.keyboard.press("ArrowRight");
   await page.waitForTimeout(500);
   const tempsApres = await page.locator("audio").evaluate((a) => a.currentTime);
 
   // La lecture est en pause : seul le curseur peut avoir fait bouger le temps.
+  //
+  // On verifie un DEPLACEMENT, pas un nombre de secondes : en CI, les morceaux sont les mp3 de
+  // test de `preparer-medias.mjs` — 2 SECONDES de silence. Un `> tempsAvant + 5` passerait ici
+  // (le vrai catalogue fait des morceaux de 2 a 8 minutes) et echouerait la-bas, faute de
+  // secondes a parcourir. C'est exactement le piege de la note 55.
   verifier(
     "lecteur : la barre de progression deplace REELLEMENT la lecture",
-    tempsApres > tempsAvant + 5,
-    `${Math.round(tempsAvant)}s -> ${Math.round(tempsApres)}s`,
+    tempsApres > 0,
+    `0s -> ${tempsApres.toFixed(2)}s`,
   );
 
   // -------------------------------------------------------------------------
@@ -365,13 +373,22 @@ await etape("lecteur", async () => {
   );
   await page.waitForTimeout(500);
 
-  const tempsApresClic = await page
+  // On mesure une PROPORTION, pas des secondes : cliquer a 60 % de la barre doit poser la lecture
+  // vers 60 % du morceau, qu'il dure 2 secondes (les mp3 de test de la CI) ou 8 minutes (le vrai
+  // catalogue). Une assertion en secondes ne vaudrait que sur la machine qui l'a vue passer.
+  //
+  // La fenetre est LARGE, et volontairement : le pas du curseur est d'une seconde. Sur un morceau
+  // de 2 secondes, il n'a donc que trois positions possibles — un clic a 60 % arrondit a 1 s,
+  // soit 48 %. La precision proportionnelle est physiquement impossible sur un morceau court, et
+  // ce n'est pas ce qu'on teste : on teste que le clic est PRIS EN COMPTE hors du centre du rail.
+  // La zone cliquable, elle, est verifiee juste au-dessus, en pixels et sans dependre de la duree.
+  const positionRelative = await page
     .locator("audio")
-    .evaluate((a) => a.currentTime);
+    .evaluate((a) => (a.duration ? a.currentTime / a.duration : 0));
   verifier(
-    "lecteur : un clic HORS du centre du rail deplace la lecture",
-    tempsApresClic > 5,
-    `${Math.round(tempsApresClic)}s apres un clic a 60 % de la barre`,
+    "lecteur : un clic HORS du centre du rail deplace la lecture (~60 %)",
+    positionRelative > 0.3 && positionRelative < 0.85,
+    `${Math.round(positionRelative * 100)} % du morceau apres un clic a 60 %`,
   );
 
   // -------------------------------------------------------------------------

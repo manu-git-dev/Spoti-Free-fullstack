@@ -83,8 +83,15 @@ jobs:
           mysql -h 127.0.0.1 -P 3306 -uroot -proot spotifree < backend/scripts/schema.sql
           mysql -h 127.0.0.1 -P 3306 -uroot -proot spotifree < backend/scripts/seed-musics.sql
 
-      # Les vrais fichiers audio ne sont pas versionnes (23 Mo, et pas nos droits). On recree
-      # `backend/public/` avec un mp3 SILENCIEUX fabrique pour l'occasion.
+      # Les vrais fichiers audio ne sont pas versionnes : 590 Mo, ca n'a rien a faire dans Git.
+      # (Ce n'est plus une question de droits : le catalogue est desormais entierement sous licence
+      # Creative Commons BY / BY-SA, donc redistribuable — c'est son POIDS qui l'exclut.)
+      #
+      # On recree `backend/public/` avec un mp3 SILENCIEUX de 2 secondes, un par morceau du seed.
+      # ATTENTION : ces 2 secondes sont une contrainte reelle pour les tests. Une assertion du
+      # genre « la lecture a avance de 5 secondes » passe en local (les vrais morceaux font 2 a
+      # 8 minutes) et echoue ICI. Les tests du lecteur mesurent donc des PROPORTIONS, pas des
+      # secondes.
       - name: Preparer les medias de test
         run: node tests/preparer-medias.mjs
 
