@@ -10,6 +10,7 @@ import {
   API,
   limitesDesactivees,
   creerCompte,
+  creerAdmin,
   apiAuth,
   verifier,
   etape,
@@ -464,6 +465,176 @@ if (limitesDesactivees) {
     );
   });
 }
+
+// ---------------------------------------------------------------------------
+// Suppression de compte : le mot de passe fait barriere, et la cascade nettoie tout
+//
+// L'action est irreversible et emporte toutes les donnees de la personne. Un token valide ne
+// suffit donc pas : il prouve qu'une SESSION est ouverte, pas que c'est la bonne personne qui
+// est devant l'ecran.
+// ---------------------------------------------------------------------------
+await etape("suppression de compte", async () => {
+  const sansToken = await fetch(`${API}/api/users/mon-compte`, {
+    method: "DELETE",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ motDePasse: "MotDePasse123!" }),
+  });
+  verifier(
+    "suppression : sans token => 401",
+    sansToken.status === 401,
+    `recu ${sansToken.status}`,
+  );
+
+  const victime = await creerCompte("CompteASupprimer");
+  const api = apiAuth(victime.token);
+
+  const mauvaisMotDePasse = await api("/api/users/mon-compte", {
+    method: "DELETE",
+    body: { motDePasse: "PasLeBonMotDePasse1" },
+  });
+  verifier(
+    "suppression : un mot de passe faux est refuse (403)",
+    mauvaisMotDePasse.reponse.status === 403,
+    `recu ${mauvaisMotDePasse.reponse.status}`,
+  );
+
+  // 403 et pas 401 : une faute de frappe ne doit pas purger la session et deconnecter la
+  // personne. On sait qui elle est ; elle n'a juste pas prouve son identite pour cette action.
+  const sansMotDePasse = await api("/api/users/mon-compte", {
+    method: "DELETE",
+    body: {},
+  });
+  verifier(
+    "suppression : sans mot de passe du tout => 400",
+    sansMotDePasse.reponse.status === 400,
+    `recu ${sansMotDePasse.reponse.status}`,
+  );
+
+  // Le compte doit toujours exister apres ces echecs.
+  const encoreLa = await api("/api/users/profil");
+  verifier(
+    "suppression : un echec de mot de passe ne supprime rien",
+    encoreLa.reponse.status === 200,
+    `recu ${encoreLa.reponse.status}`,
+  );
+
+  // On lui donne une playlist et un favori, pour verifier que la cascade les emporte.
+  const playlist = await api("/api/playlists/ajouter", {
+    method: "POST",
+    body: { nom: "Playlist a supprimer" },
+  });
+  verifier(
+    "suppression : la playlist temoin est bien creee (201)",
+    playlist.reponse.status === 201,
+    `recu ${playlist.reponse.status}`,
+  );
+
+  const suppression = await api("/api/users/mon-compte", {
+    method: "DELETE",
+    body: { motDePasse: victime.cred.password },
+  });
+  verifier(
+    "suppression : avec le bon mot de passe => 200",
+    suppression.reponse.status === 200,
+    `recu ${suppression.reponse.status} — ${suppression.donnees?.message}`,
+  );
+
+  // Le token reste cryptographiquement valide (il n'expire que dans 24h), mais l'utilisateur
+  // qu'il designe n'existe plus. L'API ne doit plus le servir.
+  const apresSuppression = await api("/api/users/profil");
+  verifier(
+    "suppression : le token d'un compte supprime ne donne plus rien",
+    apresSuppression.reponse.status === 401 ||
+      apresSuppression.reponse.status === 404,
+    `recu ${apresSuppression.reponse.status}`,
+  );
+
+  // La cascade a-t-elle vraiment nettoye la base ?
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT),
+  });
+
+  const [[{ nbUsers }]] = await db.query(
+    "SELECT COUNT(*) AS nbUsers FROM users WHERE email = ?",
+    [victime.cred.email],
+  );
+  const [[{ nbPlaylists }]] = await db.query(
+    "SELECT COUNT(*) AS nbPlaylists FROM playlists WHERE id_user = ?",
+    [victime.user.id_user],
+  );
+  await db.end();
+
+  verifier(
+    "suppression : le compte a bien disparu de la base",
+    nbUsers === 0,
+    `${nbUsers} ligne(s) restante(s)`,
+  );
+  verifier(
+    "suppression : les playlists partent en cascade",
+    nbPlaylists === 0,
+    `${nbPlaylists} playlist(s) restante(s)`,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Le dernier admin ne peut pas se supprimer
+//
+// Sans ce garde-fou, un clic rend le catalogue et la moderation definitivement ingerables : plus
+// personne ne peut approuver un depot ni promouvoir un nouvel admin, il faut repasser par MySQL
+// a la main sur le serveur.
+// ---------------------------------------------------------------------------
+await etape("le dernier admin est protege", async () => {
+  const admin1 = await creerAdmin("AdminSuppression1");
+  const admin2 = await creerAdmin("AdminSuppression2");
+
+  // Deux admins existent (au moins) : le premier peut partir.
+  const premier = await apiAuth(admin1.token)("/api/users/mon-compte", {
+    method: "DELETE",
+    body: { motDePasse: admin1.cred.password },
+  });
+  verifier(
+    "suppression : un admin parmi d'autres peut supprimer son compte (200)",
+    premier.reponse.status === 200,
+    `recu ${premier.reponse.status}`,
+  );
+
+  // `admin2` n'est le dernier admin que si la base n'en contient pas d'autres. Sur une base de
+  // developpement qui a deja un vrai admin, ce test ne peut rien affirmer : on ne le joue que
+  // lorsqu'il ne reste effectivement plus que lui.
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT),
+  });
+  const [[{ nbAdmins }]] = await db.query(
+    "SELECT COUNT(*) AS nbAdmins FROM users WHERE role = 'admin'",
+  );
+  await db.end();
+
+  if (nbAdmins === 1) {
+    const dernier = await apiAuth(admin2.token)("/api/users/mon-compte", {
+      method: "DELETE",
+      body: { motDePasse: admin2.cred.password },
+    });
+    verifier(
+      "suppression : le DERNIER admin ne peut pas se supprimer (409)",
+      dernier.reponse.status === 409,
+      `recu ${dernier.reponse.status}`,
+    );
+  } else {
+    console.log(
+      `  (test du dernier admin ignore : ${nbAdmins} admins en base, ce n'est pas le cas teste)`,
+    );
+  }
+});
 
 await nettoyerComptesDeTest();
 rapport("TESTS DE SECURITE — API");

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
+import SupprimerCompte from "../composants/SupprimerCompte";
 import EnTetePage from "../composants/EnTetePage";
 import { apiFetch } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
@@ -109,6 +110,13 @@ export default function Profil({
 
           <div className="flex justify-center">
             <Deconnexion setUser={setUser} setToken={setToken} />
+          </div>
+
+          {/* La suppression du compte est separee du reste par un trait et reste discrete :
+              c'est une action definitive, elle ne doit pas se trouver sous le doigt de
+              quelqu'un qui cherchait juste a se deconnecter. */}
+          <div className="flex justify-center border-t border-border pt-4">
+            <SupprimerCompte setUser={setUser} setToken={setToken} />
           </div>
         </div>
       </section>

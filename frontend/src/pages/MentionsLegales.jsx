@@ -91,16 +91,30 @@ export default function MentionsLegales() {
             sel, et ne permettent pas de remonter à une personne.
           </p>
           <p>
-            Pour demander l'accès, la rectification ou la suppression de vos
-            données, écrivez-nous via la{" "}
+            Vous pouvez <strong>supprimer votre compte à tout moment</strong>,
+            depuis votre{" "}
+            <Link
+              to="/profil"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              profil
+            </Link>
+            , sans avoir à le demander à qui que ce soit. La suppression est
+            immédiate et définitive : elle emporte vos playlists, vos favoris et
+            vos dépôts en attente. Les morceaux que vous avez déposés et qui ont
+            été publiés restent au catalogue, sous la licence libre que vous
+            leur avez donnée.
+          </p>
+          <p>
+            Pour toute autre demande concernant vos données (accès,
+            rectification), écrivez-nous via la{" "}
             <Link
               to="/contact"
               className="text-primary underline-offset-2 hover:underline"
             >
               page de contact
             </Link>
-            . La suppression d'un compte entraîne celle de ses playlists et de
-            ses favoris.
+            .
           </p>
         </Bloc>
       </div>

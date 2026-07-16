@@ -1694,3 +1694,33 @@ Est-ce que ça aurait cassé mon app ? **Probablement pas** : `mysql2` gère `ca
 **Et une question à laquelle j'ai eu la mauvaise raison** : je voulais un vrai catalogue « pour intéresser de vrais utilisateurs ». Honnêtement : **personne ne viendra écouter de la musique libre sur Spotifree alors que Spotify existe.** Ce n'est pas grave, ce n'est pas le but. Le vrai bénéfice est ailleurs : **5 morceaux c'est une démo, 100 morceaux c'est une application**. La recherche prend un sens, les filtres se justifient, la pagination devient un vrai sujet, et les problèmes de perf apparaissent enfin. Bonne décision, mauvaise raison — et ça valait le coup de le dire.
 
 ---
+
+### 59. Supprimer son compte : ce que la cascade emporte, et ce qu'elle ne doit surtout pas emporter
+
+**Contexte** : ma page de mentions légales affirmait qu'on pouvait supprimer son compte depuis son profil. C'était faux — la route n'existait pas. Plutôt que d'adoucir la phrase, autant écrire la fonctionnalité : le **RGPD** donne un « droit à l'effacement », et une personne doit pouvoir faire disparaître ses données **sans avoir à le demander à qui que ce soit**. Un formulaire de contact n'est pas un droit à l'effacement, c'est une faveur.
+
+**La règle du projet qui semblait l'interdire** : mon `CLAUDE.md` dit « ne pas compléter le CRUD utilisateurs ». Mais en relisant *pourquoi* : l'absence d'**édition** du pseudo/nom/email est volontaire, parce que **l'email est l'identifiant de connexion** — pouvoir le modifier ouvre une escalade de privilèges. Ce raisonnement ne dit **rien** sur la suppression. **Supprimer n'est pas modifier.** Leçon : une règle sans son « pourquoi » devient un dogme qu'on applique de travers. J'ai précisé la règle plutôt que de la contourner.
+
+**Deux garde-fous qui ne font pas double emploi** : je voulais « juste une modale de confirmation ». La modale confirme l'**intention** (on ne supprime pas son compte d'un clic égaré). Elle ne confirme pas l'**identité**. Or l'action est irréversible et emporte tout. Un token valide prouve qu'**une session est ouverte** — pas que c'est la **bonne personne devant l'écran**. Un ordinateur laissé sans surveillance trente secondes, un token volé, et le compte n'existe plus. D'où le **mot de passe redemandé dans la modale**. C'est ce que font GitHub (retaper le nom du dépôt) et Google (retaper son mot de passe) : ce n'est pas de la lourdeur, c'est proportionné à l'irréversibilité.
+
+**403 et pas 401 sur un mauvais mot de passe** : réflexe naturel = 401. Mauvaise idée ici. Mon `apiFetch` **purge la session sur tout 401** (c'est le comportement voulu : un 401 signifie « je ne sais pas qui tu es »). Une simple faute de frappe aurait donc **déconnecté** la personne. Or je sais parfaitement qui elle est — son token est valide. Elle n'a juste pas prouvé son identité **pour cette action-là**. C'est la définition du **403** : « je sais qui tu es, mais tu n'as pas le droit ». La distinction 401/403 n'est pas une subtilité académique, elle a une conséquence directe sur l'UX.
+
+**Le piège de la cascade — celui qui aurait vraiment fait mal** : `submissions` part en cascade avec l'utilisateur (`ON DELETE CASCADE`). Mais **la base ne sait rien des fichiers sur le disque**. Il faut les nettoyer soi-même. Et là, le réflexe « je supprime les fichiers de ses dépôts » est une **catastrophe** :
+
+| Statut du dépôt | Où est le fichier | Que faire |
+|---|---|---|
+| `en_attente` | dans `uploads/` | **supprimer** — il n'appartient qu'à ce dépôt |
+| `approuve` | **déplacé dans `public/`** | **NE PAS TOUCHER** — c'est le fichier du **catalogue** |
+| `refuse` | déjà effacé au refus | rien |
+
+La ligne `submissions` d'un dépôt **approuvé** porte encore le nom du fichier — mais à l'approbation, un `fs.rename` l'a **déplacé** dans `public/`. Le supprimer rendrait un morceau **public** injouable. Et s'il s'agit d'une pochette, elle est peut-être **partagée par plusieurs morceaux** — exactement la règle « ne jamais supprimer un fichier partagé » que j'avais déjà apprise en me la prenant en pleine figure. **Le même piège est revenu par une porte différente.** Une ligne en base ne dit pas où est le fichier : elle dit où il *était* quand on l'a écrite.
+
+**Le garde-fou auquel je n'avais pas pensé** : le **dernier admin ne peut pas se supprimer** (409). Sinon, un clic et le catalogue comme la modération deviennent **définitivement ingérables** — plus personne ne peut approuver un dépôt ni promouvoir un nouvel admin. Il faudrait se connecter en SSH et faire un `UPDATE` à la main sur la base de production. Ce genre de garde-fou ne se voit pas dans les specs : il se voit en se demandant « et si la dernière personne qui a la clé la jette ? ».
+
+**Un bug trouvé grâce à un test qui a échoué comme prévu** : j'avais écrit un test « le token d'un compte supprimé ne donne plus rien », en attendant un 401 ou un 404. **Reçu : 200.** Parce que `authMiddleware` ne vérifie que la **signature** du token, **pas l'existence du compte** — le jeton reste cryptographiquement bon jusqu'à son expiration (24h). Et `/profil` faisait `res.json(undefined)` sur un utilisateur introuvable → **200 avec un corps vide**. Le front croyait avoir reçu un profil et affichait une page vide **sans la moindre erreur**. Corrigé en 404. Ce n'était pas lié à la suppression : ce bug existait pour **n'importe quel** utilisateur inexistant. **Le test que j'avais écrit "pour la forme" a trouvé un vrai bug.**
+
+**La limite qui reste, et que j'assume** : un JWT ne se révoque pas. Le token d'un compte supprimé reste valide jusqu'à son expiration. En pratique ce n'est pas grave ici — le compte n'existe plus, il n'y a rien à lire, et les clés étrangères bloquent toute écriture. Mais c'est la faiblesse structurelle des JWT : vérifier l'existence du compte à chaque requête coûterait une requête SQL sur **chaque** appel. `adminMiddleware` le fait déjà (il relit le rôle en base), mais seulement sur les routes d'admin, qui sont rares. Le faire partout serait un vrai choix d'architecture, pas une correction à glisser en passant.
+
+**Ce que je retiens sur les tests** : mes tests API ont validé la route, mais c'est le test **navigateur** qui a vérifié que le bouton de confirmation est bien **désactivé tant que le mot de passe est vide**. Sans lui, la modale n'aurait été qu'un clic de plus. Les deux niveaux ne testent pas la même chose : l'API teste la **barrière**, le navigateur teste le **garde-fou**.
+
+---

@@ -5,6 +5,8 @@ const router = express.Router();
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import crypto from "node:crypto";
+import path from "node:path";
+import fs from "node:fs/promises";
 import nodemailer from "nodemailer";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
@@ -53,12 +55,148 @@ router.get("/profil", authMiddleware, async (req, res) => {
       [idUser],
     );
     const userInfo = infoProfil[0];
+
+    // Le token peut etre valide alors que l'utilisateur n'existe plus : `authMiddleware` ne
+    // verifie que la SIGNATURE du jeton, pas l'existence du compte. C'est le cas apres une
+    // suppression de compte — le jeton reste cryptographiquement bon jusqu'a son expiration.
+    //
+    // Sans ce test, `res.json(undefined)` repondait **200 avec un corps vide** : le front croyait
+    // avoir recu un profil, et affichait une page vide sans la moindre erreur.
+    if (!userInfo) {
+      return res.status(404).json({ message: "Compte introuvable." });
+    }
+
     return res.json(userInfo);
   } catch (error) {
     console.error(error);
 
     return res.status(500).json({
       message: "Erreur lors du suivi du profil.",
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/users/mon-compte — l'utilisateur supprime SON compte
+//
+// Le RGPD appelle ca le "droit a l'effacement" : une personne doit pouvoir faire disparaitre ses
+// donnees sans avoir a le demander a qui que ce soit. D'ou une route que l'utilisateur declenche
+// lui-meme, et non un formulaire de contact.
+//
+// Cette route ne "complete pas le CRUD utilisateurs" au sens interdit par les conventions du
+// projet : l'absence d'EDITION du pseudo/nom/email reste volontaire (l'email est l'identifiant de
+// connexion, le modifier ouvrirait une escalade de privileges). Supprimer n'est pas modifier.
+//
+// LE MOT DE PASSE EST EXIGE, et ce n'est pas de la paranoia deplacee : l'action est irreversible
+// et emporte tout (playlists, favoris, depots). Un token suffisant, c'est un ordinateur laisse
+// sans surveillance trente secondes, ou un token vole, et le compte n'existe plus. Redemander le
+// mot de passe verifie que c'est bien LA PERSONNE, pas seulement SA SESSION.
+// ---------------------------------------------------------------------------
+router.delete("/mon-compte", authMiddleware, async (req, res) => {
+  try {
+    const idUser = req.user.id_user;
+    const motDePasse = req.body?.motDePasse;
+
+    if (typeof motDePasse !== "string" || motDePasse === "") {
+      return res.status(400).json({
+        message: "Le mot de passe est nécessaire pour supprimer le compte.",
+      });
+    }
+
+    const [[utilisateur]] = await db.query(
+      "SELECT id_user, password_hash, role FROM users WHERE id_user = ?",
+      [idUser],
+    );
+
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Compte introuvable." });
+    }
+
+    const motDePasseCorrect = await bcrypt.compare(
+      motDePasse,
+      utilisateur.password_hash,
+    );
+
+    if (!motDePasseCorrect) {
+      // 403 et non 401 : on sait tres bien qui est cette personne (son token est valide), elle
+      // n'a simplement pas prouve son identite pour CETTE action. Un 401 ferait purger la
+      // session cote front et la deconnecterait pour une simple faute de frappe.
+      return res.status(403).json({ message: "Mot de passe incorrect." });
+    }
+
+    // Garde-fou : le dernier admin ne peut pas se supprimer.
+    //
+    // Sans ca, un seul clic rend le catalogue et la moderation des depots definitivement
+    // ingerables — plus personne ne peut approuver, refuser, ni promouvoir un nouvel admin. Il
+    // faudrait repasser par MySQL a la main sur le serveur pour s'en sortir.
+    if (utilisateur.role === "admin") {
+      const [[{ nb }]] = await db.query(
+        "SELECT COUNT(*) AS nb FROM users WHERE role = 'admin'",
+      );
+
+      if (nb <= 1) {
+        return res.status(409).json({
+          message:
+            "Tu es le dernier administrateur : nomme quelqu'un d'autre avant de supprimer ton compte.",
+        });
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Les fichiers des depots — LE piege de cette route.
+    //
+    // `submissions` part en cascade avec l'utilisateur (cle etrangere ON DELETE CASCADE), mais
+    // la base ne sait rien des fichiers sur le disque. Il faut donc les nettoyer nous-memes,
+    // AVANT de perdre les lignes qui donnent leur nom.
+    //
+    // Et surtout : UNIQUEMENT ceux des depots `en_attente`.
+    //
+    //   - `en_attente` -> le fichier est dans `uploads/`, il n'appartient qu'a ce depot, et
+    //     personne ne le reclamera jamais : on le supprime.
+    //   - `approuve`   -> le fichier a ete DEPLACE dans `public/` a l'approbation. La ligne de
+    //     `submissions` porte encore son nom, mais ce fichier est desormais celui du CATALOGUE.
+    //     Le supprimer rendrait un morceau public injouable — et s'il s'agit d'une pochette,
+    //     elle est peut-etre partagee par plusieurs morceaux (cf. la regle du projet : ne jamais
+    //     supprimer un fichier partage). On n'y touche pas.
+    //   - `refuse`     -> le fichier a deja ete supprime au moment du refus. Rien a faire.
+    //
+    // Le morceau approuve reste donc au catalogue apres la suppression du compte. C'est
+    // volontaire : il y est sous licence libre, l'auteur l'a place la, et le retirer casserait
+    // les playlists et les favoris de tous les autres utilisateurs.
+    // -----------------------------------------------------------------------
+    const [depotsEnAttente] = await db.query(
+      "SELECT fichier_audio, fichier_image FROM submissions WHERE id_user = ? AND statut = 'en_attente'",
+      [idUser],
+    );
+
+    const DOSSIER_UPLOADS = path.join(process.cwd(), "uploads");
+
+    for (const depot of depotsEnAttente) {
+      for (const nom of [depot.fichier_audio, depot.fichier_image]) {
+        if (!nom) continue;
+        try {
+          // `path.basename` : la colonne ne contient qu'un nom de fichier, mais on ne construit
+          // jamais un chemin a partir d'une valeur de base sans le neutraliser.
+          await fs.unlink(path.join(DOSSIER_UPLOADS, path.basename(nom)));
+        } catch (error) {
+          // Fichier deja absent : ce n'est pas une raison de faire echouer la suppression du
+          // compte. L'utilisateur a demande a partir, il part.
+          if (error.code !== "ENOENT") console.error(error);
+        }
+      }
+    }
+
+    // Les likes, playlists, playlists_musics, submissions et password_resets partent en cascade
+    // (ON DELETE CASCADE, voir schema.sql). Une seule requete suffit donc.
+    await db.query("DELETE FROM users WHERE id_user = ?", [idUser]);
+
+    return res.status(200).json({
+      message: "Ton compte et toutes tes données ont été supprimés.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Erreur lors de la suppression du compte.",
     });
   }
 });
