@@ -108,7 +108,7 @@ export default function HeaderMobile({ user, isPlaying }) {
             {/* Ne ferme PAS le menu : basculer le theme est un reglage, pas une navigation —
                 on laisse voir le changement, et de quoi revenir en arriere. */}
             <div className="h-px bg-border my-1" />
-            <BasculeTheme className={`${lien} w-full`} />
+            <BasculeTheme className={`${lien} w-full justify-between`} />
           </nav>
         </>
       )}
