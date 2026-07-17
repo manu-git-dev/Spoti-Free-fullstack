@@ -128,26 +128,45 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
+10. **Les tests laissent des fichiers orphelins dans `backend/public/musiques/`** — constate le
+   2026-07-17 en fin de session : **56 fichiers en UUID** (`006c8e29-….mp3`…), references par
+   AUCUN morceau du catalogue, plus 4 dans `uploads/`.
+
+   **D'ou ils viennent** : `depot.test.mjs` approuve des depots, et l'approbation **deplace** le
+   fichier de `uploads/` vers `public/` — c'est le comportement normal. Le nettoyage de fin de
+   suite supprime la ligne en base, mais **pas le fichier** : il est desormais dans `public/`, ou
+   la regle du projet dit justement qu'on ne supprime jamais a l'aveugle (les pochettes sont
+   mutualisees). Chaque execution en ajoute donc quelques-uns.
+
+   **Pas grave, mais pas propre** : `public/` est gitignore, rien ne part en prod, et ca pese
+   ~2 Mo (le mp3 de test fait 33 Ko). Mais ca grossira a chaque `npm test`.
+
+   **Piste** : que le nettoyage de `depot.test.mjs` releve le `src_audio` / `src_image` des
+   morceaux qu'il supprime du catalogue et efface les fichiers **avant** de supprimer la ligne —
+   comme le fait deja `e2e.test.mjs` pour les depots `en_attente` (`supprimerFichiersDeposes`).
+   **Attention** : ne jamais effacer une image **partagee** (verifier qu'aucun autre morceau ne la
+   reference), c'est la regle qui protege le catalogue.
+
 ### Ce qui est a faire par Manuel
 
-10. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+11. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-11. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+12. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-12. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+13. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-13. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+14. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-14. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+15. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
 
