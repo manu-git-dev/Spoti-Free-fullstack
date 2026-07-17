@@ -5,7 +5,6 @@ import {
   Info,
   Mail,
   UploadCloud,
-  Inbox,
   LayoutDashboard,
   ShieldCheck,
   Users,
@@ -50,13 +49,13 @@ export default function HeaderMobile({ user, isPlaying }) {
           <nav className="absolute right-0 top-14 z-20 flex flex-col gap-1 w-56 max-h-[70vh] overflow-y-auto bg-popover text-popover-foreground border border-border rounded-xl p-2 shadow-lg">
             {user ? (
               <>
+                {/* Pas de « Mes demandes » ici, comme dans l'Aside : `Deposer.jsx` y mene par
+                    une carte conditionnee a `nbDepots > 0`. Les deux navigations doivent dire la
+                    meme chose — un lien present sur mobile et absent sur bureau (ou l'inverse)
+                    est un piege pour la suite. */}
                 <Link to="/deposer" onClick={fermer} className={lien}>
                   <UploadCloud className="w-4 h-4" />
                   Déposer une musique
-                </Link>
-                <Link to="/mes-depots" onClick={fermer} className={lien}>
-                  <Inbox className="w-4 h-4" />
-                  Mes demandes
                 </Link>
                 <div className="h-px bg-border my-1" />
               </>

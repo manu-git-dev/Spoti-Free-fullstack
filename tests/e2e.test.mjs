@@ -4,6 +4,10 @@
 // Prerequis : MAMP (MySQL) demarre, backend sur :3000, frontend sur :5173.
 // Lancer :   cd tests && npm install && npm run test:e2e
 
+import fs from "node:fs";
+import path from "node:path";
+import url from "node:url";
+
 import { chromium } from "playwright";
 import {
   APP,
@@ -17,10 +21,47 @@ import {
   nettoyerComptesDeTest,
 } from "./utils.mjs";
 
+const ICI = path.dirname(url.fileURLToPath(import.meta.url));
 const BUREAU = { width: 1440, height: 900 };
 
 const navigateur = await chromium.launch();
 const erreursJS = [];
+
+/**
+ * Efface les fichiers deposes par un compte de test, dans `backend/uploads/`.
+ *
+ * A appeler AVANT `nettoyerComptesDeTest` : la suppression du compte fait disparaitre la ligne
+ * `submissions` (cle etrangere ON DELETE CASCADE), donc le nom du fichier avec elle.
+ */
+async function supprimerFichiersDeposes(idUser) {
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  });
+
+  const [depots] = await db.query(
+    `SELECT fichier_audio, fichier_image FROM submissions
+      WHERE id_user = ? AND statut = 'en_attente'`,
+    [idUser],
+  );
+  await db.end();
+
+  const dossier = path.join(ICI, "..", "backend", "uploads");
+  for (const depot of depots) {
+    for (const nom of [depot.fichier_audio, depot.fichier_image]) {
+      if (!nom) continue;
+      try {
+        fs.unlinkSync(path.join(dossier, nom));
+      } catch {
+        /* deja absent : rien a faire */
+      }
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // 1. Inscription — dont la confirmation du mot de passe
@@ -804,6 +845,76 @@ await etape("mise en page : l'app tient dans l'ecran", async () => {
 
     await page.context().close();
   }
+});
+
+// ---------------------------------------------------------------------------
+// 12. Depot : la carte de suivi est le SEUL chemin vers « Mes demandes »
+//
+// « Mes demandes » a ete retire de l'Aside ET du menu mobile le 2026-07-17 : la page ne concerne
+// que ceux qui ont deja depose, et `Deposer.jsx` y mene par une carte conditionnee a
+// `nbDepots > 0`. Le raisonnement tient tant que cette carte marche — si elle casse, la page
+// devient inatteignable sans taper l'URL a la main, et quelqu'un qui vient de deposer n'a plus
+// aucun moyen de suivre sa demande.
+//
+// Ce test depose par le VRAI formulaire (et non par l'API) pour la raison apprise avec le bouton
+// « Modifier » du catalogue : une route qui repond ne prouve pas que l'interface l'appelle bien.
+// Il couvre donc au passage le <select> de genre pose le meme jour.
+// ---------------------------------------------------------------------------
+await etape("depot : la carte de suivi mene a « Mes demandes »", async () => {
+  const compte = await creerCompte("CarteDepot");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+  page.on("pageerror", (e) => erreursJS.push(e.message));
+
+  await page.goto(`${APP}/deposer`);
+  await page.waitForSelector("#title");
+
+  // Sans depot, pas de carte : c'est la justification meme du retrait de l'Aside. Si cette
+  // assertion tombe, c'est que la carte s'affiche pour tout le monde — et le lien permanent
+  // redevenait defendable.
+  verifier(
+    "depot : sans aucun depot, la carte de suivi est absente",
+    (await page.getByRole("link", { name: /Mes demandes de dépôt/ }).count()) === 0,
+  );
+
+  await page.fill("#title", "Morceau de test e2e");
+  await page.fill("#artist", "Artiste de test e2e");
+  await page.selectOption("#genre", "Pop");
+  await page.selectOption("#licence", "CC BY 4.0");
+  await page.setInputFiles(
+    'input[type="file"][accept="audio/*"]',
+    path.join(ICI, "fixtures", "audio-test.mp3"),
+  );
+  await page.check('input[name="droitsConfirmes"]');
+  await page.getByRole("button", { name: /Envoyer/ }).click();
+
+  // La carte doit apparaitre SANS rechargement : `Deposer.jsx` rafraichit `nbDepots` apres un
+  // envoi reussi. Sans ca, celui qui vient de deposer reste bloque sur une page sans issue.
+  const carte = page.getByRole("link", { name: /Mes demandes de dépôt/ });
+  await carte.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  verifier(
+    "depot : apres un envoi, la carte de suivi apparait sans rechargement",
+    await carte.isVisible().catch(() => false),
+  );
+
+  await carte.click();
+  await page.waitForTimeout(1200);
+  verifier(
+    "depot : la carte mene bien a /mes-depots",
+    new URL(page.url()).pathname === "/mes-depots",
+    page.url(),
+  );
+  verifier(
+    "depot : le morceau depose y est liste",
+    await page.getByText("Morceau de test e2e").first().isVisible().catch(() => false),
+  );
+
+  // Le fichier envoye vit dans `backend/uploads/`. Le nettoyage general supprime le COMPTE, et
+  // `submissions` cascade — la ligne disparait donc, et avec elle le seul moyen de retrouver le
+  // nom du fichier. Il faut l'effacer ICI, tant que la ligne existe, sinon `uploads/` accumule
+  // un orphelin a chaque execution.
+  await supprimerFichiersDeposes(compte.user.id_user);
+
+  await page.context().close();
 });
 
 await navigateur.close();

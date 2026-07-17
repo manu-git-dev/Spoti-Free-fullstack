@@ -8,7 +8,6 @@ import {
   Mail,
   User,
   UploadCloud,
-  Inbox,
   ShieldCheck,
   LayoutDashboard,
   Music,
@@ -141,17 +140,16 @@ export default function Aside({
             <User className="w-5 h-5 shrink-0" />
             Profil
           </NavLink>
+          {/* « Mes demandes » n'est PAS ici : la page ne concerne que ceux qui ont deja depose,
+              et `Deposer.jsx` y mene par une carte conditionnee a `nbDepots > 0`. Un lien
+              permanent vers une page vide pour la majorite des comptes coute plus qu'il ne sert.
+              Si on le remet, le remettre AUSSI dans `HeaderMobile.jsx` : sinon la navigation dit
+              deux choses differentes selon la taille de l'ecran. */}
           {user && (
-            <>
-              <NavLink to="/deposer" className={lienNav}>
-                <UploadCloud className="w-5 h-5 shrink-0" />
-                Déposer
-              </NavLink>
-              <NavLink to="/mes-depots" className={lienNav}>
-                <Inbox className="w-5 h-5 shrink-0" />
-                Mes demandes
-              </NavLink>
-            </>
+            <NavLink to="/deposer" className={lienNav}>
+              <UploadCloud className="w-5 h-5 shrink-0" />
+              Déposer
+            </NavLink>
           )}
         </nav>
 
