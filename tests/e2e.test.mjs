@@ -807,6 +807,99 @@ await etape("mise en page : l'en-tete de page ne defile pas", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 10 bis. Mise en page : la prose et les formulaires ne s'etalent pas avec l'ecran
+//
+// Le 2026-07-16, les pages sont passees en pleine largeur — le bon choix pour les LISTES et les
+// GRILLES (Bibliotheque, Catalogue), qui gagnent a s'etaler. Mais ca a emporte la prose et les
+// formulaires avec : les paragraphes d'A propos atteignaient ~130 caracteres en 1440 px (la
+// convention typographique tourne autour de 65-75), et sur un 27 pouces les champs de Deposer
+// auraient fait ~2000 px de large.
+//
+// Ce test verifie l'INVARIANT, pas un nombre magique : la colonne ne doit pas grandir quand
+// l'ecran grandit. Figer « 65 caracteres » dependrait de la police et casserait au premier
+// changement de taille — l'invariant, lui, reste vrai.
+//
+// Il tourne en 2560 px : c'est le viewport que personne n'ouvre, et donc celui ou une regression
+// passerait inapercue le plus longtemps.
+// ---------------------------------------------------------------------------
+await etape("mise en page : la prose et les formulaires restent bornes", async () => {
+  const compte = await creerCompte("LargeurTest");
+
+  // `document.fonts.ready` n'est pas une precaution decorative : `max-w-prose` vaut **65ch**, et
+  // l'unite `ch` est la largeur du glyphe « 0 » de la police REELLEMENT chargee. Tant que
+  // Montserrat n'est pas la, le navigateur calcule avec la police de repli et la colonne fait
+  // 578 px ; une fois chargee, 689 px. Sans cette attente, le test mesure l'un ou l'autre selon
+  // la vitesse du reseau — il passait seul et echouait dans la suite complete. Un test instable
+  // est pire qu'un test absent : on finit par ignorer sa couleur.
+  const largeur = async (page, url, sel) => {
+    await page.goto(`${APP}${url}`);
+    await page.waitForSelector(sel);
+    await page.evaluate(() => document.fonts.ready);
+    return page.$eval(sel, (el) => Math.round(el.getBoundingClientRect().width));
+  };
+
+  // `main .overflow-y-auto p` et non `main p` : le second attrape le SOUS-TITRE de l'en-tete, qui
+  // n'est pas borne par `max-w-prose` (il vit dans `EnTetePage`) et dont la largeur est stable
+  // pour une tout autre raison. Les trois assertions passaient donc sans rien prouver — decouvert
+  // en retirant `max-w-prose` : le test restait vert.
+  const cibles = [
+    ["A propos : le paragraphe", "/a-propos", "main .overflow-y-auto p"],
+    [
+      "Mentions legales : le paragraphe",
+      "/mentions-legales",
+      "main .overflow-y-auto p",
+    ],
+    ["Deposer : le formulaire", "/deposer", "main form"],
+  ];
+
+  const mesures = {};
+  for (const vp of [
+    ["1440", { width: 1440, height: 900 }],
+    ["2560", { width: 2560, height: 1440 }],
+  ]) {
+    const page = await pageConnectee(navigateur, compte, vp[1]);
+    page.on("pageerror", (e) => erreursJS.push(e.message));
+    for (const [nom, url, sel] of cibles) {
+      mesures[`${nom}|${vp[0]}`] = await largeur(page, url, sel);
+    }
+    await page.context().close();
+  }
+
+  for (const [nom] of cibles) {
+    const petit = mesures[`${nom}|1440`];
+    const grand = mesures[`${nom}|2560`];
+    verifier(
+      `largeur (${nom}) : ne grandit pas de 1440 a 2560 px`,
+      petit === grand,
+      `${petit} px -> ${grand} px`,
+    );
+  }
+
+  // Le pendant, et c'est LUI qui porte la nuance : on a borne le CONTENU, pas la PAGE. La zone
+  // de defilement doit donc rester pleine largeur — seul le paragraphe qui vit dedans est borne.
+  //
+  // Sans cette assertion, les trois verifications ci-dessus passeraient tout aussi bien si on
+  // avait borne la page entiere (`max-w` sur `Page.jsx`) : la prose serait bornee, mais l'en-tete
+  // aurait retreci avec elle et la Bibliotheque aurait perdu sa pleine largeur. C'est exactement
+  // l'etat d'avant le 2026-07-16, celui que Manuel a demande de quitter.
+  //
+  // `main .overflow-y-auto` est l'ancre qu'utilisent deja les tests « en-tete » : la zone de
+  // defilement de `Page.jsx`.
+  const page = await pageConnectee(navigateur, compte, { width: 2560, height: 1440 });
+  await page.goto(`${APP}/a-propos`);
+  await page.waitForSelector("main .overflow-y-auto p");
+  const zone = await page.$eval("main .overflow-y-auto", (el) =>
+    Math.round(el.getBoundingClientRect().width),
+  );
+  verifier(
+    "largeur (A propos) : la zone de contenu reste pleine largeur (on borne le contenu, pas la page)",
+    zone > 1800,
+    `${zone} px`,
+  );
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
 // 11. Mise en page : l'app ne doit jamais depasser la hauteur de l'ecran
 // ---------------------------------------------------------------------------
 await etape("mise en page : l'app tient dans l'ecran", async () => {

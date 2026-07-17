@@ -19,7 +19,11 @@ export default function Apropos() {
       titre="À propos"
       sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
     >
-      <div className="flex flex-col gap-6">
+      {/* `max-w-prose` (~65 caracteres) borne la COLONNE DE PROSE, pas la page : l'en-tete reste
+          pleine largeur et aligne sur les autres pages. Pas de `mx-auto` — le bloc reste cale a
+          gauche. Au-dela de ~75 caracteres, l'oeil perd sa ligne en revenant a gauche ; en 1440 px
+          pleine largeur, ces paragraphes atteignaient ~130. */}
+      <div className="flex flex-col gap-6 max-w-prose">
         <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est{" "}
           <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix

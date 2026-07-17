@@ -102,7 +102,7 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 ## Intégration continue
 
 `.github/workflows/ci.yml` — à chaque push sur `main`, une machine neuve reconstruit la base,
-démarre les serveurs, joue les 161 tests, compile le build et vérifie `npm audit`.
+démarre les serveurs, joue les 165 tests, compile le build et vérifie `npm audit`.
 
 **Rien ne doit dépendre de cette machine.** Un test qui suppose un compte de la base de dev, ou lit
 un fichier gitignoré, passera en local et échouera en CI (c'est déjà arrivé — voir la note 55 des
@@ -111,7 +111,7 @@ lisent leurs médias dans `tests/fixtures/`.
 
 ## Tests
 
-`cd tests && npm install && npm test` — **161 tests** contre l'application réellement démarrée
+`cd tests && npm install && npm test` — **165 tests** contre l'application réellement démarrée
 (MAMP + backend + frontend). 4 suites : parcours, sécurité, dépôt, admin. Le processus sort en
 **code 1** si un test échoue.
 
@@ -152,6 +152,14 @@ rouge, c'est qu'une régression est réapparue.
   c'est **voulu**, tranché par Manuel le 2026-07-17, pas un oubli de la refonte : un état
   « connecte-toi » est un **appel à l'action**, pas du contenu. L'étaler sur 1400 px isolerait un
   bouton au milieu du vide. Ne pas « harmoniser » cette différence.
+- **Largeurs** : borner le **contenu**, jamais la **page** ni l'**en-tête**. `max-w-prose` sur la
+  colonne de prose (À propos, Mentions légales), `max-w-2xl` sur un `<form>` (Déposer) — **sans
+  `mx-auto`** : le bloc reste calé à gauche et l'en-tête garde la pleine largeur, aligné sur les
+  autres pages. Un `max-w` sur `Page.jsx` rétrécirait l'en-tête **et** casserait les grilles. La
+  pleine largeur reste juste pour la **Bibliothèque**, le **Catalogue** et le **Tableau de bord** :
+  ce sont des grilles, elles gagnent des cartes par rangée. La prose et les formulaires, non — leur
+  largeur utile est bornée par l'œil, pas par l'écran. Verrouillé par les tests e2e "largeur", qui
+  mesurent en **2560 px**.
 - **Typographie** : `EnTetePage` = le `<h1>` de la page (avec son icône) ; `TitreSection` = un
   `<h2>` dans une page de prose (À propos, Mentions légales). Ne pas redéfinir un composant `Titre`
   local dans une page — c'est exactement comme ça que les tailles ont divergé.

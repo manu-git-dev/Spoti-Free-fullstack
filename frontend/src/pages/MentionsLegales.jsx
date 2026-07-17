@@ -29,7 +29,9 @@ export default function MentionsLegales() {
       titre="Mentions légales"
       sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
     >
-      <div className="flex flex-col gap-8">
+      {/* Meme regle qu'A propos : on borne la colonne de prose (~65 caracteres), pas la page.
+          Voir le commentaire d'`Apropos.jsx`. */}
+      <div className="flex flex-col gap-8 max-w-prose">
         <Bloc titre="Éditeur">
           <p>
             Spotifree est un projet personnel et non commercial, réalisé dans le

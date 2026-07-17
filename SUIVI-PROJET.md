@@ -10,29 +10,22 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > dans le reste du fichier et dans les commits. Tenu a jour a chaque fin de session (protocole
 > dans `CLAUDE.md`). Manuel dit « reprenons » -> Claude restitue cette liste.
 
-### Ce qui attend une decision de Manuel
-
-1. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
-   le passage en pleine largeur. La convention typographique tourne autour de 65-75 : au-dela,
-   l'oeil perd sa ligne en revenant a gauche. Compromis possible : garder la page pleine largeur
-   mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
-
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-2. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+1. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-3. **Une passe de tests ultra complete AVANT le deploiement.** Les 161 tests sont verts, mais la
+2. **Une passe de tests ultra complete AVANT le deploiement.** Les 165 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-4. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+3. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -73,48 +66,75 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-5. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
-   (portable) uniquement — ca passe. Sur un 27 pouces, le panneau fera ~2200 px : les champs de
-   **Deposer** (titre, artiste, genre, licence, source) s'etaleront sur toute la largeur. Un champ
-   de texte de 2000 px n'a aucun sens : l'oeil ne suit plus, et ca ne ressemble a rien.
+4. **La largeur de « Mes demandes » et de « Profil » sur grand ecran.** La prose (A propos,
+   Mentions legales) et le formulaire de Deposer ont ete bornes le 2026-07-17 (voir plus bas).
+   **Ces deux pages-la ne l'ont pas ete** : ce ne sont ni de la prose ni des formulaires, mais des
+   **cartes et des listes**, et la regle appliquee ne tranche pas leur cas.
 
-   **C'est une consequence directe du passage en pleine largeur** demande le 2026-07-16 : le
-   `max-w-2xl mx-auto` de Deposer / Mes demandes / Profil et le `max-w-3xl` d'A propos /
-   Mentions legales ont ete retires. **Meme cause que « les lignes a ~130 caracteres »** (1er point
-   de cette liste) — les deux devraient se decider ensemble.
+   **La question** : une liste verticale de cartes (une par depot) ne gagne rien a s'etaler — elle
+   n'a pas plus d'elements par rangee, elle etire juste chaque ligne, et l'oeil doit traverser
+   2200 px entre le titre a gauche et le statut a droite. C'est different d'une **grille**
+   (Bibliotheque, Catalogue), qui gagne reellement : plus de cartes par rangee.
 
-   **La nuance a trancher** : « pleine largeur » etait le bon choix pour la Bibliotheque, le
-   Catalogue et le Tableau de bord — ce sont des **listes et des grilles**, elles gagnent
-   reellement a s'etaler (plus de cartes par rangee). Ca ne l'est pas forcement pour un
-   **formulaire** ni pour de la **prose**, ou la largeur utile est bornee par l'oeil, pas par
-   l'ecran.
-
-   **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
-   pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
-   lui-meme etait centre avec le contenu.
+   Si c'est a borner, c'est `max-w-2xl` sur le conteneur de la liste — jamais sur `Page.jsx`, qui
+   retrecirait l'en-tete et casserait les grilles. **Verifiable en 2560 px** : les 4 tests
+   « largeur » de `e2e.test.mjs` donnent le patron a copier.
 
 ### Ce qui est a faire par Manuel
 
-6. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+5. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-7. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+6. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-8. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+7. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-9. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+8. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-10. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+9. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## Largeurs : borner le CONTENU, pas la page - 2026-07-17 - fait
+
+Le passage en pleine largeur du 2026-07-16 avait emporte la prose et les formulaires avec lui :
+les paragraphes d'A propos faisaient ~130 caracteres en 1440 px (la convention typographique
+tourne autour de 65-75), et sur un 27 pouces les champs de Deposer auraient fait ~2000 px.
+
+**La regle retenue** : borner le **contenu**, jamais la **page** ni l'**en-tete**. `max-w-prose`
+sur la colonne de prose (A propos, Mentions legales), `max-w-2xl` sur le `<form>` de Deposer — et
+sur la carte « Mes demandes » qui le suit, sinon elle depassait le formulaire de 1500 px. **Pas de
+`mx-auto`** : le bloc reste cale a gauche, l'en-tete reste pleine largeur et aligne sur les autres
+pages. C'est ce qui distingue cette mise en page de l'etat d'avant le 2026-07-16, ou le titre
+lui-meme etait centre avec le contenu.
+
+La pleine largeur reste le bon choix pour la **Bibliotheque**, le **Catalogue** et le **Tableau de
+bord** : ce sont des grilles, elles gagnent reellement a s'etaler (plus de cartes par rangee). La
+prose et les formulaires, non : leur largeur utile est bornee par l'oeil, pas par l'ecran.
+
+4 tests ajoutes (suite : **165**), en **2560 px** — le viewport que personne n'ouvre, donc celui
+ou une regression passerait inapercue le plus longtemps. Ils testent l'**invariant** (« la colonne
+ne grandit pas de 1440 a 2560 ») et non un nombre de caracteres, qui dependrait de la police.
+
+**Les deux pieges rencontres en les ecrivant** (voir la note 61 de `NOTES-APPRENTISSAGE.md`) :
+
+1. **`main p` attrapait le SOUS-TITRE de l'en-tete**, pas la prose. Les trois assertions passaient
+   sans rien prouver — decouvert en retirant `max-w-prose` : le test restait **vert**. Il faut
+   `main .overflow-y-auto p`.
+2. **`max-w-prose` vaut `65ch`, et `ch` depend de la police REELLEMENT chargee** : 578 px avec la
+   police de repli, **689 px** une fois Montserrat arrivee. Le test passait seul et echouait dans
+   la suite complete. Corrige par `await page.evaluate(() => document.fonts.ready)`.
+
+> Reste en suspens : **Mes demandes** et **Profil** (des cartes et des listes, pas de la prose ni
+> des formulaires) — la regle appliquee ici ne tranche pas leur cas.
 
 ## « Mes demandes » quitte la navigation - 2026-07-17 - fait
 
@@ -188,10 +208,10 @@ accepte en 201).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **161 tests** automatises : `cd tests && npm install && npm test`
-  (65 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **161/161.**
-- **CI verte** (GitHub Actions) : les 161 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 161 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **165 tests** automatises : `cd tests && npm install && npm test`
+  (69 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **165/165.**
+- **CI verte** (GitHub Actions) : les 165 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 165 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -346,7 +366,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 161 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 165 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -371,7 +391,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 161 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 165 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
