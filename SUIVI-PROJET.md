@@ -128,25 +128,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-10. **Les tests laissent des fichiers orphelins dans `backend/public/musiques/`** — constate le
-   2026-07-17 en fin de session : **56 fichiers en UUID** (`006c8e29-….mp3`…), references par
-   AUCUN morceau du catalogue, plus 4 dans `uploads/`.
-
-   **D'ou ils viennent** : `depot.test.mjs` approuve des depots, et l'approbation **deplace** le
-   fichier de `uploads/` vers `public/` — c'est le comportement normal. Le nettoyage de fin de
-   suite supprime la ligne en base, mais **pas le fichier** : il est desormais dans `public/`, ou
-   la regle du projet dit justement qu'on ne supprime jamais a l'aveugle (les pochettes sont
-   mutualisees). Chaque execution en ajoute donc quelques-uns.
-
-   **Pas grave, mais pas propre** : `public/` est gitignore, rien ne part en prod, et ca pese
-   ~2 Mo (le mp3 de test fait 33 Ko). Mais ca grossira a chaque `npm test`.
-
-   **Piste** : que le nettoyage de `depot.test.mjs` releve le `src_audio` / `src_image` des
-   morceaux qu'il supprime du catalogue et efface les fichiers **avant** de supprimer la ligne —
-   comme le fait deja `e2e.test.mjs` pour les depots `en_attente` (`supprimerFichiersDeposes`).
-   **Attention** : ne jamais effacer une image **partagee** (verifier qu'aucun autre morceau ne la
-   reference), c'est la regle qui protege le catalogue.
-
 ### Ce qui est a faire par Manuel
 
 11. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la

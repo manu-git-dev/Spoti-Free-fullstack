@@ -2111,3 +2111,41 @@ La différence est franche, il n'y a pas d'ambiguïté à trancher. Et je l'ai v
 C'est le miroir exact de la note 61 : là, un test **vert** ne prouvait rien (il mesurait le sous-titre). Ici, un test **rouge** ne prouve rien non plus. **La couleur d'un test ne dit pas s'il a raison** — elle dit seulement que ce qu'il affirme est vrai ou faux. Encore faut-il qu'il affirme la bonne chose.
 
 ---
+
+## 2026-07-17 — Spoti-Free (les fichiers fantômes des tests)
+
+### 65. Un `catch {}` vide a caché un bug pendant des semaines
+
+**Contexte** : je constate que `backend/public/musiques/` se remplit de fichiers en UUID (`006c8e29-….mp3`) que plus aucun morceau du catalogue ne référence — une soixantaine, quelques Mo. Ils s'ajoutent à chaque `npm test`. `public/` est gitignoré, donc rien ne part en prod, mais ça grossit indéfiniment.
+
+**Ma première explication était fausse** — et c'est ça, le vrai sujet. Je pensais : « le nettoyage de fin de tests supprime la ligne en base mais oublie de supprimer le fichier ». Logique, sauf que le code faisait *exactement l'inverse de ce que je croyais* : il supprimait bien le fichier **avant** la ligne. Donc « ligne partie, fichier resté » ne pouvait **pas** venir d'un oubli. Il y avait autre chose.
+
+**Le vrai coupable** : la boucle de suppression des fichiers utilisait une variable `PUBLIC` qui **n'était jamais définie ni importée** dans le fichier de test. À chaque tour :
+
+```js
+try {
+  fs.unlinkSync(path.join(PUBLIC, relatif));  // ReferenceError: PUBLIC is not defined
+} catch {
+  /* deja absent */                            // ← avale TOUT, y compris la ReferenceError
+}
+```
+
+`path.join(PUBLIC, …)` levait `ReferenceError: PUBLIC is not defined`. Mais le `catch {}` était **vide** : il ne regardait même pas quelle erreur il rattrapait. Il l'avalait, la boucle passait au fichier suivant, et le `DELETE FROM musics` juste après, lui, réussissait. Ligne supprimée, fichier jamais touché → orphelin sans référence. À chaque exécution.
+
+**Ce que je retiens, et c'est plus important que le bug lui-même** : un `catch {}` qui n'inspecte pas son erreur ne « gère » pas un cas, il **rend le programme aveugle**. Celui-là était écrit pour absorber une seule chose — « le fichier n'existe déjà plus » — et il a fini par absorber une faute de frappe de variable, pendant des semaines, sans un mot dans la console.
+
+**La bonne pratique, celle que j'ai appliquée** : un `catch` ne doit avaler **que l'erreur qu'il attend**, et **relancer tout le reste**.
+
+```js
+} catch (erreur) {
+  if (erreur.code !== "ENOENT") throw erreur;  // "fichier absent" : OK. Tout le reste remonte.
+}
+```
+
+Avec ça, la `ReferenceError` aurait fait échouer le test **le premier jour**, au lieu de fabriquer des déchets en silence pendant un mois. C'est la différence entre « ignorer un cas prévu » et « ignorer *ce qui se passe* ».
+
+**Le nettoyage des orphelins déjà là** posait un dernier piège. Ils n'avaient plus ni ligne en base ni marqueur de test : impossible de les retrouver par ce qu'ils *sont*. Il a fallu les retrouver par ce qu'ils ne sont **pas** — référencés par aucune ligne. Et là, la règle de sécurité du projet (« ne jamais supprimer un fichier partagé à l'aveugle ») redevient centrale : je ne supprime un fichier que si **aucune** colonne d'**aucune** table ne le cite. Un fichier référencé n'est, par définition, pas un orphelin — la sûreté vient de la définition, pas d'une liste que je maintiendrais à la main. J'en ai fait un petit script versionné (`nettoyer-medias-orphelins.mjs`), dry-run par défaut : il *liste* avant de supprimer, parce qu'une suppression de masse qu'on ne relit pas est exactement le genre de commande qui efface `images/3.jpg` en croyant bien faire.
+
+**Et c'est précisément ce qui a failli arriver — avec mon propre script.** `uploads/` contient un `.gitignore` (`*` + `!.gitignore`) qui garde le dossier versionné tout en ignorant les dépôts. Ma première version listait *tous* les fichiers du dossier, comparait chacun aux références en base, et… `.gitignore` n'est référencé par aucune ligne. Il l'a donc classé « orphelin » et supprimé. Je ne l'ai vu qu'au `git status` avant de committer : `D backend/uploads/.gitignore`. La leçon se mord la queue : mon nettoyeur d'orphelins avait exactement la maladie qu'il soignait — supprimer par « ce que je ne trouve pas » sans se demander *ce que c'est*. Un « orphelin », pour ce script, ce n'est pas « un fichier non référencé », c'est « un **média** non référencé » : j'ai dû lui apprendre à ne jamais toucher aux fichiers d'infrastructure (les dotfiles). Deux gardes-fous m'ont sauvé, et c'est pour ça qu'ils existent : le **dry-run** (rien n'est supprimé sans que je l'aie lu) et le **`git status` avant commit** (la dernière relecture avant que ça devienne réel).
+
+---
