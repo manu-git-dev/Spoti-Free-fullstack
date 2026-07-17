@@ -82,7 +82,11 @@ function SelectContent({
           )}
           {...props}>
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          {/* `p-1` : sans lui, les options touchent le bord du popup — le survol et l'option
+              selectionnee se peignent alors d'un bord a l'autre, sans respiration. Le `p-1`
+              existait sur `SelectGroup`, mais il ne s'applique que si on groupe ses options ;
+              une liste simple n'en avait aucune. */}
+          <SelectPrimitive.List className="p-1">{children}</SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

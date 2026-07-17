@@ -235,8 +235,47 @@ await etape("playlists", async () => {
     await page.waitForTimeout(900);
     await page.getByRole("combobox").click();
     await page.waitForTimeout(600);
+
+    // --- Non-regression : la modale « Ajouter a une playlist » (bugs signales le 2026-07-17) ---
+    //
+    // Ces deux verifications vivent ICI, au milieu du parcours, parce que le decor y est deja.
+    // Et surtout : ce test PASSAIT alors que les deux bugs etaient la. Il ouvrait la modale,
+    // choisissait l'option et validait — il exercait tout le chemin sans jamais regarder ce que
+    // l'ECRAN montrait. Une modale qui marche n'est pas une modale qui s'affiche.
+
+    // 1. Le popup ne doit pas RECOUVRIR le champ. Par defaut, Base UI aligne l'option
+    //    selectionnee sur le declencheur : la liste venait se poser dessus et on ne voyait plus
+    //    du tout le champ qu'on remplissait.
+    const chevauchement = await page.evaluate(() => {
+      const champ = document
+        .querySelector('[data-slot="select-trigger"]')
+        .getBoundingClientRect();
+      const popup = document
+        .querySelector('[data-slot="select-content"]')
+        .getBoundingClientRect();
+      return Math.round(
+        Math.max(0, Math.min(champ.bottom, popup.bottom) - Math.max(champ.top, popup.top)),
+      );
+    });
+    verifier(
+      "playlist : la liste deroulante ne recouvre pas le champ",
+      chevauchement === 0,
+      `${chevauchement} px de recouvrement`,
+    );
+
     await page.getByRole("option", { name: "Playlist de test" }).click();
     await page.waitForTimeout(400);
+
+    // 2. Le champ doit afficher le NOM, pas l'identifiant. `<Select.Value>` rend la valeur brute
+    //    tant qu'on ne lui donne pas la table `items` — et la valeur, c'est `id_playlist`. On
+    //    choisissait « Playlist de test » et le champ affichait « 1332 ».
+    const affiche = (await page.getByRole("combobox").innerText()).trim();
+    verifier(
+      "playlist : le champ affiche le NOM choisi, pas son identifiant",
+      affiche === "Playlist de test",
+      `affiche ${JSON.stringify(affiche)}`,
+    );
+
     await page.getByRole("button", { name: /^ajouter$/i }).click();
     await page.waitForTimeout(1400);
   };
@@ -966,7 +1005,7 @@ await etape("depot : la carte de suivi mene a « Mes demandes »", async () => {
   // redevenait defendable.
   verifier(
     "depot : sans aucun depot, la carte de suivi est absente",
-    (await page.getByRole("link", { name: /Mes demandes de dépôt/ }).count()) === 0,
+    (await page.getByRole("link", { name: /Mes demandes/ }).count()) === 0,
   );
 
   await page.fill("#title", "Morceau de test e2e");
@@ -982,7 +1021,7 @@ await etape("depot : la carte de suivi mene a « Mes demandes »", async () => {
 
   // La carte doit apparaitre SANS rechargement : `Deposer.jsx` rafraichit `nbDepots` apres un
   // envoi reussi. Sans ca, celui qui vient de deposer reste bloque sur une page sans issue.
-  const carte = page.getByRole("link", { name: /Mes demandes de dépôt/ });
+  const carte = page.getByRole("link", { name: /Mes demandes/ });
   await carte.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
   verifier(
     "depot : apres un envoi, la carte de suivi apparait sans rechargement",
