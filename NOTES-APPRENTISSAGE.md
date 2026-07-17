@@ -2149,3 +2149,27 @@ Avec ça, la `ReferenceError` aurait fait échouer le test **le premier jour**, 
 **Et c'est précisément ce qui a failli arriver — avec mon propre script.** `uploads/` contient un `.gitignore` (`*` + `!.gitignore`) qui garde le dossier versionné tout en ignorant les dépôts. Ma première version listait *tous* les fichiers du dossier, comparait chacun aux références en base, et… `.gitignore` n'est référencé par aucune ligne. Il l'a donc classé « orphelin » et supprimé. Je ne l'ai vu qu'au `git status` avant de committer : `D backend/uploads/.gitignore`. La leçon se mord la queue : mon nettoyeur d'orphelins avait exactement la maladie qu'il soignait — supprimer par « ce que je ne trouve pas » sans se demander *ce que c'est*. Un « orphelin », pour ce script, ce n'est pas « un fichier non référencé », c'est « un **média** non référencé » : j'ai dû lui apprendre à ne jamais toucher aux fichiers d'infrastructure (les dotfiles). Deux gardes-fous m'ont sauvé, et c'est pour ça qu'ils existent : le **dry-run** (rien n'est supprimé sans que je l'aie lu) et le **`git status` avant commit** (la dernière relecture avant que ça devienne réel).
 
 ---
+
+## 2026-07-17 — Cours : les types de tests (générique, pas lié à un bug du projet)
+
+### 66. Les différentes familles de tests, et pourquoi elles existent
+
+*Note de cours (j'ai demandé le panorama, ce n'est pas un bug rencontré). Exemples volontairement génériques, pas tirés de la suite du projet, pour retenir le concept.*
+
+On classe les tests de **deux** manières, qui se croisent.
+
+**1. Par ce qu'ils exercent — la « pyramide des tests »** (beaucoup en bas, rapides et isolés ; peu en haut, lents et réalistes) :
+
+- **Unitaires** : une seule fonction isolée. Ex. générique : `calculerTVA(100, 0.2) === 120` + cas limites. Rapides, précis (ils pointent la ligne fautive), nombreux. Mais ne prouvent que la brique : deux briques justes peuvent mal s'emboîter. On remplace les dépendances par des **mocks/stubs**.
+- **Intégration** : plusieurs briques ensemble, avec de vraies dépendances (base, serveur). Ex. : `POST /commande` sur un serveur réel → la ligne apparaît en base. Attrapent les bugs **entre** les briques (colonne mal nommée, contrat d'API cassé). Plus lents, échec moins précis.
+- **Bout en bout (E2E)** : l'app entière pilotée comme un utilisateur (navigateur automatisé — Playwright, Cypress). Ex. : se connecter via le formulaire, vérifier l'arrivée sur le tableau de bord. La plus grande confiance, mais lents et parfois *flaky* (échouent au hasard sur du timing). On en garde peu.
+
+**La règle** : beaucoup d'unitaires → moins d'intégration → une poignée d'E2E. Tout en E2E = suite lente et fragile ; tout en unitaire = suite verte qui laisse passer les bugs d'assemblage. (École récente, le *testing trophy* de K. C. Dodds : mettre le centre de gravité sur l'**intégration** — meilleur rapport confiance/coût.)
+
+**2. Par objectif — transversal à la pyramide** : non-régression (verrouiller un bug corrigé), fumée (*smoke*, « ça démarre ? »), sécurité, performance/charge, accessibilité, régression visuelle (*snapshot*), contrat d'API, acceptation (BDD/Gherkin), exploratoires/manuels.
+
+**Deux notions liées** : le **TDD** (écrire le test avant le code : rouge → vert → refactor) est une *méthode*, pas un type. La **couverture** (% de lignes exécutées) est utile mais trompeuse : exécuter une ligne ne veut pas dire qu'on a **vérifié** quelque chose dessus.
+
+Lien avec ce que je fais ici (pour ancrer) : ma suite est surtout **intégration** (API réellement démarrée) + **E2E** (Playwright), avec beaucoup de **non-régression** et une suite **sécurité** dédiée. Ce qui manquerait pour compléter le bas de la pyramide : des **unitaires** purs sur les fonctions de validation.
+
+---
