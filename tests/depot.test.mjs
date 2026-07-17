@@ -378,42 +378,47 @@ await etape("moderation : approbation et refus", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. La pochette est facultative
+// 4. La pochette est OBLIGATOIRE
 //
-// Sans pochette, l'admin peut quand meme approuver : une image deja presente dans le catalogue
-// est tiree au hasard. L'admin doit aussi pouvoir CONSULTER la pochette proposee (pour verifier
-// les droits d'image) — d'ou la route dediee.
+// Un depot sans pochette est refuse des l'envoi (400). Avant, il etait accepte, et l'approbation
+// lui attribuait une image DEJA au catalogue tiree au hasard — la pochette d'un AUTRE artiste,
+// affichee sous un nom qui n'est pas le sien (fausse attribution). L'admin doit aussi pouvoir
+// CONSULTER la pochette d'un depot avant de l'approuver (pour verifier les droits d'image).
 // ---------------------------------------------------------------------------
-await etape("pochette facultative", async () => {
+await etape("pochette obligatoire", async () => {
   const { token } = await creerCompte("DepotPochette");
   const admin = apiAuth(tokenAdmin());
 
-  // --- depot SANS pochette ---
+  // --- depot SANS pochette : REFUSE ---
   const sans = await deposer(token, `Sans pochette ${MARQUEUR}`, {
     audio: VRAI_MP3,
     nomAudio: "sans.mp3",
     image: null,
   });
   verifier(
-    "pochette : un depot sans pochette est accepte",
-    sans.reponse.status === 201,
+    "pochette : un depot SANS pochette est refuse (400)",
+    sans.reponse.status === 400,
     `recu ${sans.reponse.status} — ${sans.donnees.message}`,
   );
 
-  // --- depot AVEC pochette ---
-  await deposer(token, `Avec pochette ${MARQUEUR}`, {
+  // --- depot AVEC pochette : accepte ---
+  const avec = await deposer(token, `Avec pochette ${MARQUEUR}`, {
     audio: VRAI_MP3,
     nomAudio: "avec.mp3",
   });
+  verifier(
+    "pochette : un depot AVEC pochette est accepte (201)",
+    avec.reponse.status === 201,
+    `recu ${avec.reponse.status} — ${avec.donnees.message}`,
+  );
 
   const { donnees: depots } = await admin("/api/submissions?statut=en_attente");
-  const depotSans = depots.find((d) => d.title === `Sans pochette ${MARQUEUR}`);
   const depotAvec = depots.find((d) => d.title === `Avec pochette ${MARQUEUR}`);
 
   verifier(
-    "pochette : l'admin voit quels depots en ont une",
-    !depotSans.a_pochette && Boolean(depotAvec.a_pochette),
-    `sans=${depotSans.a_pochette}, avec=${depotAvec.a_pochette}`,
+    "pochette : l'admin voit que le depot en a une",
+    Boolean(depotAvec?.a_pochette),
+    `a_pochette=${depotAvec?.a_pochette}`,
   );
 
   // --- consultation de la pochette (pour verifier les droits d'image) ---
@@ -437,44 +442,65 @@ await etape("pochette facultative", async () => {
     pochetteUtilisateur.status === 403,
     `recu ${pochetteUtilisateur.status}`,
   );
+});
 
-  const { reponse: pochetteAbsente } = await admin(
-    `/api/submissions/${depotSans.id_submission}/image`,
-    { brut: true },
-  );
-  verifier(
-    "pochette : un depot sans pochette renvoie 404 sur /image",
-    pochetteAbsente.status === 404,
-    `recu ${pochetteAbsente.status}`,
-  );
+// ---------------------------------------------------------------------------
+// 4bis. Approuver un vieux depot sans pochette est refuse (409)
+//
+// La pochette est desormais obligatoire A L'ENVOI, mais un depot ANTERIEUR a cette regle peut
+// encore etre en attente sans image. On ne peut plus lui en inventer une (le tirage au hasard a
+// ete retire, `musics.src_image` est NOT NULL) : l'approbation doit le refuser proprement, AVANT
+// de deplacer le moindre fichier. On fabrique ce cas en inserant le depot directement en base
+// (l'API ne permet plus de le creer), avec une licence valide pour atteindre le garde-fou pochette.
+// ---------------------------------------------------------------------------
+await etape("approbation d'un depot sans pochette (ancien) refusee", async () => {
+  const { user } = await creerCompte("DepotSansPochetteLegacy");
+  const admin = apiAuth(tokenAdmin());
 
-  // --- approbation sans pochette : une image du catalogue est tiree au hasard ---
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  });
+
+  const [resultat] = await db.query(
+    `INSERT INTO submissions
+       (id_user, title, artist, genre, fichier_audio, fichier_image, duration,
+        licence, source_url, droits_confirmes_at, statut)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, NOW(), 'en_attente')`,
+    [
+      user.id_user,
+      `Legacy sans pochette ${MARQUEUR}`,
+      MARQUEUR,
+      "Pop",
+      "legacy-sans-pochette.mp3",
+      120,
+      "CC BY 4.0",
+    ],
+  );
+  await db.end();
+
   const approbation = await admin(
-    `/api/submissions/${depotSans.id_submission}/approuver`,
+    `/api/submissions/${resultat.insertId}/approuver`,
     { method: "PATCH" },
   );
   verifier(
-    "pochette : un depot sans pochette peut etre approuve",
-    approbation.reponse.status === 200,
-    `recu ${approbation.reponse.status}`,
+    "approbation : un depot sans pochette est refuse (409)",
+    approbation.reponse.status === 409,
+    `recu ${approbation.reponse.status} — ${approbation.donnees.message}`,
   );
 
-  const catalogue = await (await fetch(`${API}/api/musics`)).json();
-  const ajoute = catalogue.find((m) => m.title === `Sans pochette ${MARQUEUR}`);
-
+  // Le garde-fou agit AVANT tout deplacement : le depot doit rester en_attente, jamais a moitie
+  // publie (audio deplace, mais pas d'entree en base).
+  const { donnees: apres } = await admin("/api/submissions?statut=en_attente");
+  const encoreLa = apres.find((d) => d.id_submission === resultat.insertId);
   verifier(
-    "pochette : une pochette du catalogue lui a ete attribuee",
-    Boolean(ajoute?.src_image),
-    ajoute?.src_image ?? "aucune",
-  );
-
-  // La pochette attribuee doit reellement exister : sinon le morceau s'afficherait avec une
-  // image cassee.
-  const fichierPochette = await fetch(`${API}/${ajoute.src_image}`);
-  verifier(
-    "pochette : la pochette attribuee existe bien sur le disque",
-    fichierPochette.status === 200,
-    `recu ${fichierPochette.status} pour ${ajoute.src_image}`,
+    "approbation : le depot refuse reste en attente",
+    Boolean(encoreLa),
+    encoreLa ? "toujours en_attente" : "disparu",
   );
 });
 

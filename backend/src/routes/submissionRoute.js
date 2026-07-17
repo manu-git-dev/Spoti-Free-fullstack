@@ -182,12 +182,15 @@ router.post(
       // en booleen. On compare donc a la chaine.
       const droitsConfirmes = req.body.droitsConfirmes === "true";
 
-      // La pochette est FACULTATIVE : si l'utilisateur n'en fournit pas, une pochette deja
-      // utilisee dans le catalogue sera tiree au hasard au moment de l'approbation.
-      if (!title || !artist || !audio) {
+      // La pochette est OBLIGATOIRE, au meme titre que l'audio. Sans elle, l'approbation attribuait
+      // avant une image DEJA au catalogue, tiree au hasard — donc la pochette de l'oeuvre d'un
+      // AUTRE artiste, affichee a cote d'un nom qui n'est pas le sien. Une fausse attribution, sur
+      // un projet dont tout le chantier droits d'auteur vise justement l'inverse. On l'exige donc
+      // des le depot, et le tirage au hasard a disparu (voir l'approbation).
+      if (!title || !artist || !audio || !image) {
         await supprimerFichiers(audio?.filename, image?.filename);
         return res.status(400).json({
-          message: "Titre, artiste et fichier audio sont obligatoires.",
+          message: "Titre, artiste, fichier audio et pochette sont obligatoires.",
         });
       }
 
@@ -228,7 +231,7 @@ router.post(
       }
 
       // La limite globale de multer est celle de l'audio (10 Mo) : on affine ici pour l'image.
-      if (image && image.size > TAILLE_MAX_IMAGE) {
+      if (image.size > TAILLE_MAX_IMAGE) {
         await supprimerFichiers(audio.filename, image.filename);
         return res.status(413).json({
           message: "Pochette trop lourde (2 Mo maximum).",
@@ -264,11 +267,9 @@ router.post(
       // Dans les deux cas, un vrai morceau aurait une duree. On rejette, et on ne laisse pas
       // les fichiers trainer.
       if (!duration) {
-        // `image?.` et non `image.` : la pochette est facultative. Sur un depot sans pochette
-        // ET avec un audio invalide, `image.filename` levait un TypeError, transformant un
-        // refus 400 parfaitement prevu en 500 — et laissant le fichier orphelin sur le disque,
-        // puisque le nettoyage plantait avant de s'executer.
-        await supprimerFichiers(audio.filename, image?.filename);
+        // Audio ET pochette sont garantis presents ici (verifies plus haut) : on nettoie les deux
+        // avant de refuser, pour ne pas les laisser orphelins sur le disque.
+        await supprimerFichiers(audio.filename, image.filename);
         return res.status(400).json({
           message:
             "Ce fichier n'est pas un fichier audio valide (ou il est corrompu).",
@@ -286,7 +287,7 @@ router.post(
           artist,
           genre,
           audio.filename,
-          image?.filename ?? null, // pochette facultative
+          image.filename,
           duration,
           licence,
           sourceUrl,
@@ -477,6 +478,18 @@ router.patch(
         });
       }
 
+      // La pochette est desormais obligatoire au depot. Un depot ANTERIEUR a cette regle peut
+      // encore etre en attente sans image : on ne peut plus lui en inventer une (le tirage au
+      // hasard a ete retire, et `musics.src_image` est NOT NULL). Meme logique que la licence
+      // ci-dessus — on refuse AVANT de deplacer quoi que ce soit, car refuser apres avoir publie
+      // ne refuse rien.
+      if (!depot.fichier_image) {
+        return res.status(409).json({
+          message:
+            "Ce dépôt n'a pas de pochette : demandez-en une au déposant avant de l'approuver.",
+        });
+      }
+
       const nomAudio = path.basename(depot.fichier_audio);
 
       // On deplace le fichier audio : c'est maintenant, et seulement maintenant, qu'il devient
@@ -486,41 +499,14 @@ router.patch(
         path.join(DOSSIER_PUBLIC_AUDIO, nomAudio),
       );
 
-      // La pochette est facultative.
-      // - Fournie -> on la deplace dans public/, comme l'audio.
-      // - Absente  -> on reutilise une pochette DEJA presente dans le catalogue, tiree au
-      //   hasard. On ne copie aucun fichier : plusieurs morceaux peuvent parfaitement partager
-      //   la meme image (c'est deja le cas dans le catalogue existant).
-      let cheminImage;
-
-      if (depot.fichier_image) {
-        const nomImage = path.basename(depot.fichier_image);
-        await fs.rename(
-          path.join(DOSSIER_UPLOADS, nomImage),
-          path.join(DOSSIER_PUBLIC_IMAGES, nomImage),
-        );
-        cheminImage = `images/${nomImage}`;
-      } else {
-        const [[pochette]] = await db.query(
-          "SELECT src_image FROM musics GROUP BY src_image ORDER BY RAND() LIMIT 1",
-        );
-
-        if (!pochette) {
-          // Catalogue vide : il n'y a aucune pochette a reutiliser. On remet l'audio en attente
-          // pour ne pas laisser le depot dans un etat incoherent (fichier deplace, mais pas
-          // d'entree en base).
-          await fs.rename(
-            path.join(DOSSIER_PUBLIC_AUDIO, nomAudio),
-            path.join(DOSSIER_UPLOADS, nomAudio),
-          );
-          return res.status(409).json({
-            message:
-              "Aucune pochette disponible dans le catalogue : demandez-en une au déposant.",
-          });
-        }
-
-        cheminImage = pochette.src_image;
-      }
+      // La pochette est garantie presente (obligatoire au depot, et le garde-fou ci-dessus a
+      // ecarte les eventuels vieux depots sans image). On la deplace dans public/, comme l'audio.
+      const nomImage = path.basename(depot.fichier_image);
+      await fs.rename(
+        path.join(DOSSIER_UPLOADS, nomImage),
+        path.join(DOSSIER_PUBLIC_IMAGES, nomImage),
+      );
+      const cheminImage = `images/${nomImage}`;
 
       // Les chemins stockes sont RELATIFS a `public/`, comme le reste du catalogue
       // (`musiques/xxx.mp3`, `images/xxx.jpg`).

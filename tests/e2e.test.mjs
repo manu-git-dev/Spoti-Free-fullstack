@@ -1025,6 +1025,12 @@ await etape("depot : la carte de suivi mene a « Mes demandes »", async () => {
     'input[type="file"][accept="audio/*"]',
     path.join(ICI, "fixtures", "audio-test.mp3"),
   );
+  // La pochette est obligatoire depuis qu'on a retire le tirage au hasard a l'approbation : sans
+  // elle, `Deposer.jsx` bloque l'envoi cote client (toast) et le depot ne part jamais.
+  await page.setInputFiles(
+    'input[type="file"][accept="image/*"]',
+    path.join(ICI, "fixtures", "pochette-test.jpg"),
+  );
   await page.check('input[name="droitsConfirmes"]');
   await page.getByRole("button", { name: /Envoyer/ }).click();
 
