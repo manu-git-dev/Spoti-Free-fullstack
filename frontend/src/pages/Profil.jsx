@@ -8,6 +8,17 @@ import { apiFetch } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// Un chiffre du profil. En pile verticale (colonne de droite), le chiffre a GAUCHE et son libelle
+// a DROITE se lisent mieux qu'empiles : l'oeil descend une colonne de chiffres alignes.
+function Stat({ valeur, libelle, classe }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 rounded-xl border border-border bg-background/50 px-4 py-3">
+      <span className={`text-2xl font-bold ${classe}`}>{valeur}</span>
+      <span className="text-xs text-muted-foreground">{libelle}</span>
+    </div>
+  );
+}
+
 export default function Profil({
   user,
   musiquesLikee,
@@ -61,6 +72,14 @@ export default function Profil({
   } else {
     return (
       <Page icone={UserIcon} titre="Mon profil">
+        {/* DEUX COLONNES — meme agencement que `Deposer.jsx`. Rien n'est invente pour remplir : les
+            3 chiffres existaient deja, ils passent simplement a droite, en pile verticale au lieu
+            d'une rangee de 3. A gauche, ce qui concerne l'identite et les actions.
+
+            Pas d'enveloppe grise ici, contrairement aux pages de prose : le contenu de cette page
+            EST deja fait de panneaux (`bg-background/50`). Un panneau autour rendrait ceux du
+            dedans invisibles — meme fond sur meme fond. */}
+        <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
         <div className="space-y-6">
           <div className="relative overflow-hidden flex flex-col items-center text-center gap-3 rounded-2xl border border-border bg-background/50 p-6 md:flex-row md:text-left md:items-center md:gap-6">
             <div
@@ -81,32 +100,6 @@ export default function Profil({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background/50 px-2 py-4">
-              <p className="text-2xl font-bold text-primary">
-                {playlists.length}
-              </p>
-              <p className="text-xs text-muted-foreground">playlists</p>
-            </div>
-            <div className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background/50 px-2 py-4">
-              <p className="text-2xl font-bold text-accent">
-                {musiquesLikee.length}
-              </p>
-              <p className="text-xs text-muted-foreground">favoris</p>
-            </div>
-            <div className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background/50 px-2 py-4">
-              <p className="text-lg font-bold text-chart-2">
-                {infoUser.created_at
-                  ? new Date(infoUser.created_at).toLocaleDateString("fr-FR", {
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "—"}
-              </p>
-              <p className="text-xs text-muted-foreground">membre depuis</p>
-            </div>
-          </div>
-
           <div className="flex justify-center">
             <Deconnexion setUser={setUser} setToken={setToken} />
           </div>
@@ -117,6 +110,28 @@ export default function Profil({
           <div className="flex justify-center border-t border-border pt-4">
             <SupprimerCompte setUser={setUser} setToken={setToken} />
           </div>
+        </div>
+
+        <aside className="flex flex-col gap-3">
+          <Stat valeur={playlists.length} libelle="playlists" classe="text-primary" />
+          <Stat
+            valeur={musiquesLikee.length}
+            libelle="favoris"
+            classe="text-accent"
+          />
+          <Stat
+            valeur={
+              infoUser.created_at
+                ? new Date(infoUser.created_at).toLocaleDateString("fr-FR", {
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "—"
+            }
+            libelle="membre depuis"
+            classe="text-chart-2"
+          />
+        </aside>
         </div>
       </Page>
     );
