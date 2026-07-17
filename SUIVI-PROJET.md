@@ -12,20 +12,36 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-1. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+1. **Les cartes de playlist sont TROP GRANDES en mobile** — constate par Manuel en cliquant dans
+   l'app le 2026-07-17. « On fera plus tard ».
+
+   **Ou regarder** : `pages/Playlists.jsx:60` rend la grille en **`grid-cols-2`** sous `md`, et
+   `composants/Playlist.jsx:90` donne a la vignette un **`aspect-square w-full`**. Sur un ecran de
+   390 px, chaque carte fait donc ~170 px de large — et sa vignette **~170 px de haut**, plus le
+   titre : on voit a peine deux playlists a l'ecran.
+
+   **Pistes** (a trancher) : passer a `grid-cols-1` avec une vignette **petite et a gauche** (une
+   ligne par playlist, comme une liste) ; ou garder deux colonnes en reduisant la vignette
+   (`aspect-[3/2]`, ou une hauteur fixe). La premiere ressemble a ce que font les vraies applis
+   de musique sur telephone.
+
+   **A verifier en meme temps** : les cartes de MUSIQUE (`composants/Card.jsx`) ont-elles le meme
+   defaut ? Si oui, c'est une seule decision, pas deux.
+
+2. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-2. **Une passe de tests ultra complete AVANT le deploiement.** Les 165 tests sont verts, mais la
+3. **Une passe de tests ultra complete AVANT le deploiement.** Les 165 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-3. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+4. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -66,7 +82,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-4. **La largeur de « Mes demandes » et de « Profil » sur grand ecran.** La prose (A propos,
+5. **La largeur de « Mes demandes » et de « Profil » sur grand ecran.** La prose (A propos,
    Mentions legales) et le formulaire de Deposer ont ete bornes le 2026-07-17 (voir plus bas).
    **Ces deux pages-la ne l'ont pas ete** : ce ne sont ni de la prose ni des formulaires, mais des
    **cartes et des listes**, et la regle appliquee ne tranche pas leur cas.
@@ -82,26 +98,53 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### Ce qui est a faire par Manuel
 
-5. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+6. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-6. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+7. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-7. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+8. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-8. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+9. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-9. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+10. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## Le genre reste FACULTATIF - 2026-07-17 - decide
+
+Question posee par Manuel apres avoir teste le `<select>` : « il est donc possible d'avoir des
+musiques sans genre, est-ce une bonne idee ? ». **Reponse : oui, on garde facultatif.** Aucun code
+ne change — c'est trace ici parce que la question reviendra.
+
+**Le principe** : une valeur **fausse** est pire qu'une valeur **absente**. `NULL` veut dire « on
+ne sait pas », et c'est une information exacte. Rendre le champ obligatoire forcerait quelqu'un
+dont le morceau ne rentre dans aucune des 10 familles a choisir **la moins fausse** — et on ne
+pourrait plus distinguer « c'est de la Pop » de « il a fallu cocher quelque chose ». Un vide se
+comble ; un mensonge en base ne se rattrape pas.
+
+**L'etat reel** (mesure le 2026-07-17) : 9 morceaux du catalogue sans genre sur 100. Ce sont
+exactement les tags `indie` / `filmscore` que `FAMILLES_DE_GENRES` refuse volontairement de replier
+— `indie` est une posture, pas un son. Ce sont des « on ne sait pas » honnetes.
+
+**Ce qui rend le choix tenable ici** : l'admin **modere** de toute facon et peut poser le genre a
+l'approbation ; le Catalogue admin permet de le corriger apres coup ; et ~10 % de non classes dans
+un vrai catalogue musical est normal.
+
+**Le cout, assume** : `App.jsx:160` (`if (!musique.genre) continue`) fait qu'un morceau sans genre
+**ne cree aucune pastille** — il n'est atteignable que sans filtre, ou par la recherche texte. Il
+n'est jamais perdu, mais il est invisible a qui navigue **par genre**.
+
+> Si ce cout devient genant, la reponse n'est **pas** de forcer la saisie : c'est d'ajouter une
+> pastille « Sans genre » au filtre (~3 lignes dans `genresDisponibles`). Ecarte a 9 morceaux.
 
 ## Largeurs : borner le CONTENU, pas la page - 2026-07-17 - fait
 
