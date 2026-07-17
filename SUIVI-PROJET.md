@@ -75,6 +75,42 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    `NOT NULL`, fichiers partages jamais supprimes…) — ce qu'un relecteur generique ignore. Claude a
    propose de le monter en exemple commente. **En attente du feu vert de Manuel** (projet vs perso).
 
+### Chantier ENRICHISSEMENT (decide le 2026-07-17 : on a le temps, on complete avant de deployer)
+
+Manuel a demande un avis franc sur ce qui manque a l'app. Verdict : l'app est deja plus complete
+que la plupart des portfolios de stage — le vrai risque est le scope creep avant deploiement. Mais
+trois vrais manques reperes dans le code, ordre de priorite valeur/effort. Le VPS arrive lundi
+(2026-07-20), pas de presse pour deployer : Manuel prefere une app finie a une app moyenne en ligne.
+
+17. **Shuffle + repeat du lecteur — CODE FAIT, PAS COMMITE, en attente de validation par Manuel.**
+   Fait dans `MediaPlayer.jsx` (+ nettoyage de `maxIndex` devenu mort dans `App.jsx`). Approche
+   choisie : **sequence melangee pre-calculee** (Fisher-Yates, titre courant en tete), parcourue
+   dans l'ordre → chaque titre passe une fois avant repetition, `precedent` exact. Position derivee
+   par `ordreLecture.indexOf(currentIndex)` (pas de pointeur stocke). Repeat = 3 etats off/all/one.
+   - **A tester par Manuel dans le navigateur** (reprendre ICI) : les 3 etats de repetition ;
+     l'aleatoire ne rejoue pas un titre avant d'avoir fait le tour ; `precedent` en aleatoire ramene
+     au vrai titre precedent. Vite recompile sans erreur, mais RIEN n'a ete clique.
+   - **2 choix a trancher par Manuel** : (a) defaut = repetition OFF — ca CHANGE le comportement
+     actuel (avant : boucle infinie imposee en dur). OK ? (b) shuffle/repeat volontairement absents
+     de la barre mobile compacte (play/pause seul, comme le mini-lecteur Spotify) — les vouloir sur
+     mobile ?
+   - **Ensuite** : en faire un test e2e de non-regression (point #8). Piege a resoudre : tester du
+     hasard sans rendre le test instable → tester l'INVARIANT ("les N titres passent tous une fois
+     avant repetition"), pas une sequence precise.
+18. **Enrichir la page d'accueil (`Home.jsx`).** Aujourd'hui Home n'affiche QU'un Top 5 — c'est la
+   plus belle page mais la plus pauvre. Ajouter des sections qui donnent de la "vie" : Reprendre
+   l'ecoute / Ecoutes recemment / quelques titres par genre. **Decision liee a trancher** :
+   "Ecoutes recemment" suppose un historique → soit une table `historique`, soit du `localStorage`
+   client (rapide mais on cherche justement a s'eloigner du `localStorage`, cf #9). A arbitrer.
+19. **Panneau "file d'attente" visible.** La queue existe en memoire mais l'utilisateur ne la voit
+   pas et ne peut pas la reordonner (Spotify a ce panneau). Plus de travail UI. Bonne nouvelle : la
+   file garde son ordre d'origine (le shuffle passe par une sequence separee, cf #17) — donc elle
+   est deja prete a etre affichee telle quelle.
+20. **Passe d'accessibilite (a11y).** Irregulier : quelques composants ont des `aria-label`,
+   beaucoup non ; le lecteur n'est probablement pas pilotable au clavier. C'est le manque "invisible"
+   qui compte le plus en entretien de stage (un dev senior audite ca avant les features). Deja fait
+   au passage sur les boutons du lecteur (`aria-label` + `aria-pressed`) pendant le #17.
+
 ### Ce qui est a faire par Manuel
 
 11. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la

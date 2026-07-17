@@ -2,6 +2,9 @@ import {
   Music,
   Pause,
   Play,
+  Repeat,
+  Repeat1,
+  Shuffle,
   SkipBack,
   SkipForward,
   Volume2,
@@ -12,13 +15,29 @@ import { Slider } from "@/components/ui/slider";
 import { apiFetch, urlFichier } from "@/lib/api";
 import Attribution from "./Attribution";
 
+// Melange de Fisher-Yates : on parcourt le tableau de la fin au debut et on echange chaque element
+// avec un element tire au hasard PARMI CEUX PAS ENCORE FIXES. C'est le melange "correct" — chaque
+// permutation est equiprobable. Le raccourci qu'on voit partout, `sort(() => Math.random() - 0.5)`,
+// est biaise (l'ordre de comparaison de `sort` n'est pas uniforme) : a fuir.
+// `indexEnTete` (le titre en cours) est ramene en premiere position : activer l'aleatoire ne doit
+// jamais couper le morceau qu'on est en train d'ecouter.
+function melangerOrdre(taille, indexEnTete) {
+  const ordre = Array.from({ length: taille }, (_, i) => i);
+  for (let i = ordre.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ordre[i], ordre[j]] = [ordre[j], ordre[i]];
+  }
+  const pos = ordre.indexOf(indexEnTete);
+  if (pos > 0) [ordre[0], ordre[pos]] = [ordre[pos], ordre[0]];
+  return ordre;
+}
+
 export default function MediaPlayer({
   music,
   currentIndex,
   queue,
   setCurrentMusic,
   setCurrentIndex,
-  maxIndex,
   onEcouteComptee,
   // `isPlaying` ne vit plus ici mais dans App : le logo de l'Aside en a besoin lui aussi, et
   // deux composants freres ne peuvent partager un etat que via leur parent commun.
@@ -29,6 +48,17 @@ export default function MediaPlayer({
   const [volume, setVolume] = useState(50);
   const [duration, setDuration] = useState(0);
   const [timeUpdate, setTimeUpdate] = useState(0);
+
+  // Mode de repetition : "off" (s'arrete en fin de file) -> "all" (reboucle) -> "one" (rejoue le
+  // meme titre). Defaut "off", le standard. Avant, le lecteur rebouclait a l'infini sans qu'on
+  // l'ait choisi, parce que `onEnded` revenait a l'index 0 : un "repeter tout" impose en dur.
+  const [repeatMode, setRepeatMode] = useState("off");
+  // Lecture aleatoire. Quand elle est active, `shuffleOrder` contient une SEQUENCE melangee des
+  // index de la file (0..n-1), calculee UNE fois a l'activation. On la parcourt dans l'ordre : ca
+  // garantit que chaque titre passe une fois avant repetition — ce qu'un tirage au hasard a chaque
+  // saut ne garantit pas.
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [shuffleOrder, setShuffleOrder] = useState([]);
 
   const audioRef = useRef(null);
 
@@ -52,6 +82,15 @@ export default function MediaPlayer({
       .then(() => onEcouteComptee?.())
       .catch((error) => console.error(error));
   }, [idMusic, onEcouteComptee]);
+
+  // Si la file change pendant qu'on est en aleatoire (l'utilisateur lance un titre depuis une autre
+  // page), la sequence melangee pointe vers l'ANCIENNE file : ses index ne veulent plus rien dire.
+  // On la regenere. On ne depend QUE de `queue` a dessein : ajouter `currentIndex` remelangerait a
+  // chaque changement de titre et casserait la garantie "une passe complete avant repetition".
+  useEffect(() => {
+    if (isShuffle) setShuffleOrder(melangerOrdre(queue.length, currentIndex));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue]);
 
   const affichageDuration =
     Math.trunc(duration / 60)
@@ -79,33 +118,79 @@ export default function MediaPlayer({
       audioRef.current.pause();
     }
   };
-  const handleNext = () => {
-    let nextIndex = currentIndex + 1;
-    if (nextIndex > maxIndex) {
-      nextIndex = 0;
-      let nextMusic = queue[nextIndex];
-      setCurrentMusic(nextMusic);
-      setCurrentIndex(nextIndex);
+  // L'ordre dans lequel on parcourt la file. En lecture normale, c'est la file elle-meme
+  // (0, 1, 2, ...). En aleatoire, c'est la sequence melangee. Une seule variable a consulter, quel
+  // que soit le mode : les gestionnaires ci-dessous n'ont plus a distinguer les deux cas.
+  const ordreLecture = isShuffle
+    ? shuffleOrder
+    : Array.from({ length: queue.length }, (_, i) => i);
+
+  // Deplacement dans l'ordre de lecture. `delta` = +1 (suivant) ou -1 (precedent). On LIT la
+  // position courante par `indexOf(currentIndex)` au lieu de conserver un pointeur separe : un etat
+  // derive de moins a garder synchronise, exactement comme `currentIndex` l'est deja cote App.
+  const allerVers = (delta) => {
+    if (queue.length === 0) return;
+    const pointeur = ordreLecture.indexOf(currentIndex);
+    let cible = pointeur + delta;
+
+    // Depassement en AVANT en aleatoire : on entame une nouvelle passe remelangee (sinon on
+    // rejouerait la meme sequence). Le titre courant repasse en tete, puis on avance d'un cran pour
+    // ne pas le rejouer immediatement.
+    if (cible > ordreLecture.length - 1 && isShuffle) {
+      const nouvelOrdre = melangerOrdre(queue.length, currentIndex);
+      setShuffleOrder(nouvelOrdre);
+      const indexFile = nouvelOrdre[1] ?? nouvelOrdre[0];
+      setCurrentMusic(queue[indexFile]);
+      setCurrentIndex(indexFile);
+      return;
+    }
+
+    // Bouclage aux extremites (file lineaire, ou recul avant le premier titre).
+    if (cible > ordreLecture.length - 1) cible = 0;
+    if (cible < 0) cible = ordreLecture.length - 1;
+
+    const indexFile = ordreLecture[cible] ?? 0;
+    setCurrentMusic(queue[indexFile]);
+    setCurrentIndex(indexFile);
+  };
+
+  // Les boutons manuels avancent/reculent TOUJOURS (appuyer sur "suivant" ne doit jamais rester
+  // bloque) : ils ignorent le mode de repetition, qui ne concerne que la fin naturelle d'un titre.
+  const handleNext = () => allerVers(1);
+  const handlePrevious = () => allerVers(-1);
+
+  // Fin NATURELLE d'un morceau (`onEnded`). C'est ici, et seulement ici, que le mode de repetition
+  // agit : "one" rejoue le meme titre ; "off" au dernier titre de l'ordre s'arrete ; sinon on
+  // enchaine comme un "suivant" (et "all" reboucle grace au wrap de `allerVers`).
+  const handleEnded = () => {
+    if (repeatMode === "one") {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      return;
+    }
+    const estDernier = ordreLecture.indexOf(currentIndex) === ordreLecture.length - 1;
+    if (estDernier && repeatMode === "off") {
+      setIsPlaying(false);
+      return;
+    }
+    allerVers(1);
+  };
+
+  const toggleShuffle = () => {
+    if (isShuffle) {
+      setIsShuffle(false);
+      setShuffleOrder([]);
     } else {
-      let nextMusic = queue[nextIndex];
-      setCurrentMusic(nextMusic);
-      setCurrentIndex(nextIndex);
+      setIsShuffle(true);
+      setShuffleOrder(melangerOrdre(queue.length, currentIndex));
     }
   };
 
-  const handlePrevious = () => {
-    let previousIndex = currentIndex - 1;
-
-    if (previousIndex < 0) {
-      previousIndex = maxIndex;
-      let previousMusic = queue[previousIndex];
-      setCurrentMusic(previousMusic);
-      setCurrentIndex(previousIndex);
-    } else {
-      let previousMusic = queue[previousIndex];
-      setCurrentMusic(previousMusic);
-      setCurrentIndex(previousIndex);
-    }
+  // Cycle des trois etats au clic, comme sur les lecteurs standards.
+  const cycleRepeat = () => {
+    setRepeatMode((mode) =>
+      mode === "off" ? "all" : mode === "all" ? "one" : "off",
+    );
   };
 
   if (!music) {
@@ -137,7 +222,7 @@ export default function MediaPlayer({
           setIsPlaying(true);
         }}
         onTimeUpdate={() => setTimeUpdate(audioRef.current.currentTime)}
-        onEnded={handleNext}
+        onEnded={handleEnded}
       ></audio>
 
       {/* Bloc mobile : barre compacte, juste play/pause */}
@@ -184,10 +269,24 @@ export default function MediaPlayer({
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
+            <button
+              className={`cursor-pointer hover:scale-110 transition ${
+                isShuffle
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={toggleShuffle}
+              aria-label="Lecture aléatoire"
+              aria-pressed={isShuffle}
+              title="Lecture aléatoire"
+            >
+              <Shuffle className="w-4 h-4" />
+            </button>
             <button
               className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
               onClick={handlePrevious}
+              aria-label="Titre précédent"
             >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
@@ -205,8 +304,37 @@ export default function MediaPlayer({
             <button
               className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
               onClick={handleNext}
+              aria-label="Titre suivant"
             >
               <SkipForward className="w-5 h-5 fill-current" />
+            </button>
+            <button
+              className={`cursor-pointer hover:scale-110 transition ${
+                repeatMode !== "off"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={cycleRepeat}
+              aria-label={
+                repeatMode === "one"
+                  ? "Répéter le titre courant"
+                  : repeatMode === "all"
+                    ? "Répéter la file"
+                    : "Répétition désactivée"
+              }
+              title={
+                repeatMode === "one"
+                  ? "Répéter le titre courant"
+                  : repeatMode === "all"
+                    ? "Répéter la file"
+                    : "Répétition désactivée"
+              }
+            >
+              {repeatMode === "one" ? (
+                <Repeat1 className="w-4 h-4" />
+              ) : (
+                <Repeat className="w-4 h-4" />
+              )}
             </button>
           </div>
 

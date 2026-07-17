@@ -37,7 +37,6 @@ function App() {
   // pourrait exister, `null` dit "la question n'est pas posee".
   const [genreFiltre, setGenreFiltre] = useState(null);
   const [currentIndex, setCurrentIndex] = useState("");
-  const [maxIndex, setMaxIndex] = useState(0);
   const [currentQueue, setCurrentQueue] = useState([]);
   // "En lecture" vivait DANS MediaPlayer. Mais le logo (dans l'Aside et le HeaderMobile) doit
   // savoir si la musique tourne pour animer son egaliseur — et l'Aside n'est pas un enfant du
@@ -188,10 +187,6 @@ function App() {
       ),
     );
   }, [currentMusic, currentQueue]);
-
-  useEffect(() => {
-    setMaxIndex(currentQueue.length - 1);
-  }, [currentQueue]);
 
   return (
     // `minmax(0,1fr)` et non `1fr` : en CSS Grid, `1fr` vaut `minmax(auto, 1fr)`, et ce `auto`
@@ -384,7 +379,6 @@ function App() {
         queue={currentQueue}
         setCurrentMusic={setCurrentMusic}
         setCurrentIndex={setCurrentIndex}
-        maxIndex={maxIndex}
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}
       />
