@@ -3,30 +3,36 @@ import { useId, useState } from "react";
 // ---------------------------------------------------------------------------
 // Palette des graphiques
 //
-// Ces valeurs ne sont PAS choisies a l'oeil : elles ont ete validees par le script
-// `validate_palette.js` contre la surface sombre reelle des cartes du dashboard (#23282b).
+// Deux familles de couleurs, traitees differemment.
 //
-// - `#6c5ce7` : le violet primary du theme, tel quel.
-// - `#5c8fe6` : l'accent bleu du theme, LEGEREMENT assombri. L'accent d'origine (#6495ed)
-//   sortait de la bande de luminosite admise en mode sombre (L 0.675 > 0.67), ce qui le rendait
-//   trop clair face aux autres marques.
+// 1. Les COULEURS DE SERIES (violet, bleu) portent la donnee. Elles ne sont PAS choisies a
+//    l'oeil : validees par script, elles gardent une separation daltonisme (deuteranopie)
+//    ΔE 21.6 — tres au-dessus du seuil de 12 — qui ne depend PAS du fond. Elles restent donc
+//    identiques dans les deux themes.
+//    - `#6c5ce7` : le violet primary du theme, tel quel.
+//    - `#5c8fe6` : l'accent bleu, LEGEREMENT assombri (l'accent d'origine #6495ed sortait de la
+//      bande de luminosite admise en mode sombre, L 0.675 > 0.67).
+//    Ordre FIXE : la 1re serie prend toujours le violet, la 2e le bleu — la couleur suit
+//    l'entite, on ne la reattribue jamais selon le classement.
 //
-// Resultat des controles : bande de luminosite OK, chroma OK, contraste >= 3:1 sur la surface,
-// et surtout separation daltonisme (deuteranopie) ΔE 21.6 — tres au-dessus du seuil de 12.
-// Deux series violet/bleu restent donc distinguables par une personne daltonienne.
+// 2. Les couleurs STRUCTURELLES (grille, encre des axes, anneau autour des marques) ne portent
+//    aucune donnee : elles doivent juste se poser sur le fond. Elles etaient figees en dur pour
+//    le sombre (#23282b, #3a4044…) — ce qui dessinait des traits SOMBRES sur une carte CLAIRE
+//    des l'ajout du mode clair. Elles pointent desormais vers les variables du theme, et suivent
+//    donc la bascule toutes seules.
 //
-// Ordre FIXE : la 1re serie prend toujours le violet, la 2e le bleu. On ne recycle jamais les
-// teintes et on ne les reattribue pas selon le classement — la couleur suit l'entite.
+// Piege technique : une variable CSS ne se resout PAS dans un attribut de presentation SVG
+// (`stroke="var(--x)"` est ignore). Ces couleurs passent donc par `style={{ stroke: … }}`, ou
+// `var()` est bien interprete — et recalcule au changement de theme sans re-rendu React.
 export const COULEURS = ["#6c5ce7", "#5c8fe6"];
 
-// Couleur de la surface sur laquelle les graphiques sont poses. Elle sert aux "spacers" :
-// le trait de separation entre deux barres et l'anneau autour des points sont dessines dans
-// la couleur du fond, jamais avec une bordure (une bordure ajoute de l'encre qui n'est pas
-// de la donnee).
-const SURFACE = "#23282b";
+// La surface sur laquelle les graphiques sont poses (carte en `bg-background/50`). Sert d'anneau
+// autour des marques et d'ecart entre les barres : dessine dans la couleur du fond, il fond la
+// separation au lieu d'ajouter de l'encre. Suit le theme.
+const SURFACE = "var(--background)";
 
-const ENCRE_DISCRETE = "#a3a3a3"; // muted-foreground
-const GRILLE = "#3a4044"; // un cran au-dessus de la surface : presente, mais discrete
+const ENCRE_DISCRETE = "var(--muted-foreground)";
+const GRILLE = "var(--border)"; // les traits de grille = la couleur des bordures du theme
 
 const formatJour = (valeur) =>
   new Date(valeur).toLocaleDateString("fr-FR", {
@@ -107,7 +113,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
               x2={L - MARGE.droite}
               y1={y(v)}
               y2={y(v)}
-              stroke={GRILLE}
+              style={{ stroke: GRILLE }}
               strokeWidth="1"
             />
             <text
@@ -115,7 +121,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
               y={y(v) + 4}
               textAnchor="end"
               fontSize="10"
-              fill={ENCRE_DISCRETE}
+              style={{ fill: ENCRE_DISCRETE }}
             >
               {v}
             </text>
@@ -123,7 +129,12 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
         ))}
 
         {/* Dates : seulement la premiere et la derniere — inutile de saturer l'axe. */}
-        <text x={MARGE.gauche} y={H - 8} fontSize="10" fill={ENCRE_DISCRETE}>
+        <text
+          x={MARGE.gauche}
+          y={H - 8}
+          fontSize="10"
+          style={{ fill: ENCRE_DISCRETE }}
+        >
           {formatJour(donnees[0].jour)}
         </text>
         {donnees.length > 1 ? (
@@ -132,7 +143,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
             y={H - 8}
             textAnchor="end"
             fontSize="10"
-            fill={ENCRE_DISCRETE}
+            style={{ fill: ENCRE_DISCRETE }}
           >
             {formatJour(donnees[donnees.length - 1].jour)}
           </text>
@@ -168,7 +179,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
                 cy={y(Number(donnees[donnees.length - 1][s.cle]) || 0)}
                 r="4"
                 fill={couleur}
-                stroke={SURFACE}
+                style={{ stroke: SURFACE }}
                 strokeWidth="2"
               />
             </g>
@@ -196,7 +207,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
               x2={x(survol)}
               y1={MARGE.haut}
               y2={MARGE.haut + hauteurTrace}
-              stroke={GRILLE}
+              style={{ stroke: GRILLE }}
               strokeWidth="1"
             />
             {series.map((s, i) => (
@@ -206,7 +217,7 @@ export function CourbeTemporelle({ donnees, series, titre, sousTitre }) {
                 cy={y(Number(donnees[survol][s.cle]) || 0)}
                 r="4"
                 fill={COULEURS[i]}
-                stroke={SURFACE}
+                style={{ stroke: SURFACE }}
                 strokeWidth="2"
               />
             ))}
