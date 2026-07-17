@@ -12,6 +12,7 @@ import {
   Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import BasculeTheme from "./BasculeTheme";
 import Logo from "./Logo";
 
 // Ce menu est le SEUL acces mobile aux pages absentes de la BottomNav.
@@ -103,6 +104,11 @@ export default function HeaderMobile({ user, isPlaying }) {
               <Scale className="w-4 h-4" />
               Mentions légales
             </Link>
+
+            {/* Ne ferme PAS le menu : basculer le theme est un reglage, pas une navigation —
+                on laisse voir le changement, et de quoi revenir en arriere. */}
+            <div className="h-px bg-border my-1" />
+            <BasculeTheme className={`${lien} w-full`} />
           </nav>
         </>
       )}
