@@ -1943,3 +1943,43 @@ Un test de mise en page qui ne regarde que la fenêtre ne dit rien des conteneur
 **Ce que je retiens** : trois bugs de cette journée (les curseurs, le débordement, la zone de 4 px) étaient **invisibles aux tests mais évidents à l'usage**. Manuel les a tous trouvés en cliquant. Mes tests couvrent ce que j'ai pensé à exercer ; **ils ne remplacent pas quelqu'un qui se sert vraiment de l'application**. Le bon réflexe n'est pas d'écrire plus de tests a priori — c'est de transformer chaque retour d'usage en test, une fois qu'on sait quoi regarder.
 
 ---
+
+## 2026-07-17 — Spoti-Free (le genre du dépôt en liste fermée)
+
+### 60. Un `<select>` n'est pas une validation — et mon test mentait depuis le début
+
+**Contexte** : le formulaire de dépôt laissait le genre en **texte libre** (`Deposer.jsx`, un simple `<Input placeholder="Pop, Rock, Rap…">`). Claude me l'avait signalé deux fois ; j'ai fini par demander de le passer en `<select>` sur la liste `GENRES`.
+
+**Le problème réel** : la Bibliothèque **déduit ses pastilles de genre du catalogue** (`genresDisponibles` dans `App.jsx`), au lieu d'une liste écrite en dur. C'est le bon choix — une liste figée finirait par afficher une pastille vide ou par en oublier une. Mais ça a une conséquence : **chaque valeur nouvelle crée une pastille**. Un dépôt approuvé avec « Trap » ouvre donc une pastille menant à UN morceau. Et « rock » / « Rock » en créeraient **deux distinctes**, parce que le comptage se fait en JavaScript, où les chaînes sont sensibles à la casse — alors que MySQL, lui, les considère égaux. Un filtre qui ouvre des placards plutôt que des portes ne sert à rien.
+
+**Ce que je croyais suffisant, et qui ne l'est pas** : remplacer l'`Input` par un `<select>`. Un `<select>` ne vit que **dans le navigateur**. Un `curl` sur `POST /api/submissions` n'ouvre aucun formulaire : il envoie le genre qu'il veut. Fermer une liste dans l'interface, c'est **cacher la porte, pas la verrouiller**.
+
+C'est exactement la leçon déjà écrite dans mon propre code, deux lignes plus haut dans le même fichier :
+
+> « Le formulaire React coche `required` sur la case, mais ça ne protège personne : un appel direct à l'API ne passe jamais par le formulaire. »
+
+Je l'avais comprise pour la **case de certification** et pour la **licence** (qui passe par `licenceValide()` et répond 400). Le genre, lui, était le **seul champ à liste fermée sans garde-fou serveur** : `req.body.genre?.trim() || null`, et on écrit en base. La règle était connue ; c'est son application qui était incomplète. **Savoir une règle et l'avoir appliquée partout sont deux choses différentes** — et c'est le genre d'oubli qu'aucun test ne montre, puisque tout est vert.
+
+Plus troublant : `genreValide()` et `MESSAGE_GENRE` **existaient déjà** dans `backend/src/validation.js`, écrits, commentés… et importés **nulle part**. Le garde-fou était construit et jamais branché.
+
+**La vraie découverte, et c'est celle que je retiens : mon test mentait.**
+
+Le helper des tests de dépôt envoyait :
+
+```js
+donnees.append("genre", "Test");
+```
+
+« Test » n'est pas dans `GENRES`. Ce n'est pas un genre — c'est une valeur que j'ai tapée pour remplir le champ. Le serveur l'acceptait faute de validation, donc mes **29 tests de dépôt passaient en exerçant un cas qui n'aurait jamais dû être valide**. Ils ne testaient pas le comportement voulu : ils **entérinaient le trou**.
+
+Le garde-fou les a tous fait échouer d'un coup. C'est **la validation qui a révélé que le test mentait**, et pas l'inverse — l'ordre habituel serait pourtant que le test révèle le défaut du code. Un test écrit contre un code trop permissif **fige la permissivité** : il devient la preuve que le trou est « le comportement attendu ». Quand je bouche le trou, c'est le test qui a l'air cassé.
+
+**Ce que ça change dans ma façon d'écrire un test** : mes données de test doivent être **des données plausibles**, pas des chaînes de remplissage. `"Test"`, `"aaa"`, `"toto"` passent partout **précisément parce qu'ils ne ressemblent à rien** — donc ils n'exercent aucune règle. Le jour où la règle arrive, ils s'effondrent. Une valeur réaliste (`"Pop"`) aurait continué de passer sans que je touche à rien.
+
+**Le détail qui aurait pu tout casser** : fermer la liste ne devait **pas** rendre le champ obligatoire. 9 morceaux du catalogue n'ont pas de genre, et c'est très bien. `genreValide()` accepte donc la valeur vide — ce qui n'est pas valide, c'est une valeur **inventée**. J'ai ajouté **deux** tests, pas un : « un genre hors liste est refusé (400) » et son pendant « un dépôt sans genre reste accepté (201) ». Le premier seul aurait laissé passer une régression rendant le genre obligatoire.
+
+**Une nuance de conception que je n'aurais pas vue** : `AdminMusiques.jsx` a le même `<select>`, mais avec une option en plus — le genre actuel s'il sort de la liste (« Trap (hors liste) »). Sans elle, l'admin qui corrige un simple titre **effacerait le genre en silence**, le `<select>` retombant sur « Sans genre ». Mon formulaire de dépôt n'en a pas besoin : il **part de zéro**, il n'y a pas de valeur existante à préserver. Deux `<select>` sur la même liste, deux besoins différents. C'est aussi pour ça que je ne valide **pas** le genre sur `PUT /api/musics/update` : cette route doit continuer d'accepter les genres hors liste déjà en base, sinon corriger un titre deviendrait impossible sur ces morceaux-là.
+
+**Ce que je retiens** : une liste fermée se ferme **à l'entrée du serveur**, l'interface ne fait que l'annoncer. Et quand une validation nouvelle fait rougir des tests existants, la première question n'est pas « qu'est-ce que j'ai cassé ? » mais **« qu'est-ce que ces tests validaient au juste ? »**.
+
+---

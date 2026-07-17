@@ -48,12 +48,16 @@ function formulaireDepot(
     // les tests qui verifient le REFUS surchargent ces deux valeurs.
     licence = "CC BY 4.0",
     droitsConfirmes = "true",
+    // Le genre est une liste fermee (GENRES) : par defaut on envoie une valeur valide, et le test
+    // du REFUS surcharge celle-ci. Avant, ce helper envoyait "Test" — un genre invente, que le
+    // serveur acceptait faute de garde-fou.
+    genre = "Pop",
   },
 ) {
   const donnees = new FormData();
   donnees.append("title", titre);
   donnees.append("artist", MARQUEUR);
-  donnees.append("genre", "Test");
+  if (genre !== null) donnees.append("genre", genre);
   donnees.append("audio", new Blob([audio]), nomAudio);
   // `image: null` = depot SANS pochette (elle est facultative).
   if (image) donnees.append("image", new Blob([image]), "cover.jpg");
@@ -126,6 +130,33 @@ await etape("declaration de droits", async () => {
     "depot : une licence hors perimetre (NC/ND) est REJETEE (400)",
     licenceHorsPerimetre.reponse.status === 400,
     `recu ${licenceHorsPerimetre.reponse.status}`,
+  );
+
+  // Le <select> du formulaire ne propose que GENRES — mais un appel direct a l'API ne passe pas
+  // par le formulaire. Sans garde-fou serveur, ce depot approuve creerait une pastille "Trap"
+  // menant a UN morceau dans la Bibliotheque.
+  const genreInvente = await deposer(token, "Genre invente", {
+    audio: VRAI_MP3,
+    nomAudio: "audio.mp3",
+    genre: "Trap",
+  });
+  verifier(
+    "depot : un genre hors de la liste fermee est REJETE (400)",
+    genreInvente.reponse.status === 400,
+    `recu ${genreInvente.reponse.status}`,
+  );
+
+  // Le pendant du test precedent : le genre reste FACULTATIF (9 morceaux du catalogue n'en ont
+  // pas). Fermer la liste ne doit pas rendre le champ obligatoire.
+  const sansGenre = await deposer(token, "Sans genre", {
+    audio: VRAI_MP3,
+    nomAudio: "audio.mp3",
+    genre: null,
+  });
+  verifier(
+    "depot : un depot SANS genre reste accepte (201)",
+    sansGenre.reponse.status === 201,
+    `recu ${sansGenre.reponse.status}`,
   );
 
   // `source_url` finit dans un href affiche a tous les visiteurs : une URL `javascript:`
