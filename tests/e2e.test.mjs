@@ -56,8 +56,10 @@ async function supprimerFichiersDeposes(idUser) {
       if (!nom) continue;
       try {
         fs.unlinkSync(path.join(dossier, nom));
-      } catch {
-        /* deja absent : rien a faire */
+      } catch (erreur) {
+        // On n'ignore QUE "le fichier n'existe pas" (ENOENT) : tout autre echec (chemin
+        // faux, permission...) doit remonter plutot que d'etre avale en silence.
+        if (erreur.code !== "ENOENT") throw erreur;
       }
     }
   }

@@ -24,6 +24,12 @@ import {
 const ICI = path.dirname(url.fileURLToPath(import.meta.url));
 const FIXTURES = path.join(ICI, "fixtures");
 
+// `backend/public/` : la ou l'approbation d'un depot DEPLACE le fichier (uploads/ -> public/).
+// Utilise UNIQUEMENT par le nettoyage de fin de suite, pour effacer les fichiers des morceaux
+// de test approuves. On ne LIT jamais de media ici (les medias de test viennent des FIXTURES,
+// voir ci-dessous) — on ne fait qu'y supprimer ce que ces tests y ont depose.
+const PUBLIC = path.join(ICI, "..", "backend", "public");
+
 // Les medias viennent des FIXTURES, pas de `backend/public/` (qui est gitignore).
 // Un test qui depend d'un fichier absent du depot ne peut pas tourner ailleurs que sur la
 // machine de son auteur — c'est precisement ce que la CI doit interdire.
@@ -516,8 +522,12 @@ await etape("nettoyage du catalogue", async () => {
     for (const relatif of fichiers) {
       try {
         fs.unlinkSync(path.join(PUBLIC, relatif));
-      } catch {
-        /* deja absent */
+      } catch (erreur) {
+        // On n'ignore QUE "le fichier n'existe pas" (ENOENT). Tout le reste (chemin faux,
+        // permission, variable non definie...) doit remonter : c'est un catch vide comme
+        // celui-ci qui a masque pendant des semaines une ReferenceError sur PUBLIC, laissant
+        // les fichiers approuves s'accumuler en orphelins dans public/.
+        if (erreur.code !== "ENOENT") throw erreur;
       }
     }
   }
