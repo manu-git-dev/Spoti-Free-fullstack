@@ -21,25 +21,20 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-3. **L'icone de « Mes playlists » dans la sidebar.** C'est la **seule** entree de navigation sans
-   icone : Accueil, Bibliotheque, Favoris, Profil, Deposer, Mes demandes, A propos, Contact et
-   Mentions legales en ont toutes une (`Aside.jsx` ~ligne 94 : le `NavLink` n'a que du texte).
-   `ListMusic` est le choix naturel — c'est deja l'icone de l'en-tete de la page Playlists. Penser
-   au **menu mobile** (`HeaderMobile.jsx`) et a la **bottom nav** (`BottomNav.jsx`) en meme temps.
-4. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+3. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-5. **Une passe de tests ultra complete AVANT le deploiement.** Les 157 tests sont verts, mais la
+4. **Une passe de tests ultra complete AVANT le deploiement.** Les 157 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-6. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+5. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -80,7 +75,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-7. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
+6. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
    (portable) uniquement — ca passe. Sur un 27 pouces, le panneau fera ~2200 px : les champs de
    **Deposer** (titre, artiste, genre, licence, source) s'etaleront sur toute la largeur. Un champ
    de texte de 2000 px n'a aucun sens : l'oeil ne suit plus, et ca ne ressemble a rien.
@@ -99,9 +94,9 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
    pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
    lui-meme etait centre avec le contenu.
-8. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
-   endroits : l'Aside (`Aside.jsx:142`), le menu mobile (`HeaderMobile.jsx:57`), et une carte sur
-   la page Deposer (`Deposer.jsx:265`).
+7. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
+   endroits : l'Aside (`Aside.jsx:150`), le menu mobile (`HeaderMobile.jsx:57`), et une carte sur
+   la page Deposer (`Deposer.jsx:282`).
 
    **Le detail qui compte** : la carte de Deposer est conditionnee a **`nbDepots > 0`**. Donc la
    retirer de l'Aside ne perd personne — quelqu'un sans depot n'a rien a voir sur cette page, et
@@ -116,26 +111,39 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### Ce qui est a faire par Manuel
 
-9. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+8. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-10. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+9. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-11. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+10. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-12. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+11. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-13. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+12. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## L'icone de « Mes playlists » - 2026-07-17 - fait
+
+`Aside.jsx` : « Mes playlists » etait la **seule** entree de navigation sans icone. `ListMusic`,
+pour deux raisons convergentes — c'est deja l'icone de l'en-tete de la page Playlists **et** celle
+que `BottomNav.jsx` utilise pour ce meme onglet. Le choix etait donc deja fait ailleurs.
+
+- Une seule surface a changer, finalement : `BottomNav.jsx` avait deja son icone, et
+  `HeaderMobile.jsx` ne porte **pas** Playlists (son burger ne sert qu'aux pages absentes de la
+  BottomNav — Deposer, Mes demandes, l'admin).
+- Ce lien ne peut pas utiliser le helper `lienNav` : son etat actif est porte par le **conteneur**,
+  qui accueille aussi le bouton `+`. Le `gap-3` est donc repete a la main — verifie a l'ecran, les
+  icones de Bibliotheque, Playlists et Favoris tombent toutes a **x=41**.
 
 ## Le genre du depot passe en liste fermee - 2026-07-17 - fait
 

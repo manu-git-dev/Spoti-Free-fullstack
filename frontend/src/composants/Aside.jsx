@@ -2,6 +2,7 @@ import {
   Heart,
   Home,
   Library,
+  ListMusic,
   Plus,
   Info,
   Mail,
@@ -91,7 +92,14 @@ export default function Aside({
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             }`}
           >
-            <NavLink to="/playlists" className="flex-1 px-3 py-2">
+            {/* Le `gap-3` reprend celui de `lienNav` : ce lien ne peut pas s'en servir (l'etat
+                actif est porte par le conteneur, qui accueille aussi le bouton +), mais il doit
+                s'aligner au pixel pres sur les icones des autres entrees. */}
+            <NavLink
+              to="/playlists"
+              className="flex flex-1 items-center gap-3 px-3 py-2"
+            >
+              <ListMusic className="w-5 h-5 shrink-0" />
               Mes playlists
             </NavLink>
             {user && (
