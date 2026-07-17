@@ -81,6 +81,11 @@ export default function Deposer({ user }) {
       return;
     }
 
+    if (!image) {
+      toast.error("Une pochette est nécessaire.");
+      return;
+    }
+
     const formulaire = event.currentTarget;
     const champs = new FormData(formulaire);
 
@@ -100,9 +105,7 @@ export default function Deposer({ user }) {
       champs.get("droitsConfirmes") === "on" ? "true" : "false",
     );
     donneesEnvoi.append("audio", audio);
-    // Pochette facultative : si l'utilisateur n'en met pas, l'admin en attribuera une du
-    // catalogue a l'approbation.
-    if (image) donneesEnvoi.append("image", image);
+    donneesEnvoi.append("image", image);
 
     setEnvoiEnCours(true);
     try {
@@ -246,11 +249,11 @@ export default function Deposer({ user }) {
             onFichierChange={setAudio}
           />
           <ZoneDepotFichier
-            label="Pochette (facultatif)"
+            label="Pochette"
             accept="image/*"
             extensions={[".jpg", ".jpeg", ".png", ".webp"]}
             tailleMaxMo={2}
-            description="jpg, png, webp — 2 Mo. Sans pochette, une image sera choisie pour toi."
+            description="jpg, png, webp — 2 Mo maximum"
             fichier={image}
             onFichierChange={setImage}
           />
@@ -317,8 +320,8 @@ export default function Deposer({ user }) {
 
           <Regle titre="Les fichiers">
             Audio : mp3, wav ou ogg, <Fort>10 Mo</Fort> maximum. Pochette : jpg,
-            png ou webp, <Fort>2 Mo</Fort> — facultative, une image du catalogue
-            sera choisie pour toi.
+            png ou webp, <Fort>2 Mo</Fort> maximum — <Fort>obligatoire</Fort>,
+            comme l'audio.
           </Regle>
 
           <Regle titre="Après l'envoi">
