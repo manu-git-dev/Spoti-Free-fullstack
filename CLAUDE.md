@@ -148,7 +148,10 @@ rouge, c'est qu'une régression est réapparue.
   `min-h-0` n'est pas décoratif : sans lui rien ne défile. Verrouillé par les tests e2e "en-tête".
   Les pages d'authentification (`Login`, `Register`, `MotDePasseOublie`, `ReinitialiserMotDePasse`)
   et les états « connecte-toi » sont des formulaires centrés, sans en-tête : ils n'utilisent pas
-  `Page`.
+  `Page`. Ces états **restent centrés alors que le contenu de leur page est en pleine largeur** —
+  c'est **voulu**, tranché par Manuel le 2026-07-17, pas un oubli de la refonte : un état
+  « connecte-toi » est un **appel à l'action**, pas du contenu. L'étaler sur 1400 px isolerait un
+  bouton au milieu du vide. Ne pas « harmoniser » cette différence.
 - **Typographie** : `EnTetePage` = le `<h1>` de la page (avec son icône) ; `TitreSection` = un
   `<h2>` dans une page de prose (À propos, Mentions légales). Ne pas redéfinir un composant `Titre`
   local dans une page — c'est exactement comme ça que les tailles ont divergé.

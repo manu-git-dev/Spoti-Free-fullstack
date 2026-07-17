@@ -12,29 +12,27 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### Ce qui attend une decision de Manuel
 
-1. **Les etats « connecte-toi »** (Profil, Deposer, Mes demandes) sont restes **centres**, alors
-   que le contenu de ces pages a ete passe en pleine largeur. C'est volontaire de ma part (ce sont
-   des appels a l'action, pas du contenu), mais Manuel n'a pas tranche. *Sans reponse.*
-2. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
+1. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
    le passage en pleine largeur. La convention typographique tourne autour de 65-75 : au-dela,
    l'oeil perd sa ligne en revenant a gauche. Compromis possible : garder la page pleine largeur
    mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
+
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-3. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+2. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-4. **Une passe de tests ultra complete AVANT le deploiement.** Les 161 tests sont verts, mais la
+3. **Une passe de tests ultra complete AVANT le deploiement.** Les 161 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-5. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+4. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -75,15 +73,15 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-6. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
+5. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
    (portable) uniquement — ca passe. Sur un 27 pouces, le panneau fera ~2200 px : les champs de
    **Deposer** (titre, artiste, genre, licence, source) s'etaleront sur toute la largeur. Un champ
    de texte de 2000 px n'a aucun sens : l'oeil ne suit plus, et ca ne ressemble a rien.
 
    **C'est une consequence directe du passage en pleine largeur** demande le 2026-07-16 : le
    `max-w-2xl mx-auto` de Deposer / Mes demandes / Profil et le `max-w-3xl` d'A propos /
-   Mentions legales ont ete retires. **Meme cause que le point 3** (les lignes a 130 caracteres) —
-   les deux devraient se decider ensemble.
+   Mentions legales ont ete retires. **Meme cause que « les lignes a ~130 caracteres »** (1er point
+   de cette liste) — les deux devraient se decider ensemble.
 
    **La nuance a trancher** : « pleine largeur » etait le bon choix pour la Bibliotheque, le
    Catalogue et le Tableau de bord — ce sont des **listes et des grilles**, elles gagnent
@@ -94,26 +92,27 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
    pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
    lui-meme etait centre avec le contenu.
+
 ### Ce qui est a faire par Manuel
 
-7. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+6. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-8. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+7. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-9. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+8. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-10. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+9. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-11. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+10. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
 
