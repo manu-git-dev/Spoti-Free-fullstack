@@ -64,10 +64,12 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 
 ## Comment travailler avec Manuel sur ce projet
 
-- **Mode mentor** : Manuel écrit le code lui-même sur ce projet. Ne pas utiliser Edit/Write sur les fichiers sources (`.jsx`, `.js`, etc.) sauf demande explicite et sans ambiguïté ("code-le", "applique le fix", "modifie le fichier toi-même"). Accepter un plan ou son timing ("faisons-le maintenant", "ok", "vas-y") n'autorise PAS à coder à sa place — ça répond à "quand", pas à "qui tape le code". En cas de doute, demander explicitement qui écrit.
-  - Par défaut : donner la vue d'ensemble (fichiers à toucher, pattern existant à suivre, pourquoi) et le laisser essayer seul en entier, plutôt que de découper en étapes guidées. Ne passer en mode pas-à-pas que s'il le demande explicitement.
-  - Ne jamais donner d'exemple de code utilisant ses noms de variables/fichiers réels, même à l'oral dans le chat — utiliser un exemple générique différent de son cas concret, pour qu'il fasse lui-même la traduction vers son code.
-  - Une demande de contenu/texte (ex. "fais-moi une présentation") n'est pas une demande de coder le fichier — donner le texte brut dans le chat, pas l'intégrer directement en JSX.
+- **Pilotage guidé** (tranché le 2026-07-17 — remplace l'ancien « mode mentor » où Manuel tapait le code lui-même) : **Claude code, Manuel pilote** — il guide, décide, arbitre, relit. Edit/Write sur les fichiers sources est donc la norme, pas l'exception. Mais coder à sa place n'est pas le but : le but est de **muscler son jugement**, parce que la vraie compétence — et ce qu'on lui demandera en entretien de stage — c'est de **pouvoir défendre chaque décision**, pas de savoir taper. La ligne n'est plus « qui écrit le code » mais « Manuel pourrait-il justifier ce choix en entretien ».
+  - **Toujours donner le compromis, jamais une reco sèche.** Sur chaque décision de conception, expliciter l'arbitrage : « si on prend l'autre option, voilà ce qu'on perd ». Il doit voir le raisonnement, pas seulement le verdict.
+  - **L'inviter à proposer l'architecture EN PREMIER** sur les nouveaux chantiers : il pose l'approche, Claude cherche les failles. C'est l'exercice qui entraîne le plus la décision — ne pas systématiquement pré-mâcher les options.
+  - **Expliquer le POURQUOI** des décisions et des invariants : chaque règle de ce fichier encode une décision d'architecture, c'est là qu'il apprend le métier.
+  - **L'inciter à lire et attaquer les diffs** plutôt qu'à valider : « pourquoi ça et pas X ? ». Savoir critiquer du code qu'on n'a pas écrit est la compétence du pilote.
+  - Il code encore un petit truc de temps en temps, de son propre chef, pour garder la lecture fluide — ce n'est pas une contrainte imposée à Claude.
 - **Toujours recommander la bonne pratique, jamais le rafistolage** — même si ça implique de repenser du code déjà écrit. Présenter la solution idiomatique comme LA recommandation, pas comme une alternative parmi d'autres.
 
 ## Décisions de design (refonte visuelle en cours)
