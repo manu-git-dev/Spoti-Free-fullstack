@@ -28,7 +28,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-4. **Une passe de tests ultra complete AVANT le deploiement.** Les 157 tests sont verts, mais la
+4. **Une passe de tests ultra complete AVANT le deploiement.** Les 161 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
@@ -94,43 +94,55 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
    pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
    lui-meme etait centre avec le contenu.
-7. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
-   endroits : l'Aside (`Aside.jsx:150`), le menu mobile (`HeaderMobile.jsx:57`), et une carte sur
-   la page Deposer (`Deposer.jsx:282`).
-
-   **Le detail qui compte** : la carte de Deposer est conditionnee a **`nbDepots > 0`**. Donc la
-   retirer de l'Aside ne perd personne — quelqu'un sans depot n'a rien a voir sur cette page, et
-   des qu'il en a un, la carte apparait. Le groupement est meme plus logique : « Deposer » ->
-   « Mes demandes ».
-
-   **Contre** : c'est un clic de plus pour suivre ses depots, et la carte n'existe que sur une page
-   qu'il faut deja penser a ouvrir.
-
-   Si c'est retire, **le faire aussi dans `HeaderMobile.jsx`** — sinon la navigation dit deux
-   choses differentes selon la taille de l'ecran.
-
 ### Ce qui est a faire par Manuel
 
-8. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+7. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-9. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+8. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-10. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+9. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-11. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+10. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-12. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+11. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## « Mes demandes » quitte la navigation - 2026-07-17 - fait
+
+Retire de l'Aside **et** du menu mobile (`HeaderMobile.jsx`). Les deux ensemble, volontairement :
+un lien present sur mobile et absent sur bureau (ou l'inverse) est un piege pour la suite.
+
+**Le raisonnement** : la page ne concerne que ceux qui ont **deja depose**. `Deposer.jsx` y mene
+par une carte conditionnee a `nbDepots > 0` — donc personne n'est perdu : sans depot, il n'y a
+rien a voir sur cette page ; des qu'il y en a un, la carte apparait (le compteur est rafraichi
+apres un envoi reussi, sans rechargement). Le groupement est plus logique : « Deposer » ->
+« Mes demandes ». Le cout assume : un clic de plus pour suivre ses depots.
+
+**Ce que le retrait a rendu FRAGILE, et qui est le vrai sujet** : la carte est desormais le
+**seul** chemin vers `/mes-depots`. Si elle casse, la page devient inatteignable sans taper l'URL,
+et quelqu'un qui vient de deposer n'a plus aucun moyen de suivre sa demande. Or `depot.test.mjs`
+est **100 % API** (zero navigateur) et le e2e n'avait aucun test de depot : ce chemin n'etait
+couvert nulle part.
+
+4 tests e2e ajoutes (suite : **161**), qui deposent par le **vrai formulaire** — meme lecon que le
+bouton « Modifier » du catalogue : une route qui repond ne prouve pas que l'interface l'appelle.
+Ils couvrent au passage le `<select>` de genre pose le meme jour. Verifies en les faisant
+**echouer** (carte forcee a `false` -> 2 rouges).
+
+Un des quatre verrouille l'**absence** de carte sans depot : c'est la justification meme du
+retrait. Si elle s'affichait pour tout le monde, le lien permanent redeviendrait defendable.
+
+> Si le lien revient un jour dans l'Aside, **le remettre AUSSI dans `HeaderMobile.jsx`**.
 
 ## L'icone de « Mes playlists » - 2026-07-17 - fait
 
@@ -177,10 +189,10 @@ accepte en 201).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **157 tests** automatises : `cd tests && npm install && npm test`
-  (61 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **157/157.**
-- **CI verte** (GitHub Actions) : les 157 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 157 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **161 tests** automatises : `cd tests && npm install && npm test`
+  (65 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **161/161.**
+- **CI verte** (GitHub Actions) : les 161 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 161 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -335,7 +347,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 157 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 161 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -360,7 +372,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 157 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 161 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
