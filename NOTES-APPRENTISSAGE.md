@@ -1983,3 +1983,55 @@ Le garde-fou les a tous fait échouer d'un coup. C'est **la validation qui a ré
 **Ce que je retiens** : une liste fermée se ferme **à l'entrée du serveur**, l'interface ne fait que l'annoncer. Et quand une validation nouvelle fait rougir des tests existants, la première question n'est pas « qu'est-ce que j'ai cassé ? » mais **« qu'est-ce que ces tests validaient au juste ? »**.
 
 ---
+
+## 2026-07-17 — Spoti-Free (largeurs de lecture, et deux tests qui mentaient)
+
+### 61. `65ch` ne vaut pas la même chose selon que la police est chargée ou non
+
+**Contexte** : depuis le passage des pages en pleine largeur (2026-07-16), les paragraphes d'À propos faisaient **~130 caractères** de long en 1440 px, et sur un 27 pouces les champs du formulaire de dépôt auraient fait ~2000 px. J'ai demandé d'appliquer la recommandation : borner la prose et les formulaires.
+
+**La règle typographique, et le *pourquoi*** : la longueur de ligne confortable tourne autour de **65-75 caractères**. Ce n'est pas une coquetterie. Au-delà, quand l'œil finit une ligne à droite et revient à gauche, il doit retrouver la bonne — et plus la ligne est longue, plus il se trompe de ligne. En dessous de ~45, le problème s'inverse : on saute de ligne trop souvent, la lecture hache. Tailwind expose ça sous le nom `max-w-prose`, qui vaut **`65ch`**.
+
+**La décision de conception qui compte** : borner le **contenu**, pas la **page**. Concrètement, `max-w-prose` sur la colonne de prose et `max-w-2xl` sur le `<form>` — mais **rien** sur la coquille de page. Et **sans `mx-auto`** : le bloc reste calé à gauche.
+
+La différence n'est pas cosmétique. Si je borne la page, je rétrécis aussi l'**en-tête** (le titre ne serait plus aligné avec celui des autres pages) **et** je casse la Bibliothèque et le Catalogue, qui sont des **grilles** : elles, gagnent réellement à s'étaler, parce qu'une grille plus large affiche **plus de cartes par rangée**. Une colonne de texte plus large n'affiche pas plus de texte — elle affiche le même texte, moins lisible. **« Pleine largeur » n'est ni bien ni mal : ça dépend si le contenu a quelque chose à faire de la place.**
+
+---
+
+**Le premier piège : mon test mesurait le sous-titre.**
+
+J'ai écrit un test qui vérifie que la colonne ne grandit pas entre 1440 et 2560 px. Il est passé du premier coup. J'ai quand même retiré `max-w-prose` pour le voir échouer — et **il est resté vert**.
+
+Le sélecteur était `main p`, qui attrape le **premier** `<p>` de la page. Or l'en-tête (`EnTetePage`) contient déjà un `<p>` : le **sous-titre**. Je mesurais donc le sous-titre, dont la largeur est stable pour une tout autre raison (il vit dans un conteneur flex), et jamais la prose. Le bon sélecteur est `main .overflow-y-auto p` — le paragraphe **dans la zone de défilement**.
+
+C'est la deuxième fois de la journée qu'un de mes tests valide autre chose que ce que je crois (le premier envoyait un genre `"Test"` que le serveur acceptait faute de validation). Le point commun : **rien ne signale qu'un test passe pour la mauvaise raison.** Le vert est identique. Seul le fait de le **casser volontairement** l'a révélé — pour la troisième fois, « un test qu'on n'a pas vu échouer ne teste rien » n'était pas une formule.
+
+---
+
+**Le deuxième piège, et c'est le plus intéressant : le même test passait puis échouait, sans que le code change.**
+
+Après correction du sélecteur, le test passait seul (`npm run test:e2e`) et **échouait dans la suite complète** (`npm test`) : `578 px -> 689 px`. Même code, même page, deux résultats.
+
+Un test instable est **pire qu'un test absent** : on finit par relancer « pour voir », puis par ignorer sa couleur — et le jour où il attrape une vraie régression, on ne le croit plus.
+
+**La cause** : `max-w-prose` vaut `65ch`, et l'unité **`ch` est la largeur du glyphe « 0 » de la police réellement utilisée**. Tant que Montserrat n'est pas chargée, le navigateur calcule avec la police de repli : la colonne fait **578 px**. Une fois la police arrivée, il recalcule : **689 px**. Mon test mesurait donc l'un ou l'autre selon que la webfont avait eu le temps d'arriver — ce qui dépend du cache, de la charge machine, de l'ordre des suites.
+
+Je l'ai vérifié plutôt que de le supposer, en mesurant avant et après :
+
+```
+largeur AVANT fonts.ready : 578
+largeur APRES fonts.ready : 689
+police du conteneur : Montserrat, sans-serif
+```
+
+La correction tient en une ligne : `await page.evaluate(() => document.fonts.ready)` avant de mesurer. Puis **trois exécutions de suite** pour vérifier — une seule ne prouve rien sur un défaut d'instabilité, par définition.
+
+**Ce que je retiens sur `ch`** : c'est une unité **relative à la police**, comme `em` l'est à la taille. Toute mesure de mise en page prise avant `document.fonts.ready` est une mesure **de la police de repli**, pas de la mienne. Ça vaut pour mes tests, mais aussi pour l'utilisateur : c'est exactement ce décalage qu'on voit quand un texte « saute » légèrement au chargement d'une page.
+
+**Et une leçon de méthode, celle qui m'a coûté le plus** : j'ai cassé volontairement `max-w-prose` avec `sed` pour voir le test rougir, puis fait `git checkout --` pour restaurer… alors que **mes modifications n'étaient pas encore commitées**. `git checkout --` ramène au dernier **commit**, pas à « l'état d'avant ma bêtise » : j'ai effacé mon propre travail. Avant de casser volontairement quelque chose, **committer d'abord** — un commit « wip » jetable suffit, et il rend l'expérience réversible.
+
+---
+
+**Le détail que j'ai failli manquer** : la carte « Mes demandes » de la page Déposer est **sœur** du `<form>`, pas dedans. En bornant le formulaire à `max-w-2xl` sans y penser, elle serait restée à 2200 px sous un formulaire de 672 px. Un `max-w` ne descend qu'aux **enfants** — les frères ne sont pas concernés. Évident écrit comme ça ; invisible tant qu'on n'ouvre pas un grand écran.
+
+---

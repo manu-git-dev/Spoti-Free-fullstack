@@ -126,9 +126,14 @@ export default function Deposer({ user }) {
       titre="Déposer une musique"
       sousTitre="Ton morceau sera publié une fois validé."
     >
+      {/* `max-w-2xl` borne le FORMULAIRE, pas la page : l'en-tete reste pleine largeur, aligne sur
+          les autres pages. Un champ de texte de 2000 px sur un 27 pouces n'a aucun sens — la
+          largeur utile d'un champ est bornee par l'oeil, pas par l'ecran. La pleine largeur reste
+          le bon choix pour les LISTES et les GRILLES (Bibliotheque, Catalogue), qui gagnent
+          reellement a s'etaler : plus de cartes par rangee. */}
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
+        className="flex max-w-2xl flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="title" className="text-sm font-medium">
@@ -282,7 +287,7 @@ export default function Deposer({ user }) {
       {nbDepots > 0 ? (
         <Link
           to="/mes-depots"
-          className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
         >
           <Inbox className="w-5 h-5 text-primary shrink-0" />
           <span className="flex-1 min-w-0">
