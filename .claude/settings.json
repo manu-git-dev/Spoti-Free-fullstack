@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty' 2>/dev/null); case \"$cmd\" in *git*add*) printf '%s' \"$cmd\" | grep -Eq '\\.env([^.[:alnum:]]|$)' && { echo \"Refus : git add sur un fichier .env (secret, deja gitignore). Utiliser .env.example pour un modele sans valeurs.\" >&2; exit 2; } ;; esac; case \"$cmd\" in *git*commit*) git diff --cached --name-only 2>/dev/null | grep -Eq '(^|/)\\.env([^.[:alnum:]]|$)' && { echo \"Refus : un fichier .env est indexe (staged) pour ce commit. Le retirer : git restore --staged <fichier>.\" >&2; exit 2; } ;; esac; exit 0",
+            "statusMessage": "Garde-fou anti-commit .env"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
