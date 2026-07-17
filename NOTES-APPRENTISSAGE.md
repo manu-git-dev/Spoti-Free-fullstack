@@ -2080,3 +2080,34 @@ C'est le même angle mort que les curseurs du lecteur et que le bouton « Modifi
 **Ce que je généralise sur ces wrappers** : c'est la deuxième fois qu'un composant Base UI livré par shadcn me pose un problème invisible à la lecture du code (après les deux poignées du `Slider`). Le wrapper est du code **que je n'ai pas écrit mais qui est dans mon dépôt** : il m'appartient. Quand le comportement surprend, la réponse est dans le **type de la librairie**, pas dans le wrapper — et lire un `.d.ts` dans `node_modules` est une compétence, pas un aveu d'échec.
 
 ---
+
+### 64. Mon test avait raison de rougir : c'est mon invariant qui était faux
+
+**Contexte** : après avoir passé Profil et Mes demandes en deux colonnes, j'ajoute ces pages à mon test de largeur (celui de la note 61, qui vérifie qu'un bloc ne s'étale pas sur un grand écran). Il rougit aussitôt :
+
+```
+✗ largeur (Deposer : les deux colonnes) — 1078 px -> 1152 px
+```
+
+**Mon premier réflexe a été le mauvais** : « qu'est-ce que j'ai cassé ? ». Rien. **Le test se trompait.**
+
+L'assertion disait : *le bloc doit mesurer pareil en 1440 et en 2560*. C'était vrai tant que je ne testais que la **prose** (768 px des deux côtés) — parce que 768 est bien en dessous de la place disponible aux deux tailles, donc jamais contraint.
+
+Mais mes deux colonnes valent `max-w-6xl`, soit **1152 px**. Or en 1440, la place réellement disponible (fenêtre moins la sidebar moins les marges) n'est que de **1078 px**. Le bloc est donc **contraint** en 1440 — il n'atteint pas son maximum — et il ne l'atteint qu'en 2560. Il grandit de 1078 à 1152, **et c'est exactement ce qu'il doit faire**.
+
+**Ce que j'avais confondu** : « borné » ne veut pas dire « figé ». Un `max-width` est un **plafond**, pas une largeur. Un élément avec `max-w-6xl` fait *le minimum entre 1152 px et la place disponible* — donc il varie, tant qu'il ne dépasse jamais son plafond. Mon test vérifiait qu'il ne variait pas : il testait une propriété que le code n'a jamais eue et n'a aucune raison d'avoir.
+
+**Le bon invariant, celui que j'ai fini par écrire** : ce que je veux vraiment garantir, ce n'est pas « il ne bouge pas », c'est **« il ne suit pas l'écran »**. Donc : mesurer en 2560, et comparer à la **zone disponible** plutôt qu'à une autre mesure.
+
+```
+borné      -> 1152 px dans une zone de 2206 px
+non borné  -> 2198 px dans une zone de 2206 px
+```
+
+La différence est franche, il n'y a pas d'ambiguïté à trancher. Et je l'ai vérifié en retirant les bornes : deux rouges.
+
+**Ce que je retiens, et c'est plus large que ce test** : quand un test rougit, il y a **deux** hypothèses, pas une. Soit le code est cassé, soit **le test affirme quelque chose de faux**. J'ai tendance à ne considérer que la première — et c'est comme ça qu'on « répare » du code qui allait bien, ou qu'on assouplit une assertion jusqu'à ce qu'elle ne prouve plus rien.
+
+C'est le miroir exact de la note 61 : là, un test **vert** ne prouvait rien (il mesurait le sous-titre). Ici, un test **rouge** ne prouve rien non plus. **La couleur d'un test ne dit pas s'il a raison** — elle dit seulement que ce qu'il affirme est vrai ou faux. Encore faut-il qu'il affirme la bonne chose.
+
+---
