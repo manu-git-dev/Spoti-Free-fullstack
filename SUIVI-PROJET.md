@@ -12,30 +12,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-1. **Rendre la POCHETTE OBLIGATOIRE au depot.** Demande par Manuel : « ca n'a plus de sens de
-   mettre une aleatoire, une pochette peut etre liee a un titre ou un auteur en question, ca
-   ferait bizarre ». **Il a raison, et c'est plus grave que « bizarre ».**
-
-   **Ce que fait le code aujourd'hui** (`submissionRoute.js:489-493`) : sans pochette, l'approbation
-   **reutilise une image DEJA au catalogue, tiree au hasard**. Aucun fichier n'est copie — le
-   nouveau morceau **pointe vers l'image d'un autre morceau**.
-
-   **La consequence, qui n'avait pas ete vue** : cette image est la pochette de l'oeuvre d'un
-   **autre artiste**, sous CC BY / CC BY-SA. On l'affiche donc a cote du nom de quelqu'un d'autre,
-   sans l'attribuer a son auteur. Ce n'est pas juste laid : ca ressemble a une **fausse
-   attribution**, sur un projet dont tout le chantier « droits d'auteur » visait justement a ne
-   rien afficher qu'on n'ait le droit d'afficher.
-
-   **Ce que ca touche** : la validation serveur du depot (l'image devient obligatoire, comme
-   l'audio), `ZoneDepotFichier` cote front (retirer « (facultatif) »), le texte du panneau
-   « A savoir » de `Deposer.jsx`, et **le tirage au hasard a l'approbation qui disparait**. Les
-   tests aussi : `depot.test.mjs` a une etape « pochette facultative » qui verifie exactement le
-   comportement qu'on veut supprimer — elle doit devenir « un depot SANS pochette est refuse ».
-
-   **A decider** : que faire des morceaux **deja au catalogue** qui partagent une pochette par ce
-   mecanisme ? (Verifier s'il y en a : le catalogue vient de Jamendo, chaque morceau a la sienne —
-   il n'y en a peut-etre aucun.)
-
 4. **Revoir le CONTENU d'A propos.** Le texte est a modifier — Manuel dira quoi. *(Rappel : une
    demande de texte n'est pas une demande de code — le texte se decide d'abord.)*
 
@@ -69,7 +45,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-8. **Une passe de tests ultra complete AVANT le deploiement.** Les 170 tests sont verts, mais la
+8. **Une passe de tests ultra complete AVANT le deploiement.** Les 169 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
