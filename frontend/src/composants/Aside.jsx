@@ -196,8 +196,8 @@ export default function Aside({
           Mentions légales
         </NavLink>
         {/* Reprend le style INACTIF de `lienSecondaire` (un bouton n'a pas d'etat de route
-            actif). `w-full` : dans une colonne flex, un bouton ne s'etire pas de lui-meme. */}
-        <BasculeTheme className="flex w-full items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
+            actif), mais en `justify-between` : le libelle a gauche, l'interrupteur a droite. */}
+        <BasculeTheme className="flex w-full items-center justify-between text-sm px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
       </nav>
     </aside>
   );
