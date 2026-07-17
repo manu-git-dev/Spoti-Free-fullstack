@@ -1,31 +1,44 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Check, X, Inbox, UploadCloud, ArrowLeft } from "lucide-react";
+import {
+  Clock,
+  Check,
+  X,
+  Inbox,
+  UploadCloud,
+  ArrowLeft,
+  Info,
+} from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import Page from "../composants/Page";
 
+// `legende` : ce que le statut veut dire, en general. Affiche UNE fois, dans le panneau de droite.
+//
+// Avant, ce texte etait repete sur chaque carte — identique d'un depot a l'autre, donc du bruit
+// des qu'on en avait deux. Ce qui reste sur la carte, c'est ce qui lui est PROPRE : son statut, et
+// le motif du refus s'il y en a un (celui-la, c'est l'admin qui l'ecrit, il change a chaque fois).
 const STATUTS = {
   en_attente: {
     label: "En attente de validation",
     icone: Clock,
     classe: "text-muted-foreground bg-muted/40 border-border",
-    explication:
+    legende:
       "Ta proposition a bien été reçue. Elle sera écoutée avant d'être publiée.",
   },
   approuve: {
     label: "Approuvé",
     icone: Check,
     classe: "text-success bg-success/10 border-success/40",
-    explication:
-      "Le morceau est en ligne : tu le retrouves dans la Bibliothèque.",
+    legende: "Le morceau est en ligne : tu le retrouves dans la Bibliothèque.",
   },
   refuse: {
     label: "Refusé",
     icone: X,
     classe: "text-destructive bg-destructive/10 border-destructive/40",
-    explication: null, // le motif du refus est affiche a la place
+    legende:
+      "Le morceau n'a pas été retenu. Le motif est indiqué sur la demande concernée.",
   },
 };
 
@@ -109,6 +122,17 @@ export default function MesDepots({ user }) {
           </Link>
         </div>
       ) : (
+        /* DEUX COLONNES — meme agencement que `Deposer.jsx`, dont cette page est le pendant.
+           La liste a gauche, ce que les statuts veulent dire a droite.
+
+           La colonne de droite n'invente rien : les explications vivaient sur CHAQUE carte, ou
+           elles se repetaient a l'identique d'un depot a l'autre. Elles sont mieux en legende, une
+           seule fois. La carte dit ce qui SE PASSE (le statut, et le motif du refus qui lui est
+           propre) ; la legende dit ce que ca VEUT DIRE.
+
+           Elle n'apparait qu'avec au moins un depot : l'etat vide est un appel a l'action, une
+           legende de statuts n'y aurait aucun sens. */
+        <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
         <ul className="flex flex-col gap-3">
           {depots.map((depot) => {
             const statut = STATUTS[depot.statut] ?? STATUTS.en_attente;
@@ -134,13 +158,12 @@ export default function MesDepots({ user }) {
                     })}
                   </p>
 
+                  {/* Le motif du refus reste sur la CARTE : il est propre a ce depot-la, c'est
+                      l'admin qui l'a ecrit. L'explication generique du statut, elle, est partie
+                      en legende — elle etait identique sur toutes les cartes. */}
                   {depot.statut === "refuse" && depot.motif_refus ? (
                     <p className="mt-2 text-sm text-destructive">
                       Motif : {depot.motif_refus}
-                    </p>
-                  ) : statut.explication ? (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {statut.explication}
                     </p>
                   ) : null}
                 </div>
@@ -155,6 +178,27 @@ export default function MesDepots({ user }) {
             );
           })}
         </ul>
+
+        <aside className="flex flex-col gap-4 rounded-2xl border border-border bg-background/50 p-6">
+          <p className="flex items-center gap-2 font-serif text-lg font-bold">
+            <Info className="w-4 h-4 shrink-0 text-primary" />
+            Les statuts
+          </p>
+          {Object.entries(STATUTS).map(([cle, statut]) => (
+            <div key={cle} className="flex flex-col gap-1">
+              <span
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${statut.classe}`}
+              >
+                <statut.icone className="w-3.5 h-3.5" />
+                {statut.label}
+              </span>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {statut.legende}
+              </p>
+            </div>
+          ))}
+        </aside>
+        </div>
       )}
     </Page>
   );

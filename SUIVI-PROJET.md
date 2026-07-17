@@ -12,7 +12,53 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-1. **Les cartes de playlist sont TROP GRANDES en mobile** — constate par Manuel en cliquant dans
+1. **Rendre la POCHETTE OBLIGATOIRE au depot.** Demande par Manuel : « ca n'a plus de sens de
+   mettre une aleatoire, une pochette peut etre liee a un titre ou un auteur en question, ca
+   ferait bizarre ». **Il a raison, et c'est plus grave que « bizarre ».**
+
+   **Ce que fait le code aujourd'hui** (`submissionRoute.js:489-493`) : sans pochette, l'approbation
+   **reutilise une image DEJA au catalogue, tiree au hasard**. Aucun fichier n'est copie — le
+   nouveau morceau **pointe vers l'image d'un autre morceau**.
+
+   **La consequence, qui n'avait pas ete vue** : cette image est la pochette de l'oeuvre d'un
+   **autre artiste**, sous CC BY / CC BY-SA. On l'affiche donc a cote du nom de quelqu'un d'autre,
+   sans l'attribuer a son auteur. Ce n'est pas juste laid : ca ressemble a une **fausse
+   attribution**, sur un projet dont tout le chantier « droits d'auteur » visait justement a ne
+   rien afficher qu'on n'ait le droit d'afficher.
+
+   **Ce que ca touche** : la validation serveur du depot (l'image devient obligatoire, comme
+   l'audio), `ZoneDepotFichier` cote front (retirer « (facultatif) »), le texte du panneau
+   « A savoir » de `Deposer.jsx`, et **le tirage au hasard a l'approbation qui disparait**. Les
+   tests aussi : `depot.test.mjs` a une etape « pochette facultative » qui verifie exactement le
+   comportement qu'on veut supprimer — elle doit devenir « un depot SANS pochette est refuse ».
+
+   **A decider** : que faire des morceaux **deja au catalogue** qui partagent une pochette par ce
+   mecanisme ? (Verifier s'il y en a : le catalogue vient de Jamendo, chaque morceau a la sienne —
+   il n'y en a peut-etre aucun.)
+
+2. **Ajouter un MODE CLAIR.** L'app est en sombre uniquement. Les couleurs vivent deja dans des
+   variables CSS (`bg-background`, `bg-card`, `text-muted-foreground`…), donc la bascule est
+   surtout un jeu de valeurs a definir pour `:root` — pas une reecriture. **Deux points de
+   vigilance** : la palette des graphiques admin a ete **validee par script** pour le contraste en
+   mode sombre (violet a 2.6:1 avec les couleurs brutes, accent assombri a `#5c8fe6`) — il faudra
+   la revalider en clair ; et les surfaces (`bg-background/50` sur `bg-card`) reposent sur des
+   opacites qui ne se transposent pas mecaniquement.
+
+3. **Refaire la page d'ACCUEIL, avec des cartes speciales pour le Top 5.** Le Top 5 est reel
+   (classement par nombre d'ecoutes). Les cartes actuelles sont celles du catalogue ; un classement
+   merite sa propre forme (le rang, l'ecart d'ecoutes…).
+
+4. **Revoir le CONTENU d'A propos.** Le texte est a modifier — Manuel dira quoi. *(Rappel : une
+   demande de texte n'est pas une demande de code — le texte se decide d'abord.)*
+
+5. **La forme et/ou la couleur des barres de defilement ?** A explorer. Elles sont aujourd'hui
+   celles du navigateur, ce qui detonne en theme sombre sur certains systemes. `::-webkit-scrollbar`
+   (Chrome/Safari) et `scrollbar-color` / `scrollbar-width` (Firefox, et standard) — les deux sont
+   necessaires pour couvrir tout le monde. Attention a ne pas casser l'**accessibilite** : une barre
+   trop fine devient impossible a attraper a la souris (meme loi de Fitts que la zone de 4 px du
+   curseur du lecteur, voir la note 60).
+
+6. **Les cartes de playlist sont TROP GRANDES en mobile** — constate par Manuel en cliquant dans
    l'app le 2026-07-17. « On fera plus tard ».
 
    **Ou regarder** : `pages/Playlists.jsx:60` rend la grille en **`grid-cols-2`** sous `md`, et
@@ -28,20 +74,20 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    **A verifier en meme temps** : les cartes de MUSIQUE (`composants/Card.jsx`) ont-elles le meme
    defaut ? Si oui, c'est une seule decision, pas deux.
 
-2. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+7. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-3. **Une passe de tests ultra complete AVANT le deploiement.** Les 169 tests sont verts, mais la
+8. **Une passe de tests ultra complete AVANT le deploiement.** Les 170 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-4. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+9. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -82,40 +128,26 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-5. **La largeur de « Mes demandes » et de « Profil » sur grand ecran.** La prose (A propos,
-   Mentions legales) et le formulaire de Deposer ont ete bornes le 2026-07-17 (voir plus bas).
-   **Ces deux pages-la ne l'ont pas ete** : ce ne sont ni de la prose ni des formulaires, mais des
-   **cartes et des listes**, et la regle appliquee ne tranche pas leur cas.
-
-   **La question** : une liste verticale de cartes (une par depot) ne gagne rien a s'etaler — elle
-   n'a pas plus d'elements par rangee, elle etire juste chaque ligne, et l'oeil doit traverser
-   2200 px entre le titre a gauche et le statut a droite. C'est different d'une **grille**
-   (Bibliotheque, Catalogue), qui gagne reellement : plus de cartes par rangee.
-
-   Si c'est a borner, c'est `max-w-2xl` sur le conteneur de la liste — jamais sur `Page.jsx`, qui
-   retrecirait l'en-tete et casserait les grilles. **Verifiable en 2560 px** : les 4 tests
-   « largeur » de `e2e.test.mjs` donnent le patron a copier.
-
 ### Ce qui est a faire par Manuel
 
-6. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+10. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-7. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+11. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-8. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+12. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-9. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+13. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-10. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+14. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
 
@@ -174,8 +206,26 @@ debat :
 ramenent le vide de ~1500 px a ~1000 px et ameliorent la page ; elles ne font pas disparaitre le
 probleme. En 1440 (l'ecran de Manuel), en revanche, elles remplissent exactement.
 
-> **Restent en pleine largeur, sans panneau : Profil et Mes demandes.** Ce sont des cartes et des
-> listes — voir le point 4 d'`EN SUSPENS`, la regle retenue ne tranche pas leur cas.
+**Profil et Mes demandes ont suivi le meme jour** (les deux colonnes, pas le panneau) :
+
+- **Le panneau leur etait IMPOSSIBLE** : leur contenu est deja fait de panneaux (`bg-background/50`
+  — la carte de profil, les cases de stats, chaque ligne de depot). Une enveloppe du meme fond
+  aurait rendu invisibles ceux du dedans. La regle des surfaces n'a pas de troisieme niveau.
+- **Mes demandes** : la liste a gauche, une legende des **3 statuts** a droite. Rien d'invente —
+  les explications vivaient sur CHAQUE carte, identiques d'un depot a l'autre. Elles sont mieux en
+  legende, une fois. La carte garde ce qui lui est **propre** : son statut, et le motif du refus
+  (celui-la, c'est l'admin qui l'ecrit). Au passage, le statut « Refuse » n'avait aucune
+  explication (`explication: null`) — il en a une maintenant.
+- **Profil** : les 3 chiffres passent a droite, en pile verticale au lieu d'une rangee de 3. Le
+  chiffre a gauche, son libelle a droite : en pile, l'oeil descend une colonne de chiffres alignes.
+
+**Ce que les tests de largeur ont appris en route** : la premiere version comparait 1440 et 2560 en
+exigeant l'**egalite**. Elle etait **fausse** pour les pages a deux colonnes — leur bloc vaut
+`max-w-6xl` (1152 px) mais la place disponible en 1440 n'est que de 1078 px : il est donc
+**contraint** en 1440 et atteint son maximum en 2560. Il grandit legitimement, et le test criait au
+loup. La bonne propriete n'est pas « il ne bouge pas » mais **« il ne suit pas l'ecran »** : on
+mesure en 2560 et on compare a la zone disponible (1152 px dans 2206 px = borne ; 2198 px = il
+suit). Verifie en retirant les bornes -> 2 rouges.
 
 ## La modale « Ajouter a une playlist » : deux bugs - 2026-07-17 - fait
 
@@ -305,10 +355,10 @@ accepte en 201).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **169 tests** automatises : `cd tests && npm install && npm test`
-  (73 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **169/169.**
-- **CI verte** (GitHub Actions) : les 169 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 169 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **170 tests** automatises : `cd tests && npm install && npm test`
+  (74 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **170/170.**
+- **CI verte** (GitHub Actions) : les 170 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 170 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -463,7 +513,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 169 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 170 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -488,7 +538,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 169 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 170 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger

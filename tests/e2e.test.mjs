@@ -888,31 +888,38 @@ await etape("mise en page : la prose et les formulaires restent bornes", async (
       "/mentions-legales",
       "main .overflow-y-auto p",
     ],
-    ["Deposer : le formulaire", "/deposer", "main form"],
+    ["Deposer : les deux colonnes", "/deposer", "main .overflow-y-auto > div"],
+    ["Profil : les deux colonnes", "/profil", "main .overflow-y-auto > div"],
   ];
 
-  const mesures = {};
-  for (const vp of [
-    ["1440", { width: 1440, height: 900 }],
-    ["2560", { width: 2560, height: 1440 }],
-  ]) {
-    const page = await pageConnectee(navigateur, compte, vp[1]);
-    page.on("pageerror", (e) => erreursJS.push(e.message));
-    for (const [nom, url, sel] of cibles) {
-      mesures[`${nom}|${vp[0]}`] = await largeur(page, url, sel);
-    }
-    await page.context().close();
-  }
+  // On mesure en 2560 px et on compare a la ZONE DISPONIBLE (~2206 px), pas a la mesure en 1440.
+  //
+  // La premiere version comparait 1440 et 2560 en exigeant l'egalite. Elle etait FAUSSE pour les
+  // pages a deux colonnes : leur bloc vaut `max-w-6xl` (1152 px), mais en 1440 la place disponible
+  // n'est que de 1078 px — il est donc CONTRAINT en 1440 et atteint son maximum en 2560. Il grandit
+  // legitimement (1078 -> 1152), et le test criait au loup.
+  //
+  // La vraie propriete a verrouiller n'est pas « il ne bouge pas », c'est **« il ne suit pas
+  // l'ecran »** : borne, il reste tres en dessous de la zone ; non borne, il la remplit.
+  const LIMITE = 1300;
+  const page2560 = await pageConnectee(navigateur, compte, {
+    width: 2560,
+    height: 1440,
+  });
+  page2560.on("pageerror", (e) => erreursJS.push(e.message));
 
-  for (const [nom] of cibles) {
-    const petit = mesures[`${nom}|1440`];
-    const grand = mesures[`${nom}|2560`];
+  for (const [nom, url, sel] of cibles) {
+    const mesure = await largeur(page2560, url, sel);
+    const zone = await page2560.$eval("main .overflow-y-auto", (el) =>
+      Math.round(el.getBoundingClientRect().width),
+    );
     verifier(
-      `largeur (${nom}) : ne grandit pas de 1440 a 2560 px`,
-      petit === grand,
-      `${petit} px -> ${grand} px`,
+      `largeur (${nom}) : borne en 2560 px, ne suit pas l'ecran`,
+      mesure < LIMITE,
+      `${mesure} px dans une zone de ${zone} px`,
     );
   }
+  await page2560.context().close();
 
   // Le pendant, et c'est LUI qui porte la nuance : on a borne le CONTENU, pas la PAGE. La zone
   // de defilement doit donc rester pleine largeur — seul le paragraphe qui vit dedans est borne.
