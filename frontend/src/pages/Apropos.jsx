@@ -19,11 +19,19 @@ export default function Apropos() {
       titre="À propos"
       sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
     >
-      {/* `max-w-prose` (~65 caracteres) borne la COLONNE DE PROSE, pas la page : l'en-tete reste
-          pleine largeur et aligne sur les autres pages. Pas de `mx-auto` — le bloc reste cale a
-          gauche. Au-dela de ~75 caracteres, l'oeil perd sa ligne en revenant a gauche ; en 1440 px
-          pleine largeur, ces paragraphes atteignaient ~130. */}
-      <div className="flex flex-col gap-6 max-w-prose">
+      {/* Le PANNEAU prend toute la largeur, la PROSE est calee A GAUCHE dedans.
+
+          Trois contraintes a concilier, et c'est le seul agencement qui les tient toutes :
+          - l'en-tete reste cale a gauche, aligne sur toutes les autres pages de l'app ;
+          - la prose demarre au MEME axe que lui — la centrer dans le panneau recreait le
+            desequilibre qu'on cherchait justement a supprimer ;
+          - la ligne de texte garde une longueur lisible (~65-75 caracteres : au-dela, l'oeil
+            perd sa ligne en revenant a gauche ; en pleine largeur elle atteignait ~130).
+
+          Le panneau, lui, REMPLIT l'espace horizontal : le vide vit dedans, et l'oeil le lit
+          comme de la place dans un panneau plutot que comme un trou dans la page. */}
+      <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
+      <div className="flex w-full max-w-3xl flex-col gap-6">
         <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est{" "}
           <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix
@@ -167,6 +175,7 @@ export default function Apropos() {
             Me contacter
           </Link>
         </div>
+      </div>
       </div>
     </Page>
   );

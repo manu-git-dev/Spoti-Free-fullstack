@@ -2035,3 +2035,48 @@ La correction tient en une ligne : `await page.evaluate(() => document.fonts.rea
 **Le détail que j'ai failli manquer** : la carte « Mes demandes » de la page Déposer est **sœur** du `<form>`, pas dedans. En bornant le formulaire à `max-w-2xl` sans y penser, elle serait restée à 2200 px sous un formulaire de 672 px. Un `max-w` ne descend qu'aux **enfants** — les frères ne sont pas concernés. Évident écrit comme ça ; invisible tant qu'on n'ouvre pas un grand écran.
 
 ---
+
+## 2026-07-17 — Spoti-Free (le vide à droite, et un select qui affichait un nombre)
+
+### 62. « Pleine largeur » n'est ni bien ni mal : ça dépend si le contenu a quelque chose à faire de la place
+
+**Contexte** : après avoir borné la prose et les formulaires (note 61), j'ai regardé le résultat et ça n'allait pas. Je l'ai dit comme je le voyais : « si c'est centré, ça crée un déséquilibre parce que l'en-tête commence à gauche ; si on met le contenu à gauche, la partie droite reste complètement vide ».
+
+**Ce que j'avais identifié sans le nommer** : j'avais **deux règles différentes sur la même page**. L'en-tête courait sur toute la largeur, le texte s'arrêtait à 689 px. L'œil ne voit pas « une prose bornée », il voit **deux axes qui se contredisent**. C'est ça, le « moche » — pas la largeur elle-même.
+
+**Quatre agencements construits et regardés en vrai, en 2560 px.** Je note les trois qui ont été écartés, parce que c'est là qu'est l'apprentissage :
+
+1. **Colonne centrée, en-tête compris.** Supprime le déséquilibre (un seul axe), le vide se répartit des deux côtés et se lit comme une marge. Écarté : je veux mes en-têtes **calés à gauche partout**, sans exception — c'est une règle de cohérence de l'app, elle passe avant.
+2. **Panneau pleine largeur, contenu centré dedans** (mon idée). Écarté après l'avoir vu : en 2560, les champs partaient à x=840 pendant que l'en-tête restait à x=250. **Le déséquilibre revenait**, avec une grande boîte grise à moitié vide autour. Détail important : **en 1440, c'était très correct.** Je l'aurais gardé si je n'avais regardé que mon écran.
+3. **Panneau pleine largeur, contenu calé à gauche dedans.** Retenu pour la prose. L'en-tête et le texte partent du même axe (35 px d'écart, invisible), et le panneau remplit l'espace — le vide vit **dedans**, et l'œil le lit comme de la place dans un panneau plutôt que comme un trou dans la page.
+4. **Deux colonnes.** Retenu pour Déposer, et de loin le meilleur.
+
+**Pourquoi les deux colonnes gagnent, et ce n'est pas une question de mise en page** : c'est le seul agencement qui **remplit** l'espace avec quelque chose d'**utile** au lieu de l'étirer. Les trois pavés d'explication (genre, licence, source) qui s'intercalaient entre mes champs sont partis dans un panneau « À savoir » à droite. Résultat : le formulaire est nettement plus court, et on lit les règles **avant** de saisir au lieu de les découvrir champ par champ. **La mise en page a amélioré l'usage** — ce n'était pas le but, c'est le signe qu'elle était juste.
+
+**La règle générale que je retiens** : la question n'est jamais « pleine largeur ou pas ». C'est **« ce contenu a-t-il quelque chose à faire de la place ? »**. Une **grille** (ma Bibliothèque, mon Catalogue) en a : plus large = plus de cartes par rangée, gain réel. Une **colonne de texte** n'en a rien à faire : plus large = le même texte, moins lisible. Un **formulaire** non plus : la largeur utile d'un champ est bornée par l'œil.
+
+**Et le constat honnête que Claude m'a donné et que je note** : **aucun agencement ne remplit 2200 px avec un formulaire de dépôt.** Les deux colonnes ramènent le vide de ~1500 px à ~1000 px. Elles améliorent la page, elles ne font pas disparaître le problème. Vouloir le faire disparaître obligerait à **inventer du contenu pour boucher un trou** — et ça, ça se voit.
+
+---
+
+### 63. Mon select affichait `1332` au lieu du nom — et le test passait
+
+**Contexte** : dans la modale « Ajouter à une playlist », je choisis « Chill du soir » et le champ affiche **`1332`**. Signalé en cliquant, pas par un test.
+
+**La cause, et elle n'est pas un bug de la librairie** : mon `<Select>` vient de Base UI (via le wrapper shadcn). Son composant `<Select.Value>` affiche la **valeur brute** de l'option choisie. Or ma valeur, c'est `id_playlist` — normal, c'est l'identifiant que j'envoie à l'API. Le **nom**, lui, n'est que le contenu affiché de l'`<option>`.
+
+Vu comme ça, c'est logique : **le composant n'a aucun moyen de deviner le libellé à partir de la valeur**. Il ne connaît pas mes playlists, il ne connaît qu'une chaîne. C'est écrit noir sur blanc dans son type, que j'ai fini par aller lire :
+
+> `items` — *When specified, `<Select.Value>` renders the **label** of the selected item instead of the **raw value**.*
+
+La correction, c'est de lui donner la table de correspondance : `items={{ "1332": "Chill du soir", … }}`. Pas un contournement — le mécanisme prévu, que je n'avais pas branché.
+
+**Le deuxième bug, la « saleté » visuelle que je signalais sans savoir la nommer** : le popup se posait **sur** le champ et le masquait entièrement. C'est un comportement volontaire de Base UI (`alignItemWithTrigger`, par défaut à `true`) : il aligne l'option sélectionnée sur le déclencheur, comme un menu natif macOS. Dans une modale, on ne voit plus du tout le champ qu'on remplit. `alignItemWithTrigger={false}` et la liste s'ouvre dessous — mesuré : 32 px de recouvrement avant, 0 après.
+
+**Le point qui me sert vraiment**, et c'est la troisième fois de la journée : **mon test e2e « playlists » passait alors que les deux bugs étaient là.** Il ouvrait la modale, cliquait le combobox, choisissait l'option, validait, et vérifiait que la musique était bien ajoutée. Tout le chemin. **Il n'a jamais regardé ce que l'écran montrait.**
+
+C'est le même angle mort que les curseurs du lecteur et que le bouton « Modifier » du catalogue : mes tests vérifient qu'une **action aboutit**, pas que l'**interface dit la vérité**. Une modale qui marche n'est pas une modale qui s'affiche. Depuis, deux assertions dans ce même parcours — le champ affiche le NOM, et le popup ne recouvre pas le champ — et je les ai vues rougir (`1352`, `32 px`) avant de les garder.
+
+**Ce que je généralise sur ces wrappers** : c'est la deuxième fois qu'un composant Base UI livré par shadcn me pose un problème invisible à la lecture du code (après les deux poignées du `Slider`). Le wrapper est du code **que je n'ai pas écrit mais qui est dans mon dépôt** : il m'appartient. Quand le comportement surprend, la réponse est dans le **type de la librairie**, pas dans le wrapper — et lire un `.d.ts` dans `node_modules` est une compétence, pas un aveu d'échec.
+
+---

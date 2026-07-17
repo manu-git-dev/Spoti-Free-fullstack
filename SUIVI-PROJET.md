@@ -35,7 +35,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-3. **Une passe de tests ultra complete AVANT le deploiement.** Les 165 tests sont verts, mais la
+3. **Une passe de tests ultra complete AVANT le deploiement.** Les 169 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
@@ -146,6 +146,60 @@ n'est jamais perdu, mais il est invisible a qui navigue **par genre**.
 > Si ce cout devient genant, la reponse n'est **pas** de forcer la saisie : c'est d'ajouter une
 > pastille « Sans genre » au filtre (~3 lignes dans `genresDisponibles`). Ecarte a 9 morceaux.
 
+## Largeurs, 2e passe : le panneau et les deux colonnes - 2026-07-17 - fait
+
+Le bornage a gauche du matin ne tenait pas : Manuel l'a rejete a l'oeil (« si c'est centre, ca cree
+un desequilibre — si c'est a gauche, la partie droite reste vide »). **Trois agencements ont ete
+construits et regardes en 2560 px avant d'en retenir un.** Le detail est dans `CLAUDE.md` (regle
+« Largeurs ») — l'essentiel ici, c'est ce qui a ete **ECARTE et pourquoi**, pour ne pas rejouer le
+debat :
+
+1. **Colonne centree, en-tete compris** (`max-w` + `mx-auto` sur `Page.jsx`) — rejete. Supprime bien
+   le desequilibre, mais Manuel veut les en-tetes **cales a gauche sur toutes les pages**, sans
+   exception.
+2. **Panneau pleine largeur, contenu CENTRE dedans** (l'idee initiale de Manuel) — rejete. En 2560,
+   les champs partaient a x=840 pendant que l'en-tete restait a x=250 : **le desequilibre revenait**,
+   avec une boite grise a moitie vide en prime. Correct en 1440, ce qui explique qu'on ait failli
+   le garder.
+3. **Panneau pleine largeur, contenu cale A GAUCHE dedans** — retenu pour la PROSE (A propos,
+   Mentions legales). En-tete et texte au meme axe, le panneau remplit l'espace.
+4. **Deux colonnes** — retenu pour **Deposer**, et c'est le meilleur des quatre : le formulaire a
+   gauche, un panneau « A savoir » a droite. Le seul agencement qui *remplit* vraiment, parce qu'il
+   met du contenu **utile** dans l'espace au lieu de l'etirer. Les trois paves d'explication (genre,
+   licence, source) qui s'intercalaient entre les champs y sont partis : le formulaire est
+   nettement plus court, et on lit les regles AVANT de saisir. La carte « Mes demandes » a rejoint
+   cette colonne — c'est sa place.
+
+**Le constat honnete** : aucun agencement ne remplit 2200 px avec un formulaire. Les deux colonnes
+ramenent le vide de ~1500 px a ~1000 px et ameliorent la page ; elles ne font pas disparaitre le
+probleme. En 1440 (l'ecran de Manuel), en revanche, elles remplissent exactement.
+
+> **Restent en pleine largeur, sans panneau : Profil et Mes demandes.** Ce sont des cartes et des
+> listes — voir le point 4 d'`EN SUSPENS`, la regle retenue ne tranche pas leur cas.
+
+## La modale « Ajouter a une playlist » : deux bugs - 2026-07-17 - fait
+
+Signales par Manuel en cliquant (« le select est pas propre, et le nom de la playlist devient un
+nombre »). **Reproduits avant d'etre corriges** : le declencheur affichait bien `1332`.
+
+- **Le nom devenait un nombre** : `<Select.Value>` de Base UI affiche la **valeur brute** tant
+  qu'on ne lui passe pas `items` — et la valeur, c'est l'`id_playlist` (c'est lui qu'on envoie a
+  l'API). Ce n'est pas un defaut du composant, c'est son contrat, ecrit dans son type : « When
+  specified, `<Select.Value>` renders the label of the selected item instead of the raw value. »
+  Corrige par `items={libelles}`, un objet `{ id: nom }`.
+- **Le popup recouvrait le champ** : Base UI aligne par defaut l'option selectionnee SUR le
+  declencheur (comportement d'un menu natif macOS). Dans une modale, on ne voyait plus du tout le
+  champ qu'on remplissait. Corrige par `alignItemWithTrigger={false}` — 32 px de recouvrement
+  mesures avant, 0 apres.
+- Au passage : `SelectPrimitive.List` n'avait **aucune marge** (le `p-1` vit sur `SelectGroup`, qui
+  ne sert que si on groupe ses options). Les options touchaient le bord du popup.
+
+**Ce que ca redit, pour la troisieme fois de la journee** : le test e2e « playlists » **passait**
+alors que les deux bugs etaient la. Il ouvrait la modale, choisissait l'option, validait — il
+exercait tout le chemin **sans jamais regarder ce que l'ecran montrait**. Une modale qui marche
+n'est pas une modale qui s'affiche. Deux assertions ajoutees dans ce meme parcours (le champ affiche
+le NOM ; le popup ne recouvre pas le champ), verifiees en cassant les deux corrections.
+
 ## Largeurs : borner le CONTENU, pas la page - 2026-07-17 - fait
 
 Le passage en pleine largeur du 2026-07-16 avait emporte la prose et les formulaires avec lui :
@@ -251,10 +305,10 @@ accepte en 201).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **165 tests** automatises : `cd tests && npm install && npm test`
-  (69 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **165/165.**
-- **CI verte** (GitHub Actions) : les 165 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 165 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **169 tests** automatises : `cd tests && npm install && npm test`
+  (73 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **169/169.**
+- **CI verte** (GitHub Actions) : les 169 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 169 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -409,7 +463,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 165 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 169 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -434,7 +488,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 165 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 169 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger

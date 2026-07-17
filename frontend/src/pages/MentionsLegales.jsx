@@ -29,9 +29,10 @@ export default function MentionsLegales() {
       titre="Mentions légales"
       sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
     >
-      {/* Meme regle qu'A propos : on borne la colonne de prose (~65 caracteres), pas la page.
-          Voir le commentaire d'`Apropos.jsx`. */}
-      <div className="flex flex-col gap-8 max-w-prose">
+      {/* Meme agencement qu'A propos — panneau pleine largeur, prose calee a gauche dedans.
+          Le raisonnement est detaille dans `Apropos.jsx`. */}
+      <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
+      <div className="flex w-full max-w-3xl flex-col gap-8">
         <Bloc titre="Éditeur">
           <p>
             Spotifree est un projet personnel et non commercial, réalisé dans le
@@ -115,6 +116,7 @@ export default function MentionsLegales() {
             .
           </p>
         </Bloc>
+      </div>
       </div>
     </Page>
   );

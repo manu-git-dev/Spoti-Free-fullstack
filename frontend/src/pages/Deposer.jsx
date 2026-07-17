@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, UploadCloud, Inbox, ArrowRight } from "lucide-react";
+import { Loader2, UploadCloud, Inbox, ArrowRight, Info } from "lucide-react";
 import { toast } from "sonner";
 import ZoneDepotFichier from "../composants/ZoneDepotFichier";
 import Page from "../composants/Page";
@@ -9,6 +9,21 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiFetch, messageErreur } from "@/lib/api";
 import { GENRES, LICENCES_DEPOT } from "@/lib/validation";
+
+// Met en valeur sans crier : gras + encre normale. Meme composant que dans `Apropos.jsx`.
+function Fort({ children }) {
+  return <span className="font-semibold text-foreground">{children}</span>;
+}
+
+// Une regle du panneau lateral : son intitule, puis son explication.
+function Regle({ titre, children }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="text-sm font-medium">{titre}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">{children}</p>
+    </div>
+  );
+}
 
 export default function Deposer({ user }) {
   const [audio, setAudio] = useState(null);
@@ -126,14 +141,21 @@ export default function Deposer({ user }) {
       titre="Déposer une musique"
       sousTitre="Ton morceau sera publié une fois validé."
     >
-      {/* `max-w-2xl` borne le FORMULAIRE, pas la page : l'en-tete reste pleine largeur, aligne sur
-          les autres pages. Un champ de texte de 2000 px sur un 27 pouces n'a aucun sens — la
-          largeur utile d'un champ est bornee par l'oeil, pas par l'ecran. La pleine largeur reste
-          le bon choix pour les LISTES et les GRILLES (Bibliotheque, Catalogue), qui gagnent
-          reellement a s'etaler : plus de cartes par rangee. */}
+      {/* DEUX COLONNES : le formulaire a gauche, ce qu'il faut savoir a droite.
+          L'en-tete reste cale a gauche, aligne sur toutes les autres pages de l'app, et le
+          formulaire demarre au meme axe que lui — aucun desequilibre.
+
+          Le panneau de droite n'est pas du remplissage : il accueille les explications qui
+          vivaient sous les champs (genre, licence, source) et rallongeaient le formulaire. Elles
+          y sont mieux : on les lit AVANT de saisir, au lieu de les decouvrir champ par champ.
+
+          `items-start` : sans lui, les deux colonnes s'etirent a la meme hauteur (defaut `stretch`)
+          et le panneau de droite se retrouve aussi haut que le formulaire, avec du vide dessous.
+          `lg:` seulement : sous 1024 px, les deux colonnes s'empilent, le panneau passe dessous. */}
+      <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
       <form
         onSubmit={handleSubmit}
-        className="flex max-w-2xl flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
+        className="flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="title" className="text-sm font-medium">
@@ -176,11 +198,6 @@ export default function Deposer({ user }) {
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">
-            Une liste fermée, et non un champ libre : le filtre de la
-            Bibliothèque déduit ses pastilles des genres présents. Un « Trap »
-            saisi ici créerait une pastille menant à un seul morceau.
-          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -203,11 +220,6 @@ export default function Deposer({ user }) {
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">
-            Spotifree ne diffuse que des œuvres réutilisables. En déposant, tu
-            places ton morceau sous cette licence — ou tu confirmes qu'il l'est
-            déjà.
-          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -221,10 +233,6 @@ export default function Deposer({ user }) {
             type="url"
             placeholder="https://…"
           />
-          <p className="text-xs text-muted-foreground">
-            Si le morceau vient d'ailleurs (Jamendo, ccMixter…), indique sa page
-            d'origine. Inutile pour une création personnelle.
-          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -284,22 +292,59 @@ export default function Deposer({ user }) {
         </Button>
       </form>
 
-      {nbDepots > 0 ? (
-        <Link
-          to="/mes-depots"
-          className="mt-6 flex max-w-2xl items-center gap-3 rounded-2xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
-        >
-          <Inbox className="w-5 h-5 text-primary shrink-0" />
-          <span className="flex-1 min-w-0">
-            <span className="block font-medium">Mes demandes de dépôt</span>
-            <span className="block text-sm text-muted-foreground">
-              Suis l'état de {nbDepots > 1 ? "tes" : "ta"} {nbDepots}{" "}
-              {nbDepots > 1 ? "propositions" : "proposition"}.
+      <div className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-4 rounded-2xl border border-border bg-background/50 p-6">
+          <p className="flex items-center gap-2 font-serif text-lg font-bold">
+            <Info className="w-4 h-4 shrink-0 text-primary" />À savoir
+          </p>
+
+          <Regle titre="Les licences acceptées">
+            Spotifree ne diffuse que des œuvres réutilisables : <Fort>CC BY</Fort>{" "}
+            ou <Fort>CC BY-SA</Fort>. En déposant, tu places ton morceau sous
+            cette licence — ou tu confirmes qu'il l'est déjà.
+          </Regle>
+
+          <Regle titre="Le lien vers l'original">
+            Si le morceau vient d'ailleurs (Jamendo, ccMixter…), indique sa page
+            d'origine. Inutile pour une création personnelle.
+          </Regle>
+
+          <Regle titre="Le genre">
+            Une liste fermée, et non un champ libre : le filtre de la
+            Bibliothèque déduit ses pastilles des genres réellement présents. Un
+            « Trap » créerait une pastille menant à un seul morceau.
+          </Regle>
+
+          <Regle titre="Les fichiers">
+            Audio : mp3, wav ou ogg, <Fort>10 Mo</Fort> maximum. Pochette : jpg,
+            png ou webp, <Fort>2 Mo</Fort> — facultative, une image du catalogue
+            sera choisie pour toi.
+          </Regle>
+
+          <Regle titre="Après l'envoi">
+            Ton dépôt part en modération. Il ne rejoint le catalogue qu'une fois
+            validé.
+          </Regle>
+        </aside>
+
+        {nbDepots > 0 ? (
+          <Link
+            to="/mes-depots"
+            className="flex items-center gap-3 rounded-2xl border border-border bg-background/50 px-4 py-3 transition-colors hover:border-accent hover:bg-background/80"
+          >
+            <Inbox className="w-5 h-5 text-primary shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block font-medium">Mes demandes</span>
+              <span className="block text-sm text-muted-foreground">
+                Suis l'état de {nbDepots > 1 ? "tes" : "ta"} {nbDepots}{" "}
+                {nbDepots > 1 ? "propositions" : "proposition"}.
+              </span>
             </span>
-          </span>
-          <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-        </Link>
-      ) : null}
+            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </Link>
+        ) : null}
+      </div>
+      </div>
     </Page>
   );
 }
