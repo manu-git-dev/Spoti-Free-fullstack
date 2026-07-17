@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Home as IconeAccueil } from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
-import TrackRow from "../composants/TrackRow";
+import CarteClassement from "../composants/CarteClassement";
 import Page from "../composants/Page";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -62,12 +62,12 @@ export default function Home({
         <span className="h-5 w-1 rounded-full bg-gradient-to-b from-primary to-accent" />
         Top 5 des titres les plus écoutés
       </h2>
-      <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {topCinq.map((musique, index) => (
-          <TrackRow
+          <CarteClassement
             key={musique.id_music}
             musique={musique}
-            index={index}
+            rang={index + 1}
             setCurrentMusic={setCurrentMusic}
             setCurrentQueue={setCurrentQueue}
             queue={topCinq}
