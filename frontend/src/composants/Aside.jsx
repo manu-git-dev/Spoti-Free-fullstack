@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 import ButtonAddPlaylist from "./ButtonAddPlaylist";
+import BasculeTheme from "./BasculeTheme";
 import Logo from "./Logo";
 
 const lienNav = ({ isActive }) =>
@@ -194,6 +195,9 @@ export default function Aside({
           <Scale className="w-4 h-4 shrink-0" />
           Mentions légales
         </NavLink>
+        {/* Reprend le style INACTIF de `lienSecondaire` (un bouton n'a pas d'etat de route
+            actif). `w-full` : dans une colonne flex, un bouton ne s'etire pas de lui-meme. */}
+        <BasculeTheme className="flex w-full items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
       </nav>
     </aside>
   );
