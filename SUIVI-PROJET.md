@@ -36,10 +36,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    mecanisme ? (Verifier s'il y en a : le catalogue vient de Jamendo, chaque morceau a la sienne —
    il n'y en a peut-etre aucun.)
 
-3. **Refaire la page d'ACCUEIL, avec des cartes speciales pour le Top 5.** Le Top 5 est reel
-   (classement par nombre d'ecoutes). Les cartes actuelles sont celles du catalogue ; un classement
-   merite sa propre forme (le rang, l'ecart d'ecoutes…).
-
 4. **Revoir le CONTENU d'A propos.** Le texte est a modifier — Manuel dira quoi. *(Rappel : une
    demande de texte n'est pas une demande de code — le texte se decide d'abord.)*
 
