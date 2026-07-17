@@ -22,22 +22,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    trop fine devient impossible a attraper a la souris (meme loi de Fitts que la zone de 4 px du
    curseur du lecteur, voir la note 60).
 
-6. **Les cartes de playlist sont TROP GRANDES en mobile** — constate par Manuel en cliquant dans
-   l'app le 2026-07-17. « On fera plus tard ».
-
-   **Ou regarder** : `pages/Playlists.jsx:60` rend la grille en **`grid-cols-2`** sous `md`, et
-   `composants/Playlist.jsx:90` donne a la vignette un **`aspect-square w-full`**. Sur un ecran de
-   390 px, chaque carte fait donc ~170 px de large — et sa vignette **~170 px de haut**, plus le
-   titre : on voit a peine deux playlists a l'ecran.
-
-   **Pistes** (a trancher) : passer a `grid-cols-1` avec une vignette **petite et a gauche** (une
-   ligne par playlist, comme une liste) ; ou garder deux colonnes en reduisant la vignette
-   (`aspect-[3/2]`, ou une hauteur fixe). La premiere ressemble a ce que font les vraies applis
-   de musique sur telephone.
-
-   **A verifier en meme temps** : les cartes de MUSIQUE (`composants/Card.jsx`) ont-elles le meme
-   defaut ? Si oui, c'est une seule decision, pas deux.
-
 7. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
