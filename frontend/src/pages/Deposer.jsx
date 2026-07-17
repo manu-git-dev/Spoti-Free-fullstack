@@ -8,7 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiFetch, messageErreur } from "@/lib/api";
-import { LICENCES_DEPOT } from "@/lib/validation";
+import { GENRES, LICENCES_DEPOT } from "@/lib/validation";
 
 export default function Deposer({ user }) {
   const [audio, setAudio] = useState(null);
@@ -158,7 +158,24 @@ export default function Deposer({ user }) {
           <label htmlFor="genre" className="text-sm font-medium">
             Genre <span className="text-muted-foreground">(facultatif)</span>
           </label>
-          <Input id="genre" name="genre" placeholder="Pop, Rock, Rap…" />
+          <select
+            id="genre"
+            name="genre"
+            defaultValue=""
+            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+          >
+            <option value="">Sans genre</option>
+            {GENRES.map((genre) => (
+              <option key={genre} value={genre}>
+                {genre}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Une liste fermée, et non un champ libre : le filtre de la
+            Bibliothèque déduit ses pastilles des genres présents. Un « Trap »
+            saisi ici créerait une pastille menant à un seul morceau.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">

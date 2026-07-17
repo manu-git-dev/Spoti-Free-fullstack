@@ -15,8 +15,10 @@ import {
   licenceValide,
   urlDeLicence,
   sourceUrlValide,
+  genreValide,
   MESSAGE_LICENCE,
   MESSAGE_SOURCE_URL,
+  MESSAGE_GENRE,
 } from "../validation.js";
 
 const router = express.Router();
@@ -215,6 +217,14 @@ router.post(
       if (!sourceUrlValide(sourceUrl)) {
         await supprimerFichiers(audio.filename, image?.filename);
         return res.status(400).json({ message: MESSAGE_SOURCE_URL });
+      }
+
+      // Le <select> du formulaire ne vit que dans le navigateur : un appel direct a l'API peut
+      // poser n'importe quel genre. Sans ce garde-fou, un depot approuve avec "Trap" creerait une
+      // pastille menant a UN morceau dans la Bibliotheque (qui deduit ses pastilles du catalogue).
+      if (!genreValide(genre)) {
+        await supprimerFichiers(audio.filename, image?.filename);
+        return res.status(400).json({ message: MESSAGE_GENRE });
       }
 
       // La limite globale de multer est celle de l'audio (10 Mo) : on affine ici pour l'image.

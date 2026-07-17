@@ -12,39 +12,34 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### Ce qui attend une decision de Manuel
 
-1. **Le genre du depot est en TEXTE LIBRE** (`Deposer.jsx`). Un depot approuve avec « Trap »
-   creera une pastille menant a UN morceau, et « rock » / « Rock » en feraient **deux distinctes**
-   (le comptage des pastilles se fait en JavaScript, sensible a la casse ; MySQL, lui, les
-   considere egaux). Le passer en `<select>` sur `GENRES` fermerait la porte a l'entree, comme
-   pour la licence — l'admin ne ferait plus que valider. ~15 min. *Propose deux fois, sans reponse.*
-2. **Les etats « connecte-toi »** (Profil, Deposer, Mes demandes) sont restes **centres**, alors
+1. **Les etats « connecte-toi »** (Profil, Deposer, Mes demandes) sont restes **centres**, alors
    que le contenu de ces pages a ete passe en pleine largeur. C'est volontaire de ma part (ce sont
    des appels a l'action, pas du contenu), mais Manuel n'a pas tranche. *Sans reponse.*
-3. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
+2. **Les lignes de texte d'A propos et Mentions legales font ~130 caracteres** en 1440 px, depuis
    le passage en pleine largeur. La convention typographique tourne autour de 65-75 : au-dela,
    l'oeil perd sa ligne en revenant a gauche. Compromis possible : garder la page pleine largeur
    mais limiter les **paragraphes** (`max-w-prose`), sans recentrer le bloc. *Signale, sans reponse.*
 ### A PENSER (demandes par Manuel le 2026-07-17)
 
-4. **L'icone de « Mes playlists » dans la sidebar.** C'est la **seule** entree de navigation sans
+3. **L'icone de « Mes playlists » dans la sidebar.** C'est la **seule** entree de navigation sans
    icone : Accueil, Bibliotheque, Favoris, Profil, Deposer, Mes demandes, A propos, Contact et
    Mentions legales en ont toutes une (`Aside.jsx` ~ligne 94 : le `NavLink` n'a que du texte).
    `ListMusic` est le choix naturel — c'est deja l'icone de l'en-tete de la page Playlists. Penser
    au **menu mobile** (`HeaderMobile.jsx`) et a la **bottom nav** (`BottomNav.jsx`) en meme temps.
-5. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
+4. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
    `actions` passe SOUS le titre) — c'est justement ce que le `flex-1 min-h-0` de `Page.jsx` est
    cense encaisser, mais ca n'a pas ete mesure ; le lecteur a un bloc mobile distinct (barre
    compacte, sans curseurs) ; la rangee de pastilles de genre peut passer sur plusieurs lignes.
    Moyen : rejouer la suite e2e en viewport mobile.
-6. **Une passe de tests ultra complete AVANT le deploiement.** Les 155 tests sont verts, mais la
+5. **Une passe de tests ultra complete AVANT le deploiement.** Les 157 tests sont verts, mais la
    journee a montre qu'ils couvrent ce qu'on a **pense a exercer** : les deux curseurs du lecteur
    etaient morts, le bouton « Modifier » du catalogue repondait 400, et la barre de progression
    debordait de sa carte — **tout ca avec une suite verte**. Manuel a trouve les trois en cliquant.
    Avant la mise en ligne : parcourir l'app a la main, sur bureau ET mobile, chaque page et chaque
    bouton — et transformer chaque trouvaille en test.
-7. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
+6. **Reflechir a remplacer le `localStorage` par une session.** C'est le plus gros chantier de
    cette liste, et le seul qui touche a la securite.
 
    **Le probleme** : le JWT vit dans `localStorage` (`apiFetch` le lit, `App.jsx` aussi). Or
@@ -85,7 +80,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
 
-8. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
+7. **Tester sur GRAND ecran, et repenser la mise en page des formulaires.** Verifie en 1440x900
    (portable) uniquement — ca passe. Sur un 27 pouces, le panneau fera ~2200 px : les champs de
    **Deposer** (titre, artiste, genre, licence, source) s'etaleront sur toute la largeur. Un champ
    de texte de 2000 px n'a aucun sens : l'oeil ne suit plus, et ca ne ressemble a rien.
@@ -104,7 +99,7 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    **Piste** : borner le FORMULAIRE (`max-w-2xl` sur le `<form>`), pas la page. L'en-tete resterait
    pleine largeur et aligne sur les autres pages — c'est different de l'etat d'avant, ou le titre
    lui-meme etait centre avec le contenu.
-9. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
+8. **« Mes demandes » a-t-il sa place dans l'Aside ?** La page est atteignable depuis **trois**
    endroits : l'Aside (`Aside.jsx:142`), le menu mobile (`HeaderMobile.jsx:57`), et une carte sur
    la page Deposer (`Deposer.jsx:265`).
 
@@ -121,26 +116,51 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### Ce qui est a faire par Manuel
 
-10. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
+9. **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** : directeur de la
    publication, contact, hebergeur. **Bloquant pour la mise en ligne.** Ils n'ont pas ete devines
    volontairement : des mentions legales approximatives affirment quelque chose de faux, ce qui est
    pire que pas de mentions legales. L'hebergeur sera connu des la validation Hostinger.
-11. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
+10. **La validation du paiement Hostinger.** C'est la seule chose qui bloque encore le deploiement
    cote machine.
 
 ### Decisions reportees (avec leur raison)
 
-12. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
+11. **La pagination du catalogue** : reportee APRES le deploiement. A 100 morceaux elle ne resout
    aucun probleme (`GET /api/musics` renvoie ~35 Ko), et elle casserait trois choses : la
    recherche et le tri (aujourd'hui cote client, dans `App.jsx`) et surtout **la file d'attente du
    lecteur** (`TrackRow` fait `setCurrentQueue(queue)` avec le catalogue entier — paginee, la
    lecture s'arreterait au bas de la page chargee). Elle redeviendra necessaire vers 300-500
    morceaux, et c'est alors qu'elle aura une vraie raison d'etre.
-13. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
+12. **Monter le catalogue au-dela de 100** : necessite la pagination d'abord. ~6 Mo par morceau
    (100 = 590 Mo, 300 = ~2 Go).
-14. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
+13. **Les tags non classes a l'import** : `indie (4)`, `filmscore (1)` finissent sans genre. Assume
    — `indie` est une posture, pas un son. Le script les liste a chaque import : si l'un revient
    souvent, c'est qu'il manque une famille dans `GENRES`.
+
+## Le genre du depot passe en liste fermee - 2026-07-17 - fait
+
+Le formulaire de depot laissait le genre en **texte libre** : un depot approuve avec « Trap »
+creait une pastille menant a UN morceau dans la Bibliotheque (qui deduit ses pastilles des genres
+reellement presents), et « rock » / « Rock » en auraient fait **deux distinctes**.
+
+- `Deposer.jsx` : l'`Input` devient un `<select>` sur `GENRES`, calque sur celui de la licence
+  juste en dessous (formulaire **non controle** : la valeur est lue au submit via `FormData`).
+  Pas d'option « hors liste » comme dans `AdminMusiques.jsx` — celle-la existe pour ne pas effacer
+  en silence le genre d'un morceau **deja en base**, un formulaire de creation part de zero.
+- `submissionRoute.js` : **c'est la vraie barriere**. Un `<select>` ne vit que dans le navigateur ;
+  un appel direct a l'API n'y passe pas. Le genre etait le seul champ a liste fermee sans garde-fou
+  serveur, alors que la licence avait le sien. `genreValide()` et `MESSAGE_GENRE` existaient deja
+  dans `validation.js`, importes nulle part.
+- Le genre reste **facultatif** (9 morceaux du catalogue n'en ont pas) : `genreValide()` accepte la
+  valeur vide. Fermer la liste ne devait pas rendre le champ obligatoire — un test le verrouille.
+
+**Ce que le chantier a revele** : le helper `formulaireDepot` des tests envoyait `genre: "Test"` —
+un genre invente, que le serveur acceptait faute de validation. Les 29 tests de depot passaient
+donc **en exercant un cas qui n'aurait jamais du etre valide**. Le garde-fou les a tous fait
+echouer d'un coup : c'est la validation qui a revele que le test mentait, pas l'inverse.
+
+Suite : **157 tests** (+2 : un genre hors liste est refuse en 400, un depot sans genre reste
+accepte en 201).
 
 ## ETAT DU PROJET (au 2026-07-16)
 
@@ -149,10 +169,10 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > **100 vraies oeuvres Creative Commons**, de **100 artistes differents**, chacune avec sa licence
 > et un lien vers son original. Plus rien ne bloque la mise en ligne cote droits.
 
-- **155 tests** automatises : `cd tests && npm install && npm test`
-  (61 parcours + 40 securite + 29 depot + 25 admin). Sortie en code 1 si echec. **155/155.**
-- **CI verte** (GitHub Actions) : les 155 tests tournent aussi sur une machine neuve, a chaque push.
-- Les 155 tests passent **contre le build de production**, pas seulement le serveur de dev.
+- **157 tests** automatises : `cd tests && npm install && npm test`
+  (61 parcours + 40 securite + 31 depot + 25 admin). Sortie en code 1 si echec. **157/157.**
+- **CI verte** (GitHub Actions) : les 157 tests tournent aussi sur une machine neuve, a chaque push.
+- Les 157 tests passent **contre le build de production**, pas seulement le serveur de dev.
 - **0 vulnerabilite** npm. Build OK. Envoi de mail verifie en reel.
 
 ### Le chantier des licences (2026-07-16)
@@ -307,7 +327,7 @@ utilisateurs, gestion du catalogue).
 ### LA PROCHAINE ETAPE : le deploiement
 
 **Le deploiement n'attend plus que la machine** (validation du paiement Hostinger). Le catalogue
-est en place, les 155 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
+est en place, les 157 tests sont verts. Reste a completer les trois `A_COMPLETER` des mentions
 legales (dont l'hebergeur, connu des la validation).
 
 **Etat au 2026-07-16 — le deploiement est EN COURS.** VPS **commande** chez Hostinger : **KVM 2**
@@ -332,7 +352,7 @@ Tout est deroule pas a pas dans **`DEPLOIEMENT.md`** (DNS, nginx, systemd, HTTPS
 
 **Pourquoi Ubuntu 24.04 et pas 26.04**, pourtant plus recente et LTS elle aussi : `apt install
 mysql-server` livre **MySQL 8.0 sur 24.04**, mais **MySQL 8.4 sur 26.04**. Or la CI teste contre
-`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 155 tests
+`mysql:8.0` - deployer sur 26.04 ferait tourner la prod sur une version qu'**aucun des 157 tests
 n'a jamais exercee**. Regle : pour un deploiement, prendre l'avant-derniere LTS.
 
 **Echeance a ne pas rater : ~juin 2027**, un mois avant le renouvellement - la facture Hostinger
