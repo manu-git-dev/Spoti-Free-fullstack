@@ -15,13 +15,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 4. **Revoir le CONTENU d'A propos.** Le texte est a modifier — Manuel dira quoi. *(Rappel : une
    demande de texte n'est pas une demande de code — le texte se decide d'abord.)*
 
-5. **La forme et/ou la couleur des barres de defilement ?** A explorer. Elles sont aujourd'hui
-   celles du navigateur, ce qui detonne en theme sombre sur certains systemes. `::-webkit-scrollbar`
-   (Chrome/Safari) et `scrollbar-color` / `scrollbar-width` (Firefox, et standard) — les deux sont
-   necessaires pour couvrir tout le monde. Attention a ne pas casser l'**accessibilite** : une barre
-   trop fine devient impossible a attraper a la souris (meme loi de Fitts que la zone de 4 px du
-   curseur du lecteur, voir la note 60).
-
 7. **Confirmer le responsive.** Toute la refonte (structure des pages via `Page.jsx`, filtre par
    genre, lecteur, modales) a ete verifiee **en 1440x900 uniquement**. Le mobile n'a jamais ete
    ouvert. Points a risque connus : l'en-tete `EnTetePage` **grandit** sur petit ecran (le bloc
