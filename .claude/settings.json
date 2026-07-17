@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); case \"$f\" in */SUIVI-PROJET.md) n=$(wc -l < \"$f\" 2>/dev/null || echo 0); [ \"$n\" -gt 250 ] && { echo \"SUIVI-PROJET.md fait $n lignes (>250) : ce fichier ne garde QUE la section EN SUSPENS. Elaguer — le 'fait' vit dans les commits et NOTES-APPRENTISSAGE.md.\" >&2; exit 2; } ;; esac; exit 0",
+            "statusMessage": "Garde-fou taille SUIVI-PROJET.md"
+          }
+        ]
+      }
+    ]
+  }
+}

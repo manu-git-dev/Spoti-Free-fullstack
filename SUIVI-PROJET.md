@@ -4,7 +4,7 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## EN SUSPENS — a lire en premier (mis a jour le 2026-07-17)
+## EN SUSPENS — a lire en premier (mis a jour le 2026-07-17, fin de session)
 
 > Ce qui attend une decision ou du travail. **Rien de ce qui est fait ne figure ici** : c'est
 > dans le reste du fichier et dans les commits. Tenu a jour a chaque fin de session (protocole
@@ -68,6 +68,12 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    solution idiomatique, c'est le cookie `httpOnly`. **A faire APRES le deploiement** : c'est
    exactement le genre de changement qui casse l'authentification, et on ne debugge pas une
    authentification cassee le soir d'une mise en ligne.
+
+16. **Envisager un agent de relecture** (`.claude/agents/relecteur.md`) — discute le 2026-07-17,
+   pas cree. Le plus utile des trois agents proposes (relecteur > verificateur > explorateur) : il
+   relit un diff AVANT commit contre les invariants du projet (surfaces, `apiFetch`, licence
+   `NOT NULL`, fichiers partages jamais supprimes…) — ce qu'un relecteur generique ignore. Claude a
+   propose de le monter en exemple commente. **En attente du feu vert de Manuel** (projet vs perso).
 
 ### Ce qui est a faire par Manuel
 
