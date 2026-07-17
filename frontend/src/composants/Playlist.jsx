@@ -80,23 +80,30 @@ export default function Playlist({ id, nom, setPlaylists }) {
     }
   }
 
+  // Mobile : une rangee (vignette a gauche + nom) — une playlist est un placeholder generique,
+  // pas une pochette d'album, un grand carre lui donne un poids qu'elle n'a pas. Desktop (`sm:`) :
+  // la carte poster de toujours. `pr-20` reserve la place des actions cote mobile (elles sont en
+  // overlay absolu, donc hors du flux : sans ca, un nom long passerait dessous).
   return (
-    <div className="group relative flex flex-col">
+    <div className="group relative flex">
       <Link
         to={`/playlists/${id}`}
-        className="flex flex-col rounded-2xl border border-border bg-background/50 p-3 transition-all hover:bg-background/80 hover:border-accent hover:shadow-lg hover:shadow-primary/10"
+        className="flex flex-1 min-w-0 items-center gap-3 p-3 pr-20 rounded-2xl border border-border bg-background/50 transition-all hover:bg-background/80 hover:border-accent hover:shadow-lg hover:shadow-primary/10 sm:flex-col sm:items-stretch sm:gap-0 sm:pr-3"
       >
         <div
-          className={`aspect-square w-full rounded-xl bg-gradient-to-br ${degrade} flex items-center justify-center`}
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${degrade} sm:h-auto sm:w-full sm:aspect-square`}
         >
-          <ListMusic className="w-10 h-10 text-white/90" />
+          <ListMusic className="h-7 w-7 text-white/90 sm:h-10 sm:w-10" />
         </div>
-        <h2 className="mt-2 truncate font-semibold">{nom}</h2>
-        <p className="text-xs text-muted-foreground uppercase">Playlist</p>
+        <div className="min-w-0 flex-1 sm:mt-2 sm:flex-none">
+          <h2 className="truncate font-semibold">{nom}</h2>
+          <p className="text-xs text-muted-foreground uppercase">Playlist</p>
+        </div>
       </Link>
 
-      {/* Actions : discretes, revelees au survol de la carte */}
-      <div className="absolute top-5 right-5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      {/* Actions. Mobile : toujours visibles (pas de survol au doigt), calees a droite de la
+          rangee. Desktop : discretes, revelees au survol de la carte. */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 opacity-100 transition-opacity sm:right-5 sm:top-5 sm:translate-y-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger
             render={

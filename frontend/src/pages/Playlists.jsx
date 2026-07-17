@@ -57,9 +57,9 @@ export default function Playlists({ playlists, setPlaylists, user }) {
         </ButtonAddPlaylist>
       }
     >
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {playlists.length === 0 ? (
-          <div className="text-muted-foreground col-span-2 md:col-span-4 lg:col-span-5">
+          <div className="text-muted-foreground col-span-full">
             Aucune playlist pour le moment
           </div>
         ) : (
