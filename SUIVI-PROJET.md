@@ -36,14 +36,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    mecanisme ? (Verifier s'il y en a : le catalogue vient de Jamendo, chaque morceau a la sienne —
    il n'y en a peut-etre aucun.)
 
-2. **Ajouter un MODE CLAIR.** L'app est en sombre uniquement. Les couleurs vivent deja dans des
-   variables CSS (`bg-background`, `bg-card`, `text-muted-foreground`…), donc la bascule est
-   surtout un jeu de valeurs a definir pour `:root` — pas une reecriture. **Deux points de
-   vigilance** : la palette des graphiques admin a ete **validee par script** pour le contraste en
-   mode sombre (violet a 2.6:1 avec les couleurs brutes, accent assombri a `#5c8fe6`) — il faudra
-   la revalider en clair ; et les surfaces (`bg-background/50` sur `bg-card`) reposent sur des
-   opacites qui ne se transposent pas mecaniquement.
-
 3. **Refaire la page d'ACCUEIL, avec des cartes speciales pour le Top 5.** Le Top 5 est reel
    (classement par nombre d'ecoutes). Les cartes actuelles sont celles du catalogue ; un classement
    merite sa propre forme (le rang, l'ecart d'ecoutes…).
