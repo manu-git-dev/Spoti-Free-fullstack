@@ -36,6 +36,9 @@ export default function Page({
   sousTitre,
   actions,
   classeIcone,
+  // Passe a `true` quand le bloc `actions` est large (cf. EnTetePage) : il reste empile sous le
+  // titre jusqu'a `xl` au lieu de `lg`.
+  actionsLarges,
   // Pour ce qui doit s'appliquer a la zone de defilement elle-meme (une grille, un `max-w`…).
   classeContenu,
   children,
@@ -48,6 +51,7 @@ export default function Page({
         sousTitre={sousTitre}
         actions={actions}
         classeIcone={classeIcone}
+        actionsLarges={actionsLarges}
       />
 
       {/* `-mx-1 px-1` : la zone de defilement rogne ce qui depasse d'elle. Sans cette marge
