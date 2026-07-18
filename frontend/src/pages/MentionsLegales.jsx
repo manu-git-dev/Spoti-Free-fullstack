@@ -3,10 +3,12 @@ import { Scale } from "lucide-react";
 import Page from "../composants/Page";
 import TitreSection from "../composants/TitreSection";
 
-// ATTENTION — trois valeurs sont a completer avant la mise en ligne, elles sont marquees
-// A_COMPLETER ci-dessous. Elles n'ont pas ete devinees volontairement : des mentions legales
-// qui affichent une raison sociale ou un hebergeur approximatifs sont pires que pas de mentions
-// legales du tout, puisqu'elles affirment quelque chose de faux.
+// ATTENTION — une valeur reste a completer avant la mise en ligne : les coordonnees de
+// l'HEBERGEUR (bloc « Hebergement », marque A_COMPLETER ci-dessous). Elle depend du paiement
+// Hostinger (#12) : l'entite facturante exacte et ses coordonnees figurent sur la page legale
+// d'Hostinger / le mail de confirmation de commande. Ne pas la deviner : des mentions legales
+// qui affichent un hebergeur approximatif sont pires que pas de mentions du tout, puisqu'elles
+// affirment quelque chose de faux.
 
 // La taille du corps de texte (`leading-relaxed`, sans `text-sm`) est celle des paragraphes de
 // la page A propos. Les deux pages sont de la prose : rien ne justifiait qu'on lise l'une plus
@@ -39,8 +41,15 @@ export default function MentionsLegales() {
             cadre d'une formation de développeur web.
           </p>
           <p>
-            Directeur de la publication : <strong>A_COMPLETER</strong> — contact
-            : <strong>A_COMPLETER</strong>.
+            Directeur de la publication : <strong>Manuel Mattana</strong>. Pour
+            nous contacter, écrivez-nous via la{" "}
+            <Link
+              to="/contact"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              page de contact
+            </Link>
+            .
           </p>
         </Bloc>
 
