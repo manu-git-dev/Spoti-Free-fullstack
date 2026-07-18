@@ -80,7 +80,7 @@ Si le backend a déjà crashé faute de MySQL et que MAMP vient d'être démarr�
 
 ## Base de données
 
-- **`backend/scripts/schema.sql` est la source de vérité du schéma** (les 8 tables). Les scripts
+- **`backend/scripts/schema.sql` est la source de vérité du schéma** (les 9 tables). Les scripts
   `add-*.sql` du même dossier sont des **migrations historiques** — leurs modifications sont déjà
   incluses dans `schema.sql`. Sur une base neuve, celui-ci suffit, suivi de `seed-musics.sql` (le
   catalogue). Si tu modifies une table, mets `schema.sql` à jour : c'est ce fichier que rejoue la CI.
