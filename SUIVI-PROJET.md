@@ -34,10 +34,12 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### A faire par MANUEL (bloquant pour la mise en ligne)
 
-- **Les trois `A_COMPLETER` de `frontend/src/pages/MentionsLegales.jsx`** (#11) : directeur de la
-  publication, contact, hebergeur. Pas devines volontairement : des mentions legales approximatives
-  affirment quelque chose de faux, pire que pas de mentions. L'hebergeur sera connu a la validation
-  Hostinger.
+- **⚠️ RAPPEL AVANT DEPLOIEMENT — coordonnees de l'HEBERGEUR dans `MentionsLegales.jsx`** (#11) :
+  directeur de publication (Manuel Mattana) et contact (renvoi vers `/contact`) sont **faits** le
+  2026-07-18. Reste **le seul `A_COMPLETER`** : nom + adresse + telephone de l'hebergeur, a prendre
+  sur la page legale d'Hostinger / le mail de commande **une fois le paiement passe** (#12). Manuel a
+  explicitement demande qu'on le lui **rappelle avant tout deploiement** : les mentions legales sont
+  incompletes tant que ce bloc reste en `A_COMPLETER`.
 - **La validation du paiement Hostinger** (#12) : la seule chose qui bloque encore le deploiement
   cote machine.
 
