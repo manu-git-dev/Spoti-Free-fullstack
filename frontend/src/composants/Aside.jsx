@@ -195,6 +195,9 @@ export default function Aside({
           <Scale className="w-4 h-4 shrink-0" />
           Mentions légales
         </NavLink>
+        {/* Separateur : le choix du theme n'est pas une page de plus, c'est un reglage. Le trait
+            l'isole des liens de navigation au-dessus. */}
+        <div className="h-px w-full bg-border my-1.5 shrink-0" />
         {/* Reprend le style INACTIF de `lienSecondaire` (un bouton n'a pas d'etat de route
             actif), mais en `justify-between` : le libelle a gauche, l'interrupteur a droite. */}
         <BasculeTheme className="flex w-full items-center justify-between text-sm px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
