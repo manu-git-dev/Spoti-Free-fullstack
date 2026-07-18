@@ -16,21 +16,29 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
   invariants du projet (surfaces, `apiFetch`, licence `NOT NULL`, fichiers partages jamais
   supprimes…) — ce qu'un relecteur generique ignore. Discute le 2026-07-17, pas cree. **En attente
   du feu vert** (le monter sur ce projet, ou en perso).
+- **Note d'apprentissage a ecrire ?** (question posee le 2026-07-18, sans reponse) : Claude a propose de
+  consigner dans `NOTES-APPRENTISSAGE.md` la lecon « echantillonnage discret vs paliers de rupture »
+  (des captures a 5 largeurs isolees avaient rate le bug d'en-tete de la bande 1024-1077px). A decider.
 
 ### En attente de TRAVAIL
 
-- **Passe responsive + tests manuels complete AVANT deploiement** (#7/#8) : parcourir **chaque page
-  et chaque bouton, bureau ET mobile**, et transformer chaque trouvaille en test. La refonte n'a ete
-  verifiee qu'en 1440x900 + quelques passes DevTools ; le vrai mobile n'a presque jamais ete ouvert.
-  Inclut le **vrai test tactile du lecteur sur le tel de Manuel** — reporte cette session : la box de
-  l'armee **isole les clients du wifi** (impossible de joindre le Mac depuis le tel ; le hotspot du
-  tel ne marche pas non plus car l'iPhone route par la 4G). DevTools a valide la MISE EN PAGE du
-  lecteur plein ecran mobile, mais **pas la cible tactile au doigt** (les icones font 16px + padding).
-- **Passe d'accessibilite** (#20) : irregulier (des `aria-label` par endroits, pas partout ; le
-  lecteur n'est probablement pas pilotable au clavier). Entamee au fil de l'eau sur le lecteur. C'est
-  le manque « invisible » qui compte le plus en entretien de stage.
-- **Revoir le CONTENU d'A propos** (#4) : le texte est a modifier — Manuel dira quoi. *(Une demande
-  de texte n'est pas une demande de code : le texte se decide d'abord.)*
+- **PROCHAINE GROSSE SESSION — test d'architecture archi-complet de toute l'app** (dicte par Manuel
+  le 2026-07-18, a attaquer a la reprise) : une revue de fond de bout en bout (architecture + tests)
+  de l'application entiere, page par page et flux par flux. C'est LE gros chantier de la reprise.
+- **Passe responsive + tests manuels** (#7/#8) : **la passe automatisee est faite** le 2026-07-18 —
+  13 pages x 5 largeurs (390/820/1440/1920/2560) mesurees (**0 debordement, 0 erreur JS**) + captures,
+  etats remplis (favoris/playlists/detail) verifies, et **deux bugs d'en-tete corriges** : titre casse
+  en 3 lignes sur tablette (-> seuil `lg`) et recherche de la Bibliotheque qui recouvrait le titre en
+  1024-1077px (-> seuil `xl` via la nouvelle prop `actionsLarges` de `Page`/`EnTetePage`). **Restent
+  deux verifications HUMAINES** que les captures ne remplacent pas :
+  - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en page) —
+    toujours bloque par le wifi de l'armee (isole les clients ; hotspot du tel KO, l'iPhone route par la 4G) ;
+  - la **verif visuelle des grands ecrans (1920/2560) sur le PC de la formation** — Manuel n'a pas
+    d'ecran plus grand que son portable a la maison. Les captures 2560 sont saines, mais il veut voir en vrai.
+- **Passe d'accessibilite** (#20) : irregulier (des `aria-label` par endroits, pas partout ; le lecteur
+  n'est probablement pas pilotable au clavier). Note du 2026-07-18 : les boutons de transport **desktop**
+  font **16-20px** (icone seule, sans padding) — cible souris petite, a agrandir dans cette passe (le
+  plein ecran mobile, lui, est correct). C'est le manque « invisible » qui compte le plus en entretien.
 
 ### A faire par MANUEL (bloquant pour la mise en ligne)
 
