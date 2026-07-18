@@ -48,6 +48,7 @@ export default function Bibliotheque({
     <Page
       icone={Library}
       titre="Bibliothèque"
+      actionsLarges
       actions={
         <div className="flex items-center gap-3">
           <Input

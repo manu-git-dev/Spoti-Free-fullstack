@@ -11,15 +11,28 @@
 // (768px) : dans la bande tablette, la sidebar (260px) + l'action laissaient trop peu de place, et
 // un titre long ("Mes demandes de depot") se cassait en trois lignes. En dessous de `lg`, l'en-tete
 // s'empile (titre pleine largeur, action dessous) — le meme comportement que sur mobile.
+//
+// `actionsLarges` repousse ce passage en rangee de `lg` (1024px) a `xl` (1280px). C'est pour les
+// pages dont le bloc `actions` est LARGE : la recherche de la Bibliotheque fait ~480px (champ 384px
+// + selecteur d'affichage), elle ne tient pas a cote du titre entre 1024 et ~1080px et le recouvrait.
+// On garde donc la barre EMPILEE plus longtemps pour ces pages-la. Les deux jeux de classes sont
+// ecrits en toutes lettres (pas construits) pour que le JIT de Tailwind les voie.
+const RUPTURES = {
+  lg: { conteneur: "lg:flex-row lg:items-center lg:gap-4", actions: "lg:ml-auto lg:w-auto" },
+  xl: { conteneur: "xl:flex-row xl:items-center xl:gap-4", actions: "xl:ml-auto xl:w-auto" },
+};
+
 export default function EnTetePage({
   icone: Icone,
   titre,
   sousTitre,
   actions,
   classeIcone,
+  actionsLarges = false,
 }) {
+  const rupture = actionsLarges ? RUPTURES.xl : RUPTURES.lg;
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 mb-6">
+    <div className={`flex flex-col gap-3 mb-6 ${rupture.conteneur}`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
           <Icone className={`w-6 h-6 text-white ${classeIcone ?? ""}`} />
@@ -33,7 +46,7 @@ export default function EnTetePage({
       </div>
 
       {actions ? (
-        <div className="lg:ml-auto w-full lg:w-auto shrink-0">{actions}</div>
+        <div className={`w-full shrink-0 ${rupture.actions}`}>{actions}</div>
       ) : null}
     </div>
   );
