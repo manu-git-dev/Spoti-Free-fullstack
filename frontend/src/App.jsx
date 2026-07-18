@@ -237,6 +237,8 @@ function App() {
                   token={token}
                   setToken={setToken}
                   currentMusic={currentMusic}
+                  genresDisponibles={genresDisponibles}
+                  setGenreFiltre={setGenreFiltre}
                 />
               }
             />
