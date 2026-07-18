@@ -511,6 +511,150 @@ await etape("lecteur", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 5 ter. Shuffle et repeat (verrouille #17)
+//
+// Le piege du hasard : on ne teste PAS une sequence precise (elle change a chaque tirage), mais
+// l'INVARIANT — « les N titres passent tous une fois avant repetition ». La taille de la file
+// vient de l'API (/api/musics/top), pas du DOM : on lance depuis le Top de l'accueil, dont la file
+// EST ce classement.
+// ---------------------------------------------------------------------------
+await etape("lecteur : shuffle et repeat", async () => {
+  const compte = await creerCompte("ShuffleTest");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+  page.on("pageerror", (e) => erreursJS.push(e.message));
+
+  // `/api/musics/top` renvoie le tableau DIRECTEMENT (res.json(top)), pas enveloppe dans `{donnees}`.
+  const { donnees: top } = await apiAuth(compte.token)("/api/musics/top");
+  const tailleFile = top.length;
+
+  await page.goto(`${APP}/`);
+  await page.waitForTimeout(1500);
+  await page.getByAltText(/^Pochette album /).first().click({ timeout: 5000 });
+  await page.waitForTimeout(1500);
+
+  const srcAudio = () => page.locator("audio").getAttribute("src");
+  const srcAvant = await srcAudio();
+
+  // Activer l'aleatoire ne doit pas COUPER le titre en cours : il reste en tete de sequence.
+  await page.getByRole("button", { name: /aléatoire/i }).first().click();
+  await page.waitForTimeout(400);
+  verifier(
+    "shuffle : activer l'aleatoire ne coupe pas le titre en cours",
+    (await srcAudio()) === srcAvant,
+  );
+
+  // Les `tailleFile` premiers titres doivent etre TOUS DIFFERENTS (chacun une fois). Le clic
+  // suivant remelange — c'est seulement la qu'un doublon serait permis, donc on ne va pas jusque-la.
+  const vus = [srcAvant];
+  for (let i = 0; i < tailleFile - 1; i += 1) {
+    await page.getByRole("button", { name: /^titre suivant$/i }).first().click();
+    await page.waitForTimeout(500);
+    vus.push(await srcAudio());
+  }
+  verifier(
+    "shuffle : les N titres passent tous une fois avant repetition",
+    new Set(vus).size === tailleFile && vus.length === tailleFile,
+    `${new Set(vus).size} titres distincts sur ${tailleFile}`,
+  );
+
+  // --- REPEAT : la machine a trois etats off -> all -> one -> off ---
+  // Les trois libelles commencent par « Répét… » : c'est le seul bouton du transport qui matche,
+  // et son nom accessible change a chaque etat — on le relit apres chaque clic.
+  const boutonRepeat = page.getByRole("button", { name: /Répét/i }).first();
+  const etatRepeat = () => boutonRepeat.getAttribute("aria-label");
+
+  verifier(
+    "repeat : etat initial = desactive",
+    /désactiv/i.test(await etatRepeat()),
+    await etatRepeat(),
+  );
+  await boutonRepeat.click();
+  await page.waitForTimeout(150);
+  verifier(
+    "repeat : 1er clic = repeter la file",
+    /répéter la file/i.test(await etatRepeat()),
+    await etatRepeat(),
+  );
+  await boutonRepeat.click();
+  await page.waitForTimeout(150);
+  verifier(
+    "repeat : 2e clic = repeter le titre courant",
+    /titre courant/i.test(await etatRepeat()),
+    await etatRepeat(),
+  );
+  await boutonRepeat.click();
+  await page.waitForTimeout(150);
+  verifier(
+    "repeat : 3e clic = retour a desactive",
+    /désactiv/i.test(await etatRepeat()),
+    await etatRepeat(),
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
+// 5 quater. Le lecteur plein ecran sur mobile (verrouille le flux mini -> plein ecran)
+//
+// Le mini-lecteur (barre compacte) doit rester minimal : taper la pochette/titre OUVRE l'ecran
+// « Lecture en cours », mais taper play/pause met seulement en pause — c'est pourquoi les deux
+// sont des boutons FRERES et non un <div> cliquable englobant. Le chevron referme. Le chevron
+// (« Réduire le lecteur ») n'existe QUE dans le plein ecran : sa visibilite = l'ecran est ouvert.
+// ---------------------------------------------------------------------------
+await etape("lecteur : plein ecran mobile", async () => {
+  const compte = await creerCompte("MobileTest");
+  const page = await pageConnectee(navigateur, compte, { width: 390, height: 844 });
+  page.on("pageerror", (e) => erreursJS.push(e.message));
+
+  await page.goto(`${APP}/bibliotheque`);
+  await page.waitForTimeout(1500);
+  await page.getByAltText(/^Pochette album /).first().click({ timeout: 5000 });
+  await page.waitForTimeout(1500);
+
+  const chevron = page.getByRole("button", { name: /réduire le lecteur/i });
+
+  // 1) Taper play/pause dans la mini-barre : met en pause SANS ouvrir le plein ecran.
+  await page.getByRole("button", { name: /^(pause|lecture)$/i }).first().click();
+  await page.waitForTimeout(400);
+  verifier(
+    "mobile : taper play/pause met en pause",
+    await page.locator("audio").evaluate((a) => a.paused),
+  );
+  verifier(
+    "mobile : taper play/pause n'ouvre PAS le plein ecran",
+    (await chevron.isVisible()) === false,
+  );
+
+  // 2) Taper la pochette/titre (« Ouvrir le lecteur ») ouvre le plein ecran, transport complet.
+  await page.getByRole("button", { name: /ouvrir le lecteur/i }).click();
+  await page.waitForTimeout(600);
+  verifier("mobile : taper la barre ouvre le plein ecran", await chevron.isVisible());
+
+  const precedentVisible = await page
+    .getByRole("button", { name: /^titre précédent$/i })
+    .evaluateAll((els) =>
+      els.some((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }),
+    );
+  verifier(
+    "mobile : le plein ecran offre le transport complet (titre precedent visible)",
+    precedentVisible,
+  );
+
+  // 3) Le chevron referme et revient a la mini-barre.
+  await chevron.click();
+  await page.waitForTimeout(600);
+  verifier(
+    "mobile : le chevron referme le plein ecran",
+    (await chevron.isVisible()) === false,
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
 // 5 bis. Le filtre par genre
 //
 // Les pastilles sont DEDUITES du catalogue (aucune liste en dur), donc ce test ne peut pas
