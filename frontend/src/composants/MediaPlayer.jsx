@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   Music,
   Pause,
   Play,
@@ -11,6 +12,13 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { apiFetch, urlFichier } from "@/lib/api";
 import Attribution from "./Attribution";
@@ -59,6 +67,11 @@ export default function MediaPlayer({
   // saut ne garantit pas.
   const [isShuffle, setIsShuffle] = useState(false);
   const [shuffleOrder, setShuffleOrder] = useState([]);
+
+  // Écran "Lecture en cours" plein écran (mobile uniquement). Ouvert en tapant la barre compacte.
+  // Il vit ICI, pas dans un composant séparé, pour partager le même <audio> et les mêmes
+  // gestionnaires : une seule source de vérité pour la lecture (cf. Piste 2, décidée avec Manuel).
+  const [expanded, setExpanded] = useState(false);
 
   const audioRef = useRef(null);
 
@@ -193,6 +206,14 @@ export default function MediaPlayer({
     );
   };
 
+  // Libellé partagé par les boutons repeat (desktop + mobile), pour ne pas répéter le ternaire.
+  const repeatLabel =
+    repeatMode === "one"
+      ? "Répéter le titre courant"
+      : repeatMode === "all"
+        ? "Répéter la file"
+        : "Répétition désactivée";
+
   if (!music) {
     return (
       <section className={`hidden md:flex ${className}`}>
@@ -225,23 +246,35 @@ export default function MediaPlayer({
         onEnded={handleEnded}
       ></audio>
 
-      {/* Bloc mobile : barre compacte, juste play/pause */}
-      <div className="flex md:hidden items-center gap-3 w-full px-3 py-2 bg-card border border-border rounded-2xl">
-        <img
-          src={urlFichier(music.src_image)}
-          alt={`Pochette album ${music.title}`}
-          className="w-11 h-11 rounded-lg object-cover"
-        />
-        <div className="flex flex-col min-w-0 flex-1">
-          <p className="truncate font-semibold text-sm">{music.title}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {music.artist}
-          </p>
-        </div>
+      {/* Bloc mobile : mini-lecteur compact, à la Spotify. La zone pochette+titre est un vrai
+          bouton qui ouvre l'écran "Lecture en cours" ; le play/pause est un frère à côté (pas
+          imbriqué) — sinon on aurait un bouton dans un bouton (HTML invalide) et il faudrait
+          stopPropagation. Les commandes complètes (shuffle/prec/suiv/repeat) vivent dans l'écran
+          plein écran, pas ici : une barre compacte reste minimale. */}
+      <div className="flex md:hidden items-center gap-2 w-full px-3 py-2 bg-card border border-border rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label="Ouvrir le lecteur"
+          className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer"
+        >
+          <img
+            src={urlFichier(music.src_image)}
+            alt={`Pochette album ${music.title}`}
+            className="w-11 h-11 rounded-lg object-cover shrink-0"
+          />
+          <span className="flex flex-col min-w-0 flex-1">
+            <span className="truncate font-semibold text-sm">{music.title}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {music.artist}
+            </span>
+          </span>
+        </button>
         <Button
           size="icon-sm"
           onClick={handlePlay}
           aria-label={isPlaying ? "Pause" : "Lecture"}
+          className="shrink-0"
         >
           {isPlaying ? (
             <Pause className="w-4 h-4 fill-current" />
@@ -250,6 +283,123 @@ export default function MediaPlayer({
           )}
         </Button>
       </div>
+
+      {/* Écran "Lecture en cours" plein écran (mobile). On réutilise le Dialog partagé du projet
+          (focus-trap, Échap, blocage du scroll gratuits) mais forcé en plein écran via className :
+          les classes de centrage de base (top-1/2, -translate, max-w, rounded, grid) sont écrasées
+          par tailwind-merge. Aucune modif du composant partagé — les 7 autres modales n'en savent
+          rien. */}
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent
+          showCloseButton={false}
+          className="inset-0 top-0 left-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-6 rounded-none bg-background p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        >
+          {/* En-tête : chevron pour refermer (revient au mini-lecteur) */}
+          <div className="flex items-center justify-start">
+            <DialogClose
+              render={<Button variant="ghost" size="icon" />}
+              aria-label="Réduire le lecteur"
+            >
+              <ChevronDown className="w-6 h-6" />
+            </DialogClose>
+          </div>
+
+          {/* Pochette */}
+          <div className="flex flex-1 items-center justify-center min-h-0">
+            <img
+              src={urlFichier(music.src_image)}
+              alt={`Pochette album ${music.title}`}
+              className="w-full max-w-xs aspect-square rounded-2xl object-cover shadow-xl"
+            />
+          </div>
+
+          {/* Titre / artiste / attribution — le titre EST le titre accessible du dialog */}
+          <div className="min-w-0">
+            <DialogTitle className="truncate text-xl font-bold">
+              {music.title}
+            </DialogTitle>
+            <DialogDescription className="truncate text-base">
+              {music.artist}
+            </DialogDescription>
+            <Attribution musique={music} />
+          </div>
+
+          {/* Barre de progression (mêmes gestionnaires que le desktop) */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground w-10 text-right">
+              {affichageCurrentTime}
+            </span>
+            <Slider
+              value={timeUpdate || 0}
+              min={0}
+              max={duration || 0}
+              className="flex-1"
+              aria-label="Position dans le morceau"
+              onValueChange={(nouveauTemps) => {
+                setTimeUpdate(nouveauTemps);
+                if (audioRef.current) audioRef.current.currentTime = nouveauTemps;
+              }}
+            />
+            <span className="text-xs text-muted-foreground w-10">
+              {affichageDuration}
+            </span>
+          </div>
+
+          {/* Transport complet : shuffle · prec · play · suiv · repeat */}
+          <div className="flex items-center justify-between px-2 pb-4">
+            <button
+              className={`cursor-pointer p-2 transition ${
+                isShuffle ? "text-primary" : "text-muted-foreground"
+              }`}
+              onClick={toggleShuffle}
+              aria-label="Lecture aléatoire"
+              aria-pressed={isShuffle}
+            >
+              <Shuffle className="w-5 h-5" />
+            </button>
+            <button
+              className="cursor-pointer p-2 text-foreground transition"
+              onClick={handlePrevious}
+              aria-label="Titre précédent"
+            >
+              <SkipBack className="w-7 h-7 fill-current" />
+            </button>
+            <Button
+              size="icon"
+              onClick={handlePlay}
+              aria-label={isPlaying ? "Pause" : "Lecture"}
+              className="h-16 w-16 rounded-full"
+            >
+              {isPlaying ? (
+                <Pause className="w-7 h-7 fill-current" />
+              ) : (
+                <Play className="w-7 h-7 fill-current" />
+              )}
+            </Button>
+            <button
+              className="cursor-pointer p-2 text-foreground transition"
+              onClick={handleNext}
+              aria-label="Titre suivant"
+            >
+              <SkipForward className="w-7 h-7 fill-current" />
+            </button>
+            <button
+              className={`cursor-pointer p-2 transition ${
+                repeatMode !== "off" ? "text-primary" : "text-muted-foreground"
+              }`}
+              onClick={cycleRepeat}
+              aria-label={repeatLabel}
+              aria-pressed={repeatMode !== "off"}
+            >
+              {repeatMode === "one" ? (
+                <Repeat1 className="w-5 h-5" />
+              ) : (
+                <Repeat className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Bloc desktop : barre de contrôle complète */}
       <div className="hidden md:flex md:flex-col w-full h-full bg-card border border-border rounded-2xl px-6 py-3 gap-1">
@@ -315,20 +465,9 @@ export default function MediaPlayer({
                   : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={cycleRepeat}
-              aria-label={
-                repeatMode === "one"
-                  ? "Répéter le titre courant"
-                  : repeatMode === "all"
-                    ? "Répéter la file"
-                    : "Répétition désactivée"
-              }
-              title={
-                repeatMode === "one"
-                  ? "Répéter le titre courant"
-                  : repeatMode === "all"
-                    ? "Répéter la file"
-                    : "Répétition désactivée"
-              }
+              aria-label={repeatLabel}
+              aria-pressed={repeatMode !== "off"}
+              title={repeatLabel}
             >
               {repeatMode === "one" ? (
                 <Repeat1 className="w-4 h-4" />
