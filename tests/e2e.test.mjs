@@ -352,7 +352,13 @@ await etape("lecteur", async () => {
     await page.locator("audio").evaluate((a) => !a.paused),
   );
 
-  await page.getByRole("button", { name: /pause|lecture/i }).first().click();
+  // Nom EXACT (`^...$`) : depuis l'ajout du shuffle, le bouton « Lecture aléatoire » contient
+  // « lecture » et matchait un motif non ancre — `.first()` cliquait le shuffle au lieu du
+  // play/pause. On ne veut que le bouton dont le nom accessible est exactement "Pause"/"Lecture".
+  await page
+    .getByRole("button", { name: /^(pause|lecture)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(600);
   verifier(
     "lecteur : le bouton pause fonctionne",
