@@ -889,6 +889,10 @@ await etape("mise en page : la prose et les formulaires restent bornes", async (
   // n'est pas borne par `max-w-prose` (il vit dans `EnTetePage`) et dont la largeur est stable
   // pour une tout autre raison. Les trois assertions passaient donc sans rien prouver — decouvert
   // en retirant `max-w-prose` : le test restait vert.
+  // 4e element optionnel = limite propre a la cible (defaut LIMITE). Profil est un empilement
+  // pleine largeur (choix Manuel du 2026-07-18) : son plafond est plus large (1600px) pour remplir
+  // un portable large, mais il reste BORNE (il ne suit pas l'ecran). On lui donne sa propre limite
+  // plutot que de desserrer celle des pages de prose et de Deposer, qui doivent rester serrees.
   const cibles = [
     ["A propos : le paragraphe", "/a-propos", "main .overflow-y-auto p"],
     [
@@ -897,7 +901,7 @@ await etape("mise en page : la prose et les formulaires restent bornes", async (
       "main .overflow-y-auto p",
     ],
     ["Deposer : les deux colonnes", "/deposer", "main .overflow-y-auto > div"],
-    ["Profil : les deux colonnes", "/profil", "main .overflow-y-auto > div"],
+    ["Profil : empile pleine largeur", "/profil", "main .overflow-y-auto > div", 1700],
   ];
 
   // On mesure en 2560 px et on compare a la ZONE DISPONIBLE (~2206 px), pas a la mesure en 1440.
@@ -916,14 +920,14 @@ await etape("mise en page : la prose et les formulaires restent bornes", async (
   });
   page2560.on("pageerror", (e) => erreursJS.push(e.message));
 
-  for (const [nom, url, sel] of cibles) {
+  for (const [nom, url, sel, limite = LIMITE] of cibles) {
     const mesure = await largeur(page2560, url, sel);
     const zone = await page2560.$eval("main .overflow-y-auto", (el) =>
       Math.round(el.getBoundingClientRect().width),
     );
     verifier(
       `largeur (${nom}) : borne en 2560 px, ne suit pas l'ecran`,
-      mesure < LIMITE,
+      mesure < limite,
       `${mesure} px dans une zone de ${zone} px`,
     );
   }
