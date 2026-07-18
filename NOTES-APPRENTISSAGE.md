@@ -2173,3 +2173,21 @@ On classe les tests de **deux** manières, qui se croisent.
 Lien avec ce que je fais ici (pour ancrer) : ma suite est surtout **intégration** (API réellement démarrée) + **E2E** (Playwright), avec beaucoup de **non-régression** et une suite **sécurité** dédiée. Ce qui manquerait pour compléter le bas de la pyramide : des **unitaires** purs sur les fonctions de validation.
 
 ---
+
+## 2026-07-18 — Où stocker le jeton d'auth, et pourquoi l'historique va en base
+
+### 67. `localStorage` vs cookie `httpOnly`, et l'insight « la sécurité ne concerne que le secret »
+
+*Cas réel : j'ai décidé de **garder** le JWT en `localStorage` pour l'instant, et de mettre « écoutés récemment » dans une **table** (pas en `localStorage`). Voici le raisonnement, parce que c'est typiquement ce qu'on me demandera de défendre en entretien.*
+
+**Le problème du `localStorage`.** Mon JWT y vit, et `localStorage` est **lisible par n'importe quel JavaScript de la page**. Une seule faille XSS (une dépendance npm compromise, un `dangerouslySetInnerHTML`, une valeur mal échappée) et le jeton part chez l'attaquant, qui **devient moi pour 24h**. Un cookie **`httpOnly`** est, lui, **invisible au JavaScript** : seul le navigateur le manipule. Il n'empêche pas le XSS, il rend le **vol du jeton inoffensif**.
+
+**Mais le cookie n'est pas gratuit — le troc XSS ↔ CSRF.** Comme un cookie part **automatiquement** à chaque requête, un site malveillant peut déclencher une action authentifiée à mon insu (CSRF) — un risque que `localStorage` + header `Bearer` **n'a pas** (le site attaquant ne peut ni lire mon `localStorage` ni forger le header). On échange donc *vol-par-XSS* contre *CSRF* — mais le CSRF se ferme proprement avec `SameSite=Strict` (+ éventuel token anti-CSRF), alors que garantir l'absence de XSS est bien plus dur. Le troc est **favorable**, pas nul. Autre limite : même dans un cookie, **un JWT ne se révoque pas** avant expiration ; seules des *sessions côté serveur* règlent ça, au prix d'un état à stocker.
+
+**Pourquoi je garde quand même `localStorage` (pour l'instant).** Sur une vitrine sans données sensibles, c'est un choix **courant et défendable** — et *savoir expliquer pourquoi je l'ai choisi et quel risque il porte* vaut mieux en entretien que d'avoir copié un cookie `httpOnly` sans comprendre. La migration cookie reste la cible idiomatique, mais **après** le déploiement : c'est exactement le genre de changement qui casse l'auth, et on ne débugge pas une auth cassée le soir d'une mise en ligne.
+
+**L'insight qui a débloqué « écoutés récemment ».** J'allais coupler les deux décisions (« puisqu'on s'éloigne du `localStorage`, l'historique aussi »). Erreur : **l'argument sécurité ne concerne QUE le secret** (le jeton). Un historique d'écoute n'est pas un secret — le pire, si quelqu'un le lit, c'est qu'il voie ce que j'ai écouté. Donc « ne pas mettre ça en `localStorage` **pour raison de sécurité** » **ne s'applique pas** à l'historique. La vraie question pour lui est **produit**, pas sécurité : une **table** (cross-device, persiste au vidage du cache, montre une vraie feature back) vs `localStorage` (local, ~10 lignes, marche même déconnecté). J'ai choisi la table. Les deux décisions sont donc **indépendantes** : historique en base *maintenant*, migration cookie *plus tard*.
+
+La leçon transférable : avant de propager une règle (« on abandonne X »), se demander **de quoi** cette règle protège. Une contrainte de sécurité s'applique aux **secrets**, pas à toute donnée — l'étendre par réflexe fait prendre des décisions produit pour de mauvaises raisons.
+
+---
