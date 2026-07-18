@@ -7,7 +7,10 @@
 // nouveau des la prochaine page ajoutee.
 //
 // `actions` accueille ce qui vit a droite du titre (la recherche de la Bibliotheque, le bouton
-// "Ajouter une playlist"…). Sur mobile, ce bloc passe sous le titre.
+// "Ajouter une playlist"…). Il ne passe A COTE du titre qu'a partir de `lg` (1024px), pas de `md`
+// (768px) : dans la bande tablette, la sidebar (260px) + l'action laissaient trop peu de place, et
+// un titre long ("Mes demandes de depot") se cassait en trois lignes. En dessous de `lg`, l'en-tete
+// s'empile (titre pleine largeur, action dessous) — le meme comportement que sur mobile.
 export default function EnTetePage({
   icone: Icone,
   titre,
@@ -16,7 +19,7 @@ export default function EnTetePage({
   classeIcone,
 }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-6">
+    <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 mb-6">
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
           <Icone className={`w-6 h-6 text-white ${classeIcone ?? ""}`} />
@@ -30,7 +33,7 @@ export default function EnTetePage({
       </div>
 
       {actions ? (
-        <div className="md:ml-auto w-full md:w-auto shrink-0">{actions}</div>
+        <div className="lg:ml-auto w-full lg:w-auto shrink-0">{actions}</div>
       ) : null}
     </div>
   );
