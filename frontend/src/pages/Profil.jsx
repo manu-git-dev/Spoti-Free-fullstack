@@ -89,12 +89,15 @@ export default function Profil({
             l'ecran (mobile comme desktop) : les actions restent en bas, plus coincees entre les
             blocs d'info comme dans l'ancienne version deux colonnes.
 
-            `max-w-6xl` (comme Deposer/MesDepots) et jamais `mx-auto` : sur un portable le contenu
-            fait moins de 1152px, donc les cartes sont pleine largeur ; sur un tres grand ecran, la
-            borne les empeche de s'etirer (c'est la regle "Largeurs", verrouillee par l'e2e a 2560px).
+            `max-w-[1600px]` et jamais `mx-auto` : sur un portable le contenu fait moins de 1600px,
+            donc les cartes sont pleine largeur ; sur un tres grand ecran (2560/4K), la borne les
+            empeche de s'etirer. Plafond plus large que les pages a deux colonnes (`max-w-6xl` =
+            1152px) : un empilement a besoin de plus de place pour remplir sans laisser de vide sur
+            un portable large. Choix tranche avec Manuel (2026-07-18), qui a assume d'elargir la
+            regle "Largeurs" pour cette page. Le test e2e a une limite propre a Profil (1700px).
 
             Pas d'enveloppe grise : le contenu EST deja fait de panneaux (`bg-background/50`). */}
-        <div className="flex flex-col gap-6 max-w-6xl">
+        <div className="flex flex-col gap-6 max-w-[1600px]">
           {/* Identite */}
           <div className="relative overflow-hidden flex flex-col items-center text-center gap-3 rounded-2xl border border-border bg-background/50 p-6 md:flex-row md:text-left md:items-center md:gap-6">
             <div

@@ -164,16 +164,23 @@ rouge, c'est qu'une régression est réapparue.
     déséquilibre qu'on supprimait (en-tête à gauche, contenu au milieu). Testé, rejeté.
   - **Jamais de `max-w` sur `Page.jsx`** : ça rétrécirait l'en-tête **et** casserait les grilles.
     Une colonne centrée en-tête compris a aussi été testée et rejetée.
-  - **Mieux qu'un panneau, quand la page s'y prête : deux colonnes** (`Deposer`, `Profil`,
-    `MesDepots` — `grid max-w-6xl items-start lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]`).
+  - **Mieux qu'un panneau, quand la page s'y prête : deux colonnes** (`Deposer`, `MesDepots` —
+    `grid max-w-6xl items-start lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]`).
     C'est le seul agencement qui *remplit* vraiment, parce qu'il met du contenu **utile** dans
-    l'espace au lieu de l'étirer. **Ne jamais inventer de contenu pour le remplir** : sur les trois
+    l'espace au lieu de l'étirer. **Ne jamais inventer de contenu pour le remplir** : sur ces
     pages, la colonne de droite ne contient que du **déjà-là déplacé** (les explications des
-    champs, la légende des statuts, les chiffres du profil). Du remplissage se verrait.
+    champs, la légende des statuts). Du remplissage se verrait.
     Ne s'applique pas à la prose, qui n'a rien à mettre à droite.
   - **Une page dont le contenu est DÉJÀ fait de panneaux** (Profil, Mes demandes) ne peut pas
     recevoir l'enveloppe grise : même fond sur même fond, les panneaux du dedans disparaissent. La
     règle des surfaces n'a pas de troisième niveau. Pour celles-là, c'est deux colonnes ou rien.
+  - **`Profil` a quitté les deux colonnes pour l'empilement** (tranché avec Manuel le 2026-07-18) :
+    la colonne de droite (les stats à côté de l'identité) le gênait. Trois panneaux empilés
+    (identité → stats → actions), calés à gauche, **`max-w-[1600px]`** — plafond plus large que le
+    `max-w-6xl` des deux-colonnes, parce qu'un empilement a besoin de plus de place pour remplir un
+    portable large sans laisser de vide à droite. Reste **borné** (il ne suit pas l'écran sur 4K) :
+    c'est un élargissement assumé de la règle, pas son abandon. Le test e2e "largeur" lui donne sa
+    **propre limite (1700 px)**, pour ne pas desserrer celle des pages de prose et de `Deposer`.
   - La pleine largeur **sans panneau** reste juste pour la **Bibliothèque**, le **Catalogue** et le
     **Tableau de bord** : ce sont des grilles, elles gagnent des cartes par rangée.
   - Verrouillé par les tests e2e "largeur", qui mesurent en **2560 px** — le viewport que personne
