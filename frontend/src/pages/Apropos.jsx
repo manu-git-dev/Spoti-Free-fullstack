@@ -17,7 +17,7 @@ export default function Apropos() {
     <Page
       icone={Info}
       titre="À propos"
-      sousTitre="Un lecteur de musique, et dix ans de mécanique aéronautique derrière."
+      sousTitre="Un clone de Spotify full-stack — et l'histoire, sincère, de comment je l'ai construit."
     >
       {/* Le PANNEAU prend toute la largeur, la PROSE est calee A GAUCHE dedans.
 
@@ -60,34 +60,43 @@ export default function Apropos() {
         {/* Le passage le plus important de la page : il est donc place tot, et encadre. Si un
             recruteur ne lit qu'une seule chose, c'est celle-ci qu'il doit lire. */}
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-6">
-          <TitreSection>Comprendre, pas seulement faire marcher</TitreSection>
+          <TitreSection>Comment ce projet a été construit</TitreSection>
           <p className="leading-relaxed text-muted-foreground">
-            Autant être honnête : avec les outils d'IA d'aujourd'hui, une erreur
-            trouve rarement plus de quelques minutes de résistance. J'ai
-            d'ailleurs travaillé avec un assistant IA sur certaines parties de
-            ce projet — notamment une passe d'audit et de durcissement de la
-            sécurité.
+            Ce projet a eu deux vies. La première, je l'ai codée moi-même. En
+            formation, j'avais envie de sortir des exercices et de construire un
+            vrai full-stack de bout en bout : j'ai dessiné la base de données,
+            écrit les routes de l'API, testé chaque endpoint sur Postman, puis
+            branché un front React par-dessus — squelette, Tailwind, daisyUI. À
+            la fin, ça tournait : on pouvait s'inscrire, se connecter, ajouter un
+            favori, créer une playlist. C'était brut — pas responsive, pas très
+            joli, loin d'être complet — mais ça marchait, et j'avais compris
+            comment les morceaux tenaient ensemble. C'est la partie dont je suis
+            le plus fier.
           </p>
           <p className="leading-relaxed text-muted-foreground">
-            La vraie difficulté est ailleurs, et elle est bien plus intéressante
-            : <Fort>comprendre ce qui se passe réellement derrière</Fort>.
-            Pourquoi ce <code className="text-primary">useEffect</code> se
-            relance-t-il ? Pourquoi <code className="text-primary">fetch</code>{" "}
-            plutôt qu'<code className="text-primary">axios</code> ? Pourquoi cet
-            état doit-il remonter chez le parent pour être partagé entre deux
-            composants&nbsp;?
+            Puis j'ai décroché mon stage, et le projet aurait pu s'arrêter là.
+            J'ai eu envie de continuer, autrement : m'en servir pour apprendre ce
+            qui fait aujourd'hui partie du métier — travailler avec l'IA. J'ai
+            repris l'app avec Claude Code, en essayant de ne pas juste « lui
+            demander de coder », mais d'apprendre à le diriger : proposer une
+            architecture, relire ce qu'il écrit, poser des questions quand je ne
+            comprends pas, refuser une solution bancale. C'est comme ça que l'app
+            est devenue ce que vous voyez : plus finie, responsive, plus sûre,
+            avec une centaine de tests.
           </p>
           <p className="leading-relaxed text-muted-foreground">
-            Obtenir du code qui fonctionne, c'est facile.{" "}
-            <Fort>Savoir pourquoi il fonctionne, c'est le métier.</Fort> Ma
-            règle sur ce projet : ne jamais laisser passer une ligne que je ne
-            saurais pas réexpliquer.
+            Je préfère être franc plutôt que de faire semblant : je suis un{" "}
+            <Fort>développeur junior, encore en apprentissage</Fort>, et une
+            bonne partie de cette version a été écrite avec l'IA. Je ne cherche
+            pas à le cacher — j'essaie plutôt de m'en servir bien. Les
+            fondations, elles, sont de moi. Et c'est ce que j'ai le plus envie de
+            continuer : <Fort>comprendre ce que je code</Fort>, avec ou sans
+            assistant.
           </p>
           <p className="leading-relaxed text-muted-foreground">
-            Ce n'est pas qu'une intention. À chaque difficulté rencontrée, j'ai
-            écrit une note : le problème, la cause, et le raisonnement qui m'a
-            mené à la solution. Elles sont versionnées avec le code —{" "}
-            <Fort>une cinquantaine à ce jour</Fort>.
+            J'ai aussi gardé une trace écrite au fil du projet : à chaque
+            difficulté, une note — le problème, la cause, et comment je l'ai
+            comprise. Elles sont versionnées avec le code.
           </p>
           <a
             href={`${DEPOT}/blob/main/NOTES-APPRENTISSAGE.md`}
@@ -130,17 +139,17 @@ export default function Apropos() {
         <div className="flex flex-col gap-3">
           <TitreSection>Et maintenant</TitreSection>
           <p className="leading-relaxed text-muted-foreground">
-            Je suis{" "}
-            <Fort>ouvert à toute opportunité dans le développement web</Fort>.
-            Continuer à me former en <Fort>alternance</Fort> m'intéresse autant
-            qu'un poste où je pourrai apprendre au contact d'une équipe, sur du
-            code réel.
+            Je suis en formation{" "}
+            <Fort>Développeur Web et Web Mobile</Fort> jusqu'au{" "}
+            <Fort>21 novembre 2026</Fort>, et je cherche déjà la suite : une
+            équipe où continuer à apprendre, sur des projets réels. Alternance,
+            premier poste — l'étiquette compte moins que de progresser au contact
+            de gens qui savent.
           </p>
           <p className="leading-relaxed text-muted-foreground">
             L'application est fonctionnelle : essayez-la. Le code est ouvert à
-            qui veut le lire. Et si vous avez une question, une remarque ou une
-            idée pour l'améliorer, écrivez-moi — les critiques sont les
-            bienvenues, c'est comme ça qu'on progresse.
+            qui veut le lire. Et si vous avez une remarque, une critique ou une
+            idée, écrivez-moi — c'est comme ça qu'on avance.
           </p>
         </div>
 
