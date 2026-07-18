@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { User as UserIcon } from "lucide-react";
+import {
+  User as UserIcon,
+  ListMusic,
+  Heart,
+  CalendarDays,
+} from "lucide-react";
 import Deconnexion from "../composants/Deconnexion";
 import SupprimerCompte from "../composants/SupprimerCompte";
 import Page from "../composants/Page";
@@ -8,13 +13,21 @@ import { apiFetch } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Un chiffre du profil. En pile verticale (colonne de droite), le chiffre a GAUCHE et son libelle
-// a DROITE se lisent mieux qu'empiles : l'oeil descend une colonne de chiffres alignes.
-function Stat({ valeur, libelle, classe }) {
+// Une tuile de statistique : la valeur en gros, puis une ligne "icone + libelle" dessous, le tout
+// CALE A GAUCHE. (Avant : valeur a gauche / libelle a droite via `justify-between`, pense pour une
+// colonne verticale etroite.) L'icone reprend la couleur de la valeur (`classe`) pour lier les
+// deux ; le libelle passe en capitales espacees et un peu plus gras, plus present que le `text-xs`
+// gris d'origine.
+function Stat({ valeur, libelle, classe, icone: Icone }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 rounded-xl border border-border bg-background/50 px-4 py-3">
-      <span className={`text-2xl font-bold ${classe}`}>{valeur}</span>
-      <span className="text-xs text-muted-foreground">{libelle}</span>
+    <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-background/50 px-5 py-4">
+      <span className={`text-2xl font-bold leading-tight ${classe}`}>
+        {valeur}
+      </span>
+      <span className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {Icone ? <Icone className={`h-4 w-4 shrink-0 ${classe}`} /> : null}
+        {libelle}
+      </span>
     </div>
   );
 }
@@ -72,15 +85,17 @@ export default function Profil({
   } else {
     return (
       <Page icone={UserIcon} titre="Mon profil">
-        {/* DEUX COLONNES — meme agencement que `Deposer.jsx`. Rien n'est invente pour remplir : les
-            3 chiffres existaient deja, ils passent simplement a droite, en pile verticale au lieu
-            d'une rangee de 3. A gauche, ce qui concerne l'identite et les actions.
+        {/* Trois blocs EMPILES (identite -> stats -> actions), l'ordre du DOM donnant l'ordre a
+            l'ecran (mobile comme desktop) : les actions restent en bas, plus coincees entre les
+            blocs d'info comme dans l'ancienne version deux colonnes.
 
-            Pas d'enveloppe grise ici, contrairement aux pages de prose : le contenu de cette page
-            EST deja fait de panneaux (`bg-background/50`). Un panneau autour rendrait ceux du
-            dedans invisibles — meme fond sur meme fond. */}
-        <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
-        <div className="space-y-6">
+            `max-w-6xl` (comme Deposer/MesDepots) et jamais `mx-auto` : sur un portable le contenu
+            fait moins de 1152px, donc les cartes sont pleine largeur ; sur un tres grand ecran, la
+            borne les empeche de s'etirer (c'est la regle "Largeurs", verrouillee par l'e2e a 2560px).
+
+            Pas d'enveloppe grise : le contenu EST deja fait de panneaux (`bg-background/50`). */}
+        <div className="flex flex-col gap-6 max-w-6xl">
+          {/* Identite */}
           <div className="relative overflow-hidden flex flex-col items-center text-center gap-3 rounded-2xl border border-border bg-background/50 p-6 md:flex-row md:text-left md:items-center md:gap-6">
             <div
               aria-hidden
@@ -100,38 +115,45 @@ export default function Profil({
             </div>
           </div>
 
+          {/* Stats — rangee de 3 tuiles (empilees sur mobile) */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Stat
+              valeur={playlists.length}
+              libelle="playlists"
+              classe="text-primary"
+              icone={ListMusic}
+            />
+            <Stat
+              valeur={musiquesLikee.length}
+              libelle="favoris"
+              classe="text-accent"
+              icone={Heart}
+            />
+            <Stat
+              valeur={
+                infoUser.created_at
+                  ? new Date(infoUser.created_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "—"
+              }
+              libelle="membre depuis"
+              classe="text-chart-2"
+              icone={CalendarDays}
+            />
+          </div>
+
+          {/* Deconnexion, puis suppression separee par un trait : action definitive et discrete,
+              elle ne doit pas se trouver sous le doigt de quelqu'un qui cherchait juste a se
+              deconnecter. */}
           <div className="flex justify-center">
             <Deconnexion setUser={setUser} setToken={setToken} />
           </div>
-
-          {/* La suppression du compte est separee du reste par un trait et reste discrete :
-              c'est une action definitive, elle ne doit pas se trouver sous le doigt de
-              quelqu'un qui cherchait juste a se deconnecter. */}
           <div className="flex justify-center border-t border-border pt-4">
             <SupprimerCompte setUser={setUser} setToken={setToken} />
           </div>
-        </div>
-
-        <aside className="flex flex-col gap-3">
-          <Stat valeur={playlists.length} libelle="playlists" classe="text-primary" />
-          <Stat
-            valeur={musiquesLikee.length}
-            libelle="favoris"
-            classe="text-accent"
-          />
-          <Stat
-            valeur={
-              infoUser.created_at
-                ? new Date(infoUser.created_at).toLocaleDateString("fr-FR", {
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "—"
-            }
-            libelle="membre depuis"
-            classe="text-chart-2"
-          />
-        </aside>
         </div>
       </Page>
     );
