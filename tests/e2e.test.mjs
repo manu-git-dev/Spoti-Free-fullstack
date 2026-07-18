@@ -655,6 +655,78 @@ await etape("lecteur : plein ecran mobile", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 5 quinquies. Historique d'ecoute — « Écoutés récemment » (verrouille l'upsert par-compte)
+//
+// Modele UPSERT (option B, tranche le 2026-07-18) : une ligne par (utilisateur, titre), remise en
+// tete a chaque re-ecoute. On verrouille : titres DISTINCTS, le plus recent en tete, re-ecouter ne
+// cree pas de doublon. Le tri est en secondes (colonne `datetime`) -> on espace les ecoutes de
+// +1s pour un ordre deterministe.
+// ---------------------------------------------------------------------------
+await etape("historique : ecoutes recemment", async () => {
+  // --- Backend : l'upsert (distinct, plus recent en tete, pas de doublon) ---
+  const compte = await creerCompte("HistoTest");
+  const api = apiAuth(compte.token);
+  const pause = () => new Promise((r) => setTimeout(r, 1100));
+
+  const { donnees: catalogue } = await api("/api/musics");
+  const [id1, id2] = [catalogue[0].id_music, catalogue[1].id_music];
+
+  const { donnees: initial } = await api("/api/users/historique");
+  verifier(
+    "historique : un compte neuf a un historique vide",
+    initial.length === 0,
+    `${initial.length} entree(s)`,
+  );
+
+  await api(`/api/users/historique/${id1}`, { method: "POST" });
+  await pause();
+  await api(`/api/users/historique/${id2}`, { method: "POST" });
+  const { donnees: apres2 } = await api("/api/users/historique");
+  verifier(
+    "historique : le plus recemment ecoute est en tete",
+    apres2.length === 2 && apres2[0].id_music === id2 && apres2[1].id_music === id1,
+    apres2.map((m) => m.id_music).join(", "),
+  );
+
+  // Re-ecouter id1 : il repasse en tete, SANS creer de doublon (c'est l'upsert, pas un journal).
+  await pause();
+  await api(`/api/users/historique/${id1}`, { method: "POST" });
+  const { donnees: apresReecoute } = await api("/api/users/historique");
+  verifier(
+    "historique : re-ecouter un titre le remet en tete sans doublon",
+    apresReecoute.length === 2 && apresReecoute[0].id_music === id1,
+    apresReecoute.map((m) => m.id_music).join(", "),
+  );
+
+  // --- Front : jouer un titre (compte NEUF) fait apparaitre la rangee sur l'accueil ---
+  // Compte neuf a dessein : la rangee qui apparait PROUVE que le front enregistre l'ecoute (effet
+  // de App), pas seulement que l'API l'avait peuplee ci-dessus.
+  const compteUI = await creerCompte("HistoUITest");
+  const page = await pageConnectee(navigateur, compteUI, BUREAU);
+  page.on("pageerror", (e) => erreursJS.push(e.message));
+
+  await page.goto(`${APP}/`);
+  await page.waitForTimeout(1200);
+  verifier(
+    "historique : absente de l'accueil tant qu'on n'a rien ecoute",
+    (await page.getByText(/écoutés récemment/i).isVisible()) === false,
+  );
+
+  await page.goto(`${APP}/bibliotheque`);
+  await page.waitForTimeout(1300);
+  await page.getByAltText(/^Pochette album /).first().click({ timeout: 5000 });
+  await page.waitForTimeout(1800);
+  await page.goto(`${APP}/`);
+  await page.waitForTimeout(1500);
+  verifier(
+    "historique : « Écoutés récemment » apparait sur l'accueil apres une ecoute",
+    await page.getByText(/écoutés récemment/i).isVisible(),
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
 // 5 bis. Le filtre par genre
 //
 // Les pastilles sont DEDUITES du catalogue (aucune liste en dur), donc ce test ne peut pas

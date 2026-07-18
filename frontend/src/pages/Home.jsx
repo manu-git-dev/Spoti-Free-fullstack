@@ -59,6 +59,7 @@ export default function Home({
   currentMusic,
   genresDisponibles,
   setGenreFiltre,
+  historique,
 }) {
   // `top5` vient de GET /api/musics/top : un vrai classement par nombre d'ecoutes.
   const topCinq = top5;
@@ -140,6 +141,25 @@ export default function Home({
                   currentMusic={currentMusic}
                 />
               ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Perso : écoutés récemment (connecte + au moins une écoute). L'historique est déjà
+            ordonné du plus récent au plus ancien côté serveur (ORDER BY ecoute_at DESC). */}
+        {user !== null && historique.length > 0 ? (
+          <section>
+            <EnTeteRangee titre="Écoutés récemment" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <ListesCard
+                musiques={historique}
+                setCurrentMusic={setCurrentMusic}
+                setCurrentQueue={setCurrentQueue}
+                musiquesLikee={musiquesLikee}
+                setMusiquesLikee={setMusiquesLikee}
+                user={user}
+                currentMusic={currentMusic}
+              />
             </div>
           </section>
         ) : null}

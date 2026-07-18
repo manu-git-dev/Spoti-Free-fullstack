@@ -16,6 +16,20 @@
 -- alors verifiees normalement.
 SET FOREIGN_KEY_CHECKS = 0;
 
+CREATE TABLE `historique` (
+  `id_historique` int NOT NULL AUTO_INCREMENT,
+  `id_user` int NOT NULL,
+  `id_music` int NOT NULL,
+  `ecoute_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_historique`),
+  UNIQUE KEY `uq_historique_user_music` (`id_user`,`id_music`),
+  KEY `fk_historique_musics` (`id_music`),
+  CONSTRAINT `fk_historique_musics` FOREIGN KEY (`id_music`) REFERENCES `musics` (`id_music`) ON DELETE CASCADE,
+  CONSTRAINT `fk_historique_users` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `likes` (
   `id_user` int NOT NULL,
   `id_music` int NOT NULL,

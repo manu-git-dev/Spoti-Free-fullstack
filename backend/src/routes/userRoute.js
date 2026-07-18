@@ -306,6 +306,68 @@ router.delete("/unlikes/:idMusic", authMiddleware, async (req, res) => {
   }
 });
 // ---------------------------------------------------------------------------
+// Historique d'ecoute — la rangee « Écoutés récemment » de l'accueil (ROUTE SECURISEE)
+//
+// Table `historique` en UPSERT : une ligne par (utilisateur, titre), `ecoute_at` remis a NOW() a
+// chaque relecture (UNIQUE(id_user, id_music)). On veut des titres DISTINCTS, le plus recent en
+// tete — pas un journal qui grandit sans fin. Le compte des ecoutes vit ailleurs (`play_count`).
+//
+// C'est un endpoint AUTHENTIFIE distinct de `POST /api/musics/ecoute/:id` (public, compteur global).
+// Deux endpoints a l'auth claire plutot qu'un seul a l'auth « optionnelle » : le contrat reste net.
+// ---------------------------------------------------------------------------
+router.get("/historique", authMiddleware, async (req, res) => {
+  try {
+    const idUser = req.user.id_user;
+    const [historique] = await db.query(
+      `SELECT musics.* FROM musics
+         INNER JOIN historique ON musics.id_music = historique.id_music
+        WHERE historique.id_user = ?
+        ORDER BY historique.ecoute_at DESC
+        LIMIT 12`,
+      [idUser],
+    );
+    // Une liste vide n'est pas une erreur : 200 avec un tableau vide (comme /likes).
+    return res.status(200).json(historique);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Erreur lors de la récupération de l'historique.",
+    });
+  }
+});
+
+// Enregistre une ecoute (appele a la lecture d'un titre, cote App, seulement si connecte).
+// UPSERT : insere, ou remet `ecoute_at` a NOW() si le couple existe deja. On ne teste donc pas
+// le doublon a la main (contrairement au like) : `ON DUPLICATE KEY UPDATE` s'en charge sur la
+// contrainte UNIQUE(id_user, id_music) — reecouter un titre n'est pas un conflit, c'est le cas normal.
+router.post("/historique/:idMusic", authMiddleware, async (req, res) => {
+  try {
+    const idUser = req.user.id_user;
+    const idMusic = req.params.idMusic;
+
+    const [musique] = await db.query(
+      "SELECT `id_music` FROM `musics` WHERE id_music = ?",
+      [idMusic],
+    );
+    if (musique.length === 0) {
+      return res.status(404).json({ message: "La musique est introuvable." });
+    }
+
+    await db.query(
+      `INSERT INTO historique (id_user, id_music) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE ecoute_at = NOW()`,
+      [idUser, idMusic],
+    );
+    return res.status(201).json({ message: "Écoute enregistrée." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Erreur lors de l'enregistrement de l'écoute.",
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Mot de passe oublie
 // ---------------------------------------------------------------------------
 

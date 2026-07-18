@@ -46,6 +46,7 @@ function App() {
   const [musiquesLikee, setMusiquesLikee] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [top5, setTop5] = useState([]);
+  const [historique, setHistorique] = useState([]);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -144,6 +145,36 @@ function App() {
       .catch((error) => console.error(error));
   }, [token]);
 
+  // « Écoutés récemment » (rangée de l'accueil). L'historique est cote SERVEUR (table `historique`,
+  // choix tranche le 2026-07-18), pas dans `localStorage` : cross-device et persistant. On le
+  // charge comme les likes, et on le rafraichit apres chaque enregistrement d'ecoute.
+  const chargerHistorique = useCallback(() => {
+    apiFetch("/api/users/historique")
+      .then(({ donnees }) => {
+        setHistorique(Array.isArray(donnees) ? donnees : []);
+      })
+      .catch((error) => console.error(error));
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setHistorique([]);
+      return;
+    }
+    chargerHistorique();
+  }, [token, chargerHistorique]);
+
+  // Enregistre l'ecoute du titre courant (upsert cote serveur), puis rafraichit la rangee.
+  // Seulement connecte : l'endpoint est authentifie. La dependance est l'ID du morceau (pas
+  // l'objet `currentMusic`) pour n'enregistrer qu'a chaque NOUVEAU titre, pas a chaque rendu.
+  const idMusiqueCourante = currentMusic?.id_music;
+  useEffect(() => {
+    if (!token || !idMusiqueCourante) return;
+    apiFetch(`/api/users/historique/${idMusiqueCourante}`, { method: "POST" })
+      .then(() => chargerHistorique())
+      .catch((error) => console.error(error));
+  }, [token, idMusiqueCourante, chargerHistorique]);
+
   // Les genres reellement presents dans le catalogue, tries par nombre de morceaux.
   //
   // La liste est DEDUITE des donnees, jamais ecrite en dur : le catalogue est genere par
@@ -239,6 +270,7 @@ function App() {
                   currentMusic={currentMusic}
                   genresDisponibles={genresDisponibles}
                   setGenreFiltre={setGenreFiltre}
+                  historique={historique}
                 />
               }
             />
