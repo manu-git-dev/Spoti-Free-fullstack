@@ -4,11 +4,20 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## EN SUSPENS — a lire en premier (mis a jour le 2026-07-18, fin de session)
+## EN SUSPENS — a lire en premier (mis a jour le 2026-07-19, fin de session)
 
 > Ce qui attend une decision ou du travail. **Rien de ce qui est fait ne figure ici** : c'est
 > dans les commits et `NOTES-APPRENTISSAGE.md`. Tenu a jour a chaque fin de session (protocole
 > dans `CLAUDE.md`). Manuel dit « reprenons » -> Claude restitue cette liste.
+>
+> **Fait le 2026-07-19** (voir les 8 derniers commits) : la grande **revue d'architecture +
+> securite + fonctionnel** de toute l'app (le gros chantier qui figurait ici). Bilan : 1 vrai bug
+> corrige (fichiers de depot orphelins quand un admin supprime un compte -> module `src/depots.js`
+> partage + test de non-regression), durcissement backend (timing de connexion egalise contre
+> l'enumeration, `helmet`, rate-limit sur `/ecoute`, DRY email), garde d'autorisation admin
+> centralise dans `ProtectedRoute`, **lint front passe de 23 a 0 erreur**, lecture au clavier
+> (`Card`/`TrackRow`), `play()` catche, et `AddMusicPlaylist` qui ne tire plus N requetes au
+> montage. Tout est reste vert (189 tests, build, lint) apres chaque commit.
 
 ### En attente d'une DECISION de Manuel
 
@@ -22,23 +31,32 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### En attente de TRAVAIL
 
-- **PROCHAINE GROSSE SESSION — test d'architecture archi-complet de toute l'app** (dicte par Manuel
-  le 2026-07-18, a attaquer a la reprise) : une revue de fond de bout en bout (architecture + tests)
-  de l'application entiere, page par page et flux par flux. C'est LE gros chantier de la reprise.
-- **Passe responsive + tests manuels** (#7/#8) : **la passe automatisee est faite** le 2026-07-18 —
-  13 pages x 5 largeurs (390/820/1440/1920/2560) mesurees (**0 debordement, 0 erreur JS**) + captures,
-  etats remplis (favoris/playlists/detail) verifies, et **deux bugs d'en-tete corriges** : titre casse
-  en 3 lignes sur tablette (-> seuil `lg`) et recherche de la Bibliotheque qui recouvrait le titre en
-  1024-1077px (-> seuil `xl` via la nouvelle prop `actionsLarges` de `Page`/`EnTetePage`). **Restent
-  deux verifications HUMAINES** que les captures ne remplacent pas :
-  - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en page) —
-    toujours bloque par le wifi de l'armee (isole les clients ; hotspot du tel KO, l'iPhone route par la 4G) ;
-  - la **verif visuelle des grands ecrans (1920/2560) sur le PC de la formation** — Manuel n'a pas
-    d'ecran plus grand que son portable a la maison. Les captures 2560 sont saines, mais il veut voir en vrai.
-- **Passe d'accessibilite** (#20) : irregulier (des `aria-label` par endroits, pas partout ; le lecteur
-  n'est probablement pas pilotable au clavier). Note du 2026-07-18 : les boutons de transport **desktop**
-  font **16-20px** (icone seule, sans padding) — cible souris petite, a agrandir dans cette passe (le
-  plein ecran mobile, lui, est correct). C'est le manque « invisible » qui compte le plus en entretien.
+- **⭐ Passe « echecs silencieux » AVANT tout deploiement** (demandee par Manuel le 2026-07-19, a
+  faire a la reprise) : relire CHAQUE endroit du backend qui depend d'une variable d'env et produire
+  un document « si cette variable manque ou est fausse en prod, voila ce qui casse — et comment tu
+  t'en apercois ». Le but est de ne decouvrir aucun probleme APRES la mise en ligne. Livrable = une
+  **check-list a cocher**, pas du code. Cas connus a couvrir au minimum (repere pendant la revue) :
+  - `MAIL_USER`/`MAIL_PASS` absents -> « mot de passe oublie » repond OK mais **n'envoie AUCUN mail**
+    (echec muet, `userRoute.js` : l'envoi est sous `if (MAIL_USER && MAIL_PASS)`) ; idem contact/depot.
+  - `FRONTEND_URL` absent -> **CORS bloque le vrai front** (seul `localhost:5173` reste autorise) ET
+    le lien de reset de mot de passe pointe vers `http://localhost:5173`.
+  - `NODE_ENV` != `production` -> `trust proxy` desactive (mauvaise IP pour le rate-limit) **et** le
+    bypass `RATE_LIMIT_DISABLED` redevient possible.
+  - `JWT_SECRET` faible ou reutilise depuis le dev ; `IP_HASH_SALT` absent -> hash d'IP cassable.
+  - Croiser avec la §6 (Configuration) et la §10 (Verifications) de `DEPLOIEMENT.md`.
+- **Passe responsive — 2 verifications HUMAINES restantes** (#7/#8, la passe auto est faite le
+  2026-07-18 : 13 pages x 5 largeurs, 0 debordement, 0 erreur JS) :
+  - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en page)
+    — bloque par le wifi de l'armee (isole les clients ; hotspot du tel KO, l'iPhone route par la 4G) ;
+  - la **verif visuelle des grands ecrans (1920/2560) sur le PC de la formation** — pas d'ecran plus
+    grand que le portable a la maison. Les captures 2560 sont saines, mais il veut voir en vrai.
+- **Passe d'accessibilite** (#20) : **partiellement avancee le 2026-07-19**. Fait : l'action centrale
+  « jouer un titre » (`Card`/`TrackRow`), qui etait un `<div onClick>` **souris-uniquement**, est
+  passee au pattern clavier accessible (`role="button"`/`tabIndex`/`onKeyDown` Entree-Espace +
+  `aria-label` + anneau de focus). **Restent** : le **lecteur non pilotable au clavier** (Espace =
+  play/pause, fleches = precedent/suivant) et les **boutons de transport desktop trop petits**
+  (16-20px, icone sans padding — cible souris a agrandir ; le plein ecran mobile est correct). C'est
+  le manque « invisible » qui compte le plus en entretien.
 
 ### A faire par MANUEL (bloquant pour la mise en ligne)
 
