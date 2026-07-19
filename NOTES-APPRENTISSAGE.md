@@ -2191,3 +2191,33 @@ Lien avec ce que je fais ici (pour ancrer) : ma suite est surtout **intégration
 La leçon transférable : avant de propager une règle (« on abandonne X »), se demander **de quoi** cette règle protège. Une contrainte de sécurité s'applique aux **secrets**, pas à toute donnée — l'étendre par réflexe fait prendre des décisions produit pour de mauvaises raisons.
 
 ---
+
+## 2026-07-19 — GitHub Actions et l'intégration continue
+
+### 68. Ce que fait mon onglet « Actions », et pourquoi une CI n'est pas qu'un lanceur de tests
+
+*Cas réel : mon projet a déjà une CI (`.github/workflows/ci.yml`) qui tourne à chaque push, mais je ne savais pas nommer ce que je voyais dans l'onglet **Actions** de GitHub. Mise à plat du concept, ancrée sur mon pipeline.*
+
+**Ce que c'est.** **GitHub Actions** est le service d'automatisation intégré à GitHub : il exécute des tâches sur les serveurs de GitHub **en réaction à un événement** du dépôt (un `push`, une *pull request*, une heure programmée…). L'onglet **Actions** est le tableau de bord de ces exécutions (✅/❌ + logs). C'est une implémentation de la **CI/CD** :
+- **CI (Intégration Continue)** : à chaque modif, vérifier *automatiquement* que le code s'installe, compile et passe les tests. C'est ce que fait mon `ci.yml`.
+- **CD (Déploiement Continu)** : mettre en ligne automatiquement si la CI est verte. Je ne le fais **pas** (déploiement manuel sur mon VPS), mais Actions saurait le faire.
+
+**Le vocabulaire** (lu dans mon fichier) :
+- **Workflow** = le fichier `ci.yml` entier (un scénario ; un repo peut en avoir plusieurs).
+- **Event / Trigger** = `on: push / pull_request → main` : l'événement déclencheur.
+- **Job** = `jobs: tests` : un bloc de travail (un workflow peut en enchaîner ou en paralléliser plusieurs).
+- **Runner** = `runs-on: ubuntu-latest` : la **machine virtuelle neuve** allumée pour l'occasion, détruite à la fin.
+- **Step** = chaque `- name:` : une commande, exécutée **dans l'ordre**.
+- **Action** = `uses: actions/checkout@v4` : une brique **réutilisable** publiée par d'autres. Ce sont ces « actions » qui donnent son nom au produit.
+- **Service** = `services: mysql` : un conteneur annexe monté pour le job (ici une **MySQL jetable**).
+
+**Le pourquoi — une CI n'est pas qu'un lanceur de tests.** L'insight, écrit en tête de mon `ci.yml` : l'intérêt n'est pas d'exécuter les tests (je peux le faire en local), c'est de les exécuter sur **une machine qui ne connaît RIEN de mon ordinateur** — pas de MAMP, pas de `.env`, pas de base déjà remplie, pas de fichiers audio. Trois bénéfices :
+1. **Filet anti-régression** : mes tests verrouillent de vrais bugs passés ; si un futur commit les casse, la CI le dit **avant** le VPS.
+2. **Preuve de reproductibilité** : ça garantit que le projet est **installable par quelqu'un d'autre** (un recruteur qui clone). Si je dépendais sans le savoir d'un fichier présent seulement sur mon Mac, la CI échouerait — c'est déjà arrivé (note 55). La base est d'ailleurs **reconstruite depuis zéro** à partir des seuls fichiers versionnés (`schema.sql` + `seed-musics.sql`) : si le schéma n'était pas dans Git, l'étape planterait.
+3. **Badge de confiance** (argument vitrine) : le ✅ vert sur le repo dit « ce projet est sérieux » — beaucoup de recruteurs regardent l'onglet Actions avant le code.
+
+**Les alternatives** (même concept partout : un YAML qui rejoue des étapes sur une machine neuve à chaque push) : **GitLab CI/CD**, **CircleCI**, **Jenkins** (vétéran, auto-hébergé), **Travis CI** (historique open-source). Actions a gagné surtout parce qu'il est **intégré à GitHub** et **gratuit sur les repos publics**.
+
+La leçon transférable : « faire tourner les tests » et « prouver que le projet tient debout ailleurs que chez moi » sont **deux choses différentes**. C'est la seconde qui a de la valeur — et elle n'existe que si **rien ne dépend de ma machine** (secrets fabriqués à la volée, base reconstruite, médias régénérés).
+
+---
