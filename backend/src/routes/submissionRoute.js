@@ -11,6 +11,7 @@ import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
+import { DOSSIER_UPLOADS, supprimerFichiersDepot } from "../depots.js";
 import {
   licenceValide,
   urlDeLicence,
@@ -26,14 +27,12 @@ const router = express.Router();
 // ---------------------------------------------------------------------------
 // Ou vont les fichiers
 //
-// `uploads/` est HORS de `public/`. C'est la decision la plus importante de tout ce fichier :
-// `server.js` fait `express.static("public")`, donc tout ce qui atterrit dans `public/` est
-// servi publiquement, immediatement. Un morceau depose mais pas encore valide y serait donc en
-// ligne avant moderation — et la moderation ne servirait plus a rien.
-//
-// Le fichier n'est deplace vers `public/` qu'a l'approbation (voir plus bas).
+// `uploads/` (importe depuis src/depots.js) est HORS de `public/`. C'est la decision la plus
+// importante du dossier : `server.js` fait `express.static("public")`, donc tout ce qui atterrit
+// dans `public/` est servi publiquement, immediatement. Un morceau depose mais pas encore valide
+// vit donc dans `uploads/`, invisible, et n'est deplace vers `public/` qu'a l'approbation
+// (fs.rename plus bas) — sinon la moderation ne servirait a rien.
 // ---------------------------------------------------------------------------
-const DOSSIER_UPLOADS = path.join(process.cwd(), "uploads");
 const DOSSIER_PUBLIC_AUDIO = path.join(process.cwd(), "public", "musiques");
 const DOSSIER_PUBLIC_IMAGES = path.join(process.cwd(), "public", "images");
 
@@ -103,20 +102,6 @@ const limiteDepot = rateLimit({
 // ---------------------------------------------------------------------------
 // Utilitaires
 // ---------------------------------------------------------------------------
-
-/** Supprime des fichiers sans jamais faire echouer l'appelant (nettoyage "best effort"). */
-async function supprimerFichiers(...noms) {
-  await Promise.all(
-    noms.filter(Boolean).map(async (nom) => {
-      try {
-        await fs.unlink(path.join(DOSSIER_UPLOADS, nom));
-      } catch (error) {
-        // Le fichier a deja disparu (ou n'a jamais ete ecrit) : ce n'est pas un probleme.
-        if (error.code !== "ENOENT") console.error(error);
-      }
-    }),
-  );
-}
 
 /** Notifie l'admin par mail. Un echec d'envoi ne doit PAS faire echouer le depot. */
 async function notifierAdmin(depot, pseudo) {
@@ -188,7 +173,7 @@ router.post(
       // un projet dont tout le chantier droits d'auteur vise justement l'inverse. On l'exige donc
       // des le depot, et le tirage au hasard a disparu (voir l'approbation).
       if (!title || !artist || !audio || !image) {
-        await supprimerFichiers(audio?.filename, image?.filename);
+        await supprimerFichiersDepot(audio?.filename, image?.filename);
         return res.status(400).json({
           message: "Titre, artiste, fichier audio et pochette sont obligatoires.",
         });
@@ -205,7 +190,7 @@ router.post(
       // probleme qu'un morceau sous copyright.
       // ---------------------------------------------------------------------
       if (!droitsConfirmes) {
-        await supprimerFichiers(audio.filename, image?.filename);
+        await supprimerFichiersDepot(audio.filename, image?.filename);
         return res.status(400).json({
           message:
             "Vous devez certifier détenir les droits sur le morceau et sa pochette.",
@@ -213,12 +198,12 @@ router.post(
       }
 
       if (!licenceValide(licence)) {
-        await supprimerFichiers(audio.filename, image?.filename);
+        await supprimerFichiersDepot(audio.filename, image?.filename);
         return res.status(400).json({ message: MESSAGE_LICENCE });
       }
 
       if (!sourceUrlValide(sourceUrl)) {
-        await supprimerFichiers(audio.filename, image?.filename);
+        await supprimerFichiersDepot(audio.filename, image?.filename);
         return res.status(400).json({ message: MESSAGE_SOURCE_URL });
       }
 
@@ -226,13 +211,13 @@ router.post(
       // poser n'importe quel genre. Sans ce garde-fou, un depot approuve avec "Trap" creerait une
       // pastille menant a UN morceau dans la Bibliotheque (qui deduit ses pastilles du catalogue).
       if (!genreValide(genre)) {
-        await supprimerFichiers(audio.filename, image?.filename);
+        await supprimerFichiersDepot(audio.filename, image?.filename);
         return res.status(400).json({ message: MESSAGE_GENRE });
       }
 
       // La limite globale de multer est celle de l'audio (10 Mo) : on affine ici pour l'image.
       if (image.size > TAILLE_MAX_IMAGE) {
-        await supprimerFichiers(audio.filename, image.filename);
+        await supprimerFichiersDepot(audio.filename, image.filename);
         return res.status(413).json({
           message: "Pochette trop lourde (2 Mo maximum).",
         });
@@ -269,7 +254,7 @@ router.post(
       if (!duration) {
         // Audio ET pochette sont garantis presents ici (verifies plus haut) : on nettoie les deux
         // avant de refuser, pour ne pas les laisser orphelins sur le disque.
-        await supprimerFichiers(audio.filename, image.filename);
+        await supprimerFichiersDepot(audio.filename, image.filename);
         return res.status(400).json({
           message:
             "Ce fichier n'est pas un fichier audio valide (ou il est corrompu).",
@@ -306,7 +291,7 @@ router.post(
     } catch (error) {
       console.error(error);
       // En cas de pepin, on ne laisse pas de fichiers orphelins derriere nous.
-      await supprimerFichiers(audio?.filename, image?.filename);
+      await supprimerFichiersDepot(audio?.filename, image?.filename);
 
       return res.status(500).json({
         message: "Erreur lors de l'enregistrement du dépôt.",
@@ -575,7 +560,7 @@ router.patch(
 
       // Les fichiers refuses ne servent plus a rien : on les supprime pour ne pas laisser
       // `uploads/` gonfler indefiniment.
-      await supprimerFichiers(depot.fichier_audio, depot.fichier_image);
+      await supprimerFichiersDepot(depot.fichier_audio, depot.fichier_image);
 
       await db.query(
         "UPDATE submissions SET statut = 'refuse', motif_refus = ? WHERE id_submission = ?",
