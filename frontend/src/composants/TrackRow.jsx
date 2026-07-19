@@ -2,6 +2,7 @@ import AddMusicPlaylist from "./AddMusicPlaylist";
 import ButtonLike from "./ButtonLike";
 import RemoveMusicPlaylist from "./RemoveMusicPlaylist";
 import { urlFichier } from "@/lib/api";
+import { formaterDuree } from "@/lib/utils";
 
 export default function TrackRow({
   musique,
@@ -21,15 +22,13 @@ export default function TrackRow({
     setCurrentMusic(musique);
     setCurrentQueue(queue);
   };
-  const formatDuration = (seconds) => {
-    if (seconds === null || seconds === undefined) return "--:--";
-    const minutes = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${minutes}:${secs}`;
+  // Zone de lecture accessible au clavier : Entree/Espace declenchent la lecture comme le clic.
+  // `preventDefault` sur Espace evite que la page ne defile.
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleClick();
+    }
   };
   return (
     <div
@@ -47,8 +46,12 @@ export default function TrackRow({
         {index + 1}
       </span>
       <div
-        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+        role="button"
+        tabIndex={0}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        aria-label={`Lire ${musique.title} par ${musique.artist}`}
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <img
           src={urlFichier(musique.src_image)}
@@ -89,7 +92,7 @@ export default function TrackRow({
         </div>
       )}
       <span className="hidden sm:block text-sm text-muted-foreground shrink-0 tabular-nums">
-        {formatDuration(musique.duration)}
+        {formaterDuree(musique.duration)}
       </span>
     </div>
   );

@@ -20,6 +20,14 @@ export default function Card({
     setCurrentMusic(musique);
     setCurrentQueue(queue);
   };
+  // Zone de lecture accessible au clavier : Entree/Espace lancent la lecture comme le clic.
+  // `preventDefault` sur Espace evite que la page ne defile.
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleClick();
+    }
+  };
   return (
     <article
       className={`group bg-background/50 border rounded-2xl p-3 flex flex-col cursor-pointer transition-all hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 ${
@@ -28,7 +36,14 @@ export default function Card({
           : "border-border hover:border-accent"
       }`}
     >
-      <div onClick={handleClick}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        aria-label={`Lire ${musique.title} par ${musique.artist}`}
+        className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
         <img
           src={urlFichier(musique.src_image)}
           alt={`Pochette album ${musique.title}`}
