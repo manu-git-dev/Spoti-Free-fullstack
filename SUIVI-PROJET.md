@@ -18,6 +18,14 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > centralise dans `ProtectedRoute`, **lint front passe de 23 a 0 erreur**, lecture au clavier
 > (`Card`/`TrackRow`), `play()` catche, et `AddMusicPlaylist` qui ne tire plus N requetes au
 > montage. Tout est reste vert (189 tests, build, lint) apres chaque commit.
+>
+> **Fait aussi le 2026-07-19** (2e session) : (1) la **passe « echecs silencieux »** — garde-fou
+> `backend/src/verifierEnv.js` (fail-fast : refuse de demarrer si une var d'env critique manque,
+> avertit pour le mail / `NODE_ENV`) + `CHECKLIST-ECHECS-SILENCIEUX.md` (doc a cocher jour-J) + fix
+> du `.env` d'exemple de `DEPLOIEMENT.md` §6 (oubliait `MAIL_TO`). (2) La **fin de la passe a11y
+> (#20)** — lecteur pilotable au clavier (Espace = play/pause, fleches = prec/suiv, regle
+> « ambiante » : ne tire pas si un controle a le focus) + zone de clic des boutons de transport
+> desktop agrandie (`p-2 -m-2`). 189 tests verts, lint front vert.
 
 ### En attente d'une DECISION de Manuel
 
@@ -37,14 +45,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
     — bloque par le wifi de l'armee (isole les clients ; hotspot du tel KO, l'iPhone route par la 4G) ;
   - la **verif visuelle des grands ecrans (1920/2560) sur le PC de la formation** — pas d'ecran plus
     grand que le portable a la maison. Les captures 2560 sont saines, mais il veut voir en vrai.
-- **Passe d'accessibilite** (#20) : **partiellement avancee le 2026-07-19**. Fait : l'action centrale
-  « jouer un titre » (`Card`/`TrackRow`), qui etait un `<div onClick>` **souris-uniquement**, est
-  passee au pattern clavier accessible (`role="button"`/`tabIndex`/`onKeyDown` Entree-Espace +
-  `aria-label` + anneau de focus). **Restent** : le **lecteur non pilotable au clavier** (Espace =
-  play/pause, fleches = precedent/suivant) et les **boutons de transport desktop trop petits**
-  (16-20px, icone sans padding — cible souris a agrandir ; le plein ecran mobile est correct). C'est
-  le manque « invisible » qui compte le plus en entretien.
-
 ### A faire par MANUEL (bloquant pour la mise en ligne)
 
 - **⚠️ RAPPEL AVANT DEPLOIEMENT — coordonnees de l'HEBERGEUR dans `MentionsLegales.jsx`** (#11) :
@@ -80,11 +80,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
     renvoie -1. Il faut donc **remplacer le `currentIndex` derive par un pointeur de contexte
     explicite** qui reste fige pendant qu'on depile la file utilisateur, et ne reprend qu'a
     l'epuisement de celle-ci. C'est LA decision de conception du chantier.
-
-> **Fait aussi le 2026-07-19** : la **passe « echecs silencieux »** (etait #3 ici). Livrables :
-> `backend/src/verifierEnv.js` (garde-fou fail-fast : refuse de demarrer si une var d'env critique
-> manque, avertit pour le mail/NODE_ENV) + `CHECKLIST-ECHECS-SILENCIEUX.md` (doc a cocher jour-J) +
-> correction du `.env` d'exemple de `DEPLOIEMENT.md` (§6 oubliait `MAIL_TO`). 189 tests verts.
   - Restait a trancher cote UI (repris a la reprise) : placement propose par Claude = **3e colonne
     grille a droite** (bureau) + **dans le Dialog plein ecran existant** (mobile) ; drag = `@dnd-kit`
     (effet vitrine) vs boutons haut/bas (a11y gratuite, cocherait #20) ; persistance = en memoire.
