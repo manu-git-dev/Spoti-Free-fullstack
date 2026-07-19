@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function Login({ user, setUser, token, setToken }) {
+export default function Login({ setUser, setToken }) {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
   const navigate = useNavigate();
