@@ -2221,3 +2221,23 @@ La leçon transférable : avant de propager une règle (« on abandonne X »), s
 La leçon transférable : « faire tourner les tests » et « prouver que le projet tient debout ailleurs que chez moi » sont **deux choses différentes**. C'est la seconde qui a de la valeur — et elle n'existe que si **rien ne dépend de ma machine** (secrets fabriqués à la volée, base reconstruite, médias régénérés).
 
 ---
+
+### 69. Docker, Docker Compose et CI : pourquoi ça se ressemble (et où sont les frontières)
+
+*Cas réel : en relisant mon `ci.yml`, j'ai dit « on dirait une config Docker ». Intuition en partie juste — voici le tri.*
+
+**Pourquoi la ressemblance**, du superficiel au profond :
+1. **Même format, YAML** — partagé par Actions, Docker Compose, Kubernetes, Ansible… Se ressembler *visuellement* parce qu'on est dans le même format ne veut rien dire (deux textes en français ne sont pas le même texte).
+2. **Il y a vraiment du Docker dans mon fichier** : le bloc `services: mysql: image: mysql:8.0` avec `ports` et `--health-cmd` lance un **conteneur Docker** MySQL jetable pour la durée du job. Mon œil a reconnu du Docker parce qu'il y en a.
+3. **Ce que ça évoque surtout, c'est Docker Compose** : un `docker-compose.yml` décrit lui aussi des `services:` avec `image:`/`ports:`/`healthcheck:`. C'est le cousin le plus proche de ce bloc.
+
+**La nuance (ne pas confondre) :**
+- **Docker** = empaqueter une app + ses dépendances dans une **boîte isolée et portable** (un *conteneur*) qui tourne pareil partout.
+- **Docker Compose** = orchestrer **plusieurs conteneurs** en local (`docker-compose.yml`).
+- **GitHub Actions** = orchestrer des **tâches CI/CD** à chaque push — et pour ça, il **se sert** de Docker (mon service MySQL).
+
+Donc **Docker est un outil qu'Actions emploie**, pas la même catégorie. Mon `ci.yml` n'est pas un fichier Docker : c'est un workflow CI qui, à une étape, allume un conteneur.
+
+**Le vrai lien de parenté** : la même philosophie — *décrire un environnement complet dans un fichier versionné, reconstructible à l'identique de zéro*. Docker le fait pour **faire tourner** l'app, Actions pour **la tester sur une machine vierge**. Les deux combattent le même ennemi, le « ça marche sur ma machine ». D'où le sentiment de familiarité : même réflexe d'ingénierie, appliqué à deux moments différents. Suite logique possible (plus tard) : **dockeriser** Spoti-Free (`Dockerfile` backend + `docker-compose.yml` app+MySQL) pour un déploiement encore plus reproductible.
+
+---
