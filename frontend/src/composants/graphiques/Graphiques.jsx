@@ -24,6 +24,7 @@ import { useId, useState } from "react";
 // Piege technique : une variable CSS ne se resout PAS dans un attribut de presentation SVG
 // (`stroke="var(--x)"` est ignore). Ces couleurs passent donc par `style={{ stroke: … }}`, ou
 // `var()` est bien interprete — et recalcule au changement de theme sans re-rendu React.
+// eslint-disable-next-line react-refresh/only-export-components -- constantes de theme co-localisees avec les graphiques ; impact fast-refresh (dev) uniquement
 export const COULEURS = ["#6c5ce7", "#5c8fe6"];
 
 // La surface sur laquelle les graphiques sont poses (carte en `bg-background/50`). Sert d'anneau

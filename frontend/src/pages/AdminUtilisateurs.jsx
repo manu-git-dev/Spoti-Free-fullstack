@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Users,
   Shield,
@@ -31,18 +31,21 @@ export default function AdminUtilisateurs({ user }) {
   // doit jamais suffire.
   const [changementRole, setChangementRole] = useState(null); // { cible, role }
 
-  useEffect(() => {
-    charger();
-  }, []);
-
-  function charger() {
+  // `useCallback` + declaration AVANT l'effet : `charger` etait defini apres le useEffect qui
+  // l'appelle (ca marchait par hoisting, mais le compilateur React le refuse). Reference stable,
+  // donc reutilisable par les actions (changement de role, suppression) sans se recreer.
+  const charger = useCallback(() => {
     apiFetch("/api/admin/utilisateurs")
       .then(({ donnees }) => {
         setUtilisateurs(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error))
       .finally(() => setChargement(false));
-  }
+  }, []);
+
+  useEffect(() => {
+    charger();
+  }, [charger]);
 
   // Acces (session + role admin) garanti par ProtectedRoute en amont. `user` sert encore plus bas
   // a reperer la ligne « c'est moi » dans la liste. Vraie protection : `adminMiddleware`, serveur.

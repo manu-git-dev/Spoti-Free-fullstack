@@ -48,6 +48,7 @@ export default function MesDepots({ user }) {
 
   useEffect(() => {
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- pas connecte : on coupe l'ecran de chargement pour afficher l'etat « connecte-toi »
       setChargement(false);
       return;
     }

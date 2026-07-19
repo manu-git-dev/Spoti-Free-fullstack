@@ -70,6 +70,7 @@ export default function Home({
   const aDecouvrir = useMemo(() => {
     const copie = [...musiques];
     for (let i = copie.length - 1; i > 0; i--) {
+      // eslint-disable-next-line react-hooks/purity -- hasard VOULU, memoise sur [musiques] : ne se retire qu'au chargement du catalogue, pas a chaque rendu
       const j = Math.floor(Math.random() * (i + 1));
       [copie[i], copie[j]] = [copie[j], copie[i]];
     }
