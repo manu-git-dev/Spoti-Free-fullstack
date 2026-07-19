@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api";
  * n'est jamais publie, et le token ne se retrouve pas dans une URL (ou il finirait dans les
  * logs serveur et l'historique du navigateur).
  */
+// eslint-disable-next-line react-refresh/only-export-components -- hook co-localise avec le composant qui l'utilise ; impact fast-refresh (dev) uniquement
 export function useFichierProtege(chemin, actif = true) {
   const [url, setUrl] = useState(null);
   const [erreur, setErreur] = useState(false);

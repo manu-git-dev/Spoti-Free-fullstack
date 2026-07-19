@@ -101,6 +101,7 @@ export default function MediaPlayer({
   // On la regenere. On ne depend QUE de `queue` a dessein : ajouter `currentIndex` remelangerait a
   // chaque changement de titre et casserait la garantie "une passe complete avant repetition".
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- regeneration voulue de l'ordre aleatoire quand la file change (les index de l'ancienne file ne valent plus rien)
     if (isShuffle) setShuffleOrder(melangerOrdre(queue.length, currentIndex));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue]);

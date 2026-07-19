@@ -123,6 +123,7 @@ function App() {
   // une erreur (like en doublon).
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset volontaire des favoris a la deconnexion (token -> null)
       setMusiquesLikee([]);
       return;
     }
@@ -135,6 +136,7 @@ function App() {
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset volontaire des playlists a la deconnexion (token -> null)
       setPlaylists([]);
       return;
     }
@@ -158,6 +160,7 @@ function App() {
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset volontaire de l'historique a la deconnexion (token -> null)
       setHistorique([]);
       return;
     }
@@ -212,6 +215,7 @@ function App() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- index derive de la file ; refonte reportee (chantier file d'attente, cf. SUIVI-PROJET.md)
     setCurrentIndex(
       currentQueue.findIndex(
         (musique) => musique.id_music === currentMusic?.id_music,
