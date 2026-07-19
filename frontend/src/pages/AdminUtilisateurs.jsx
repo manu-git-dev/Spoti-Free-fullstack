@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import {
   Users,
   Shield,
@@ -45,10 +44,8 @@ export default function AdminUtilisateurs({ user }) {
       .finally(() => setChargement(false));
   }
 
-  if (!user || user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
+  // Acces (session + role admin) garanti par ProtectedRoute en amont. `user` sert encore plus bas
+  // a reperer la ligne « c'est moi » dans la liste. Vraie protection : `adminMiddleware`, serveur.
   async function changerRole(cible, role) {
     try {
       const { reponse, donnees } = await apiFetch(

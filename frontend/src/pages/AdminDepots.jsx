@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { ShieldCheck, Check, X, Inbox, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import {
 import { apiFetch, messageErreur } from "@/lib/api";
 import Page from "../composants/Page";
 
-export default function AdminDepots({ user }) {
+export default function AdminDepots() {
   const [depots, setDepots] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [depotARefuser, setDepotARefuser] = useState(null);
@@ -36,13 +35,8 @@ export default function AdminDepots({ user }) {
       .finally(() => setChargement(false));
   }, []);
 
-  // Ce test n'est QUE du confort : il evite d'afficher une page vide a un non-admin.
-  // La vraie protection est `adminMiddleware`, cote serveur — quelqu'un qui trafiquerait son
-  // localStorage verrait cette page, mais toutes ses requetes seraient refusees en 403.
-  if (!user || user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
+  // Acces (session + role admin) garanti par ProtectedRoute en amont : plus de controle ici. La
+  // vraie protection reste `adminMiddleware` cote serveur (toute requete d'un non-admin -> 403).
   async function traiter(depot, action) {
     const corps = action === "refuser" ? { motif } : undefined;
 

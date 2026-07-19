@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -50,7 +50,7 @@ function Tuile({ icone: Icone, valeur, libelle, accent = false }) {
   );
 }
 
-export default function AdminDashboard({ user }) {
+export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [chargement, setChargement] = useState(true);
 
@@ -61,11 +61,8 @@ export default function AdminDashboard({ user }) {
       .finally(() => setChargement(false));
   }, []);
 
-  // Confort d'affichage uniquement : la protection reelle est `adminMiddleware`, cote serveur.
-  if (!user || user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
+  // L'acces (session + role admin) est garanti par ProtectedRoute en amont : plus de controle de
+  // role ici. La protection qui compte reste `adminMiddleware` cote serveur.
   if (chargement) {
     return (
       <section className="h-full overflow-y-auto p-4 md:p-8">
