@@ -2241,3 +2241,24 @@ Donc **Docker est un outil qu'Actions emploie**, pas la même catégorie. Mon `c
 **Le vrai lien de parenté** : la même philosophie — *décrire un environnement complet dans un fichier versionné, reconstructible à l'identique de zéro*. Docker le fait pour **faire tourner** l'app, Actions pour **la tester sur une machine vierge**. Les deux combattent le même ennemi, le « ça marche sur ma machine ». D'où le sentiment de familiarité : même réflexe d'ingénierie, appliqué à deux moments différents. Suite logique possible (plus tard) : **dockeriser** Spoti-Free (`Dockerfile` backend + `docker-compose.yml` app+MySQL) pour un déploiement encore plus reproductible.
 
 ---
+
+### 70. Dockeriser une app : image vs volume, et « après avoir déployé une fois à la main »
+
+*Demande de cours (notion pas encore appliquée) : ce que voudrait dire dockeriser Spoti-Free. Exemple gardé générique — pas de fichiers prêts à coller, le but est de comprendre la mécanique.*
+
+**Les 3 mots à ne pas confondre :**
+- **Dockerfile** = la *recette* (les étapes de construction). Analogie : le plan de montage.
+- **Image** = le résultat figé de la recette (code + runtime + dépendances), **immuable**. Le meuble emballé.
+- **Conteneur** = une image **en train de tourner**. Le meuble déballé et monté.
+
+Dockeriser, c'est traduire les **étapes d'installation** (aujourd'hui décrites à un humain dans un `DEPLOIEMENT.md`) en une recette **rejouable par une machine, à l'identique, partout**.
+
+**LE concept central : image vs volume.**
+- L'**image** contient le **CODE** — immuable, jetable, reconstructible à volonté, doit rester **légère**.
+- Un **volume** contient les **DONNÉES** — persistantes, précieuses, montées *à côté* du conteneur, sauvegardées à part.
+
+Règle d'or : *tout ce qui doit survivre au redémarrage/à la reconstruction du conteneur va dans un volume, jamais dans l'image.* Cas générique typique : une app web = image ; sa base de données, ses fichiers uploadés par les utilisateurs, ses logs = volumes. Enfermer des données dans l'image est l'erreur classique : à la reconstruction suivante, elles sont soit perdues, soit l'image devient obèse. (Appliqué à Spoti-Free : les ~590 Mo d'audio, le dossier des dépôts en attente, et les données MySQL seraient **trois volumes** ; seul le code entrerait dans l'image.)
+
+**La leçon de méthode (la plus importante) : dockeriser APRÈS avoir déployé une fois à la main.** Un premier déploiement manuel (reverse-proxy, service systemd, certificats, variables d'env) fait *toucher* chaque rouage — et c'est ça qui s'apprend et se défend en entretien. Docker par-dessus des rouages qu'on ne maîtrise pas encore n'apprend que des incantations. Une fois chaque pièce familière, la dockerisation devient un exercice de **traduction** (« je connais les étapes → je les code »), pas de découverte. Même logique que mes autres reports (auth cookie, file d'attente) : ne pas empiler une couche qui *cache* ce qu'on a besoin de voir, surtout pas juste avant une mise en ligne.
+
+---
