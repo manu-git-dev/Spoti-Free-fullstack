@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Music, Pencil, Trash2, Play, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ const formatDuree = (secondes) => {
   return `${m}:${s}`;
 };
 
-export default function AdminMusiques({ user }) {
+export default function AdminMusiques() {
   const [musiques, setMusiques] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [recherche, setRecherche] = useState("");
@@ -55,10 +54,7 @@ export default function AdminMusiques({ user }) {
       .finally(() => setChargement(false));
   }, []);
 
-  if (!user || user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
+  // Acces (session + role admin) garanti par ProtectedRoute en amont. Vraie protection : serveur.
   function ouvrirModification(musique) {
     setFormulaire({
       title: musique.title,

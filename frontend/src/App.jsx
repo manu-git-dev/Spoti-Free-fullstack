@@ -315,15 +315,15 @@ function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute user={user}>
-                  <AdminDashboard user={user} />
+                <ProtectedRoute user={user} role="admin">
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/admin/utilisateurs"
               element={
-                <ProtectedRoute user={user}>
+                <ProtectedRoute user={user} role="admin">
                   <AdminUtilisateurs user={user} />
                 </ProtectedRoute>
               }
@@ -331,16 +331,16 @@ function App() {
             <Route
               path="/admin/musiques"
               element={
-                <ProtectedRoute user={user}>
-                  <AdminMusiques user={user} />
+                <ProtectedRoute user={user} role="admin">
+                  <AdminMusiques />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/admin/depots"
               element={
-                <ProtectedRoute user={user}>
-                  <AdminDepots user={user} />
+                <ProtectedRoute user={user} role="admin">
+                  <AdminDepots />
                 </ProtectedRoute>
               }
             />
