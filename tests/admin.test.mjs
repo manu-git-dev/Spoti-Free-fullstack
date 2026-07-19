@@ -5,6 +5,10 @@
 //
 // Lancer : cd tests && npm run test:admin
 
+import fs from "node:fs";
+import path from "node:path";
+import url from "node:url";
+
 import {
   API,
   creerCompte,
@@ -15,6 +19,15 @@ import {
   rapport,
   nettoyerComptesDeTest,
 } from "./utils.mjs";
+
+const ICI = path.dirname(url.fileURLToPath(import.meta.url));
+const FIXTURES = path.join(ICI, "fixtures");
+const DOSSIER_UPLOADS = path.join(ICI, "..", "backend", "uploads");
+
+// Memes fixtures que la suite depot : un vrai MP3 silencieux et une vraie image, libres de droits
+// et versionnes (pas de dependance a `backend/public/`, gitignore).
+const VRAI_MP3 = fs.readFileSync(path.join(FIXTURES, "audio-test.mp3"));
+const VRAIE_IMAGE = fs.readFileSync(path.join(FIXTURES, "pochette-test.jpg"));
 
 // Un VRAI compte admin, cree pour ces tests puis supprime avec les autres.
 //
@@ -363,6 +376,85 @@ await etape("suppression sans casser les fichiers partages", async () => {
 
   await db.query("DELETE FROM musics WHERE artist = '__admin-test'");
   await db.end();
+});
+
+// ---------------------------------------------------------------------------
+// 7. Supprimer un utilisateur nettoie ses fichiers de depot EN ATTENTE
+//
+// Test de NON-REGRESSION. Deux chemins suppriment un utilisateur et menent au meme etat (compte
+// + `submissions` effaces en cascade) : l'auto-suppression (`DELETE /api/users/mon-compte`) et la
+// suppression par un admin (`DELETE /api/admin/utilisateurs/:id`). La cascade SQL efface les
+// LIGNES, jamais les fichiers sur le disque — il faut donc les nettoyer a la main.
+//
+// L'auto-suppression le faisait deja ; la suppression admin, elle, faisait un simple DELETE et
+// laissait les fichiers orphelins dans uploads/. Le fix extrait ce nettoyage dans une fonction
+// partagee (`nettoyerDepotsEnAttente`, src/depots.js) appelee par les DEUX routes. Avant le fix,
+// la derniere assertion de ce test echouait (les fichiers survivaient a la suppression du compte).
+// ---------------------------------------------------------------------------
+await etape("suppression admin : nettoie les depots en attente du compte", async () => {
+  const { token, user } = await creerCompte("AdminDeposant");
+
+  // Le deposant depose un vrai morceau -> une submission `en_attente` avec 2 fichiers dans uploads/.
+  const formulaire = new FormData();
+  formulaire.append("title", "Depot a nettoyer");
+  formulaire.append("artist", "Deposant");
+  formulaire.append("licence", "CC BY 4.0");
+  formulaire.append("droitsConfirmes", "true");
+  formulaire.append("audio", new Blob([VRAI_MP3]), "morceau.mp3");
+  formulaire.append("image", new Blob([VRAIE_IMAGE]), "cover.jpg");
+
+  const depot = await fetch(`${API}/api/submissions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formulaire,
+  });
+  verifier(
+    "depot en attente : cree pour le test (201)",
+    depot.status === 201,
+    `recu ${depot.status}`,
+  );
+
+  // On lit les NOMS des fichiers en base (l'API ne les expose pas, c'est voulu), pour verifier
+  // ensuite leur presence puis leur disparition sur le disque.
+  const { default: mysql } = await import("mysql2/promise");
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  });
+  const [[ligne]] = await db.query(
+    "SELECT fichier_audio, fichier_image FROM submissions WHERE id_user = ? AND statut = 'en_attente'",
+    [user.id_user],
+  );
+  await db.end();
+
+  const cheminAudio = path.join(DOSSIER_UPLOADS, ligne.fichier_audio);
+  const cheminImage = path.join(DOSSIER_UPLOADS, ligne.fichier_image);
+
+  verifier(
+    "depot en attente : les 2 fichiers sont sur le disque avant suppression",
+    fs.existsSync(cheminAudio) && fs.existsSync(cheminImage),
+    `audio=${fs.existsSync(cheminAudio)}, image=${fs.existsSync(cheminImage)}`,
+  );
+
+  const admin = apiAuth(tokenAdmin());
+  const suppression = await admin(`/api/admin/utilisateurs/${user.id_user}`, {
+    method: "DELETE",
+  });
+  verifier(
+    "suppression : l'admin supprime le compte du deposant (200)",
+    suppression.reponse.status === 200,
+    `recu ${suppression.reponse.status}`,
+  );
+
+  // LE point du test : les fichiers en attente ne survivent PAS a la suppression du compte.
+  verifier(
+    "suppression : les fichiers du depot en attente sont effaces du disque",
+    !fs.existsSync(cheminAudio) && !fs.existsSync(cheminImage),
+    `audio existe encore=${fs.existsSync(cheminAudio)}, image existe encore=${fs.existsSync(cheminImage)}`,
+  );
 });
 
 await nettoyerComptesDeTest();

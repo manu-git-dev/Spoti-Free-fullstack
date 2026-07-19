@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+import { nettoyerDepotsEnAttente } from "../depots.js";
 
 const router = express.Router();
 
@@ -296,6 +297,12 @@ router.delete(
           });
         }
       }
+
+      // Nettoyage des fichiers des depots en attente AVANT le DELETE (cf. src/depots.js) : la
+      // cascade SQL efface les lignes de `submissions`, jamais les fichiers sur le disque. Sans
+      // cet appel, supprimer un utilisateur ayant des depots en attente laissait ses fichiers
+      // orphelins dans uploads/ — l'auto-suppression (userRoute) nettoyait deja, pas celle-ci.
+      await nettoyerDepotsEnAttente(idCible);
 
       await db.query("DELETE FROM users WHERE id_user = ?", [idCible]);
 

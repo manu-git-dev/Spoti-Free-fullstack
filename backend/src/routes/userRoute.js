@@ -5,12 +5,11 @@ const router = express.Router();
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import crypto from "node:crypto";
-import path from "node:path";
-import fs from "node:fs/promises";
 import nodemailer from "nodemailer";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
+import { nettoyerDepotsEnAttente } from "../depots.js";
 import {
   emailValide,
   motDePasseValide,
@@ -142,49 +141,16 @@ router.delete("/mon-compte", authMiddleware, async (req, res) => {
       }
     }
 
-    // -----------------------------------------------------------------------
-    // Les fichiers des depots — LE piege de cette route.
+    // Nettoyage des fichiers des depots EN ATTENTE, AVANT de perdre les lignes qui les nomment :
+    // la cascade SQL (ON DELETE CASCADE) efface les lignes de `submissions`, jamais les fichiers
+    // sur le disque. Le POURQUOI du "en_attente uniquement" (les fichiers approuves sont au
+    // catalogue, potentiellement partages) vit dans src/depots.js — cette meme fonction est
+    // appelee par la suppression d'un compte par un admin, pour que l'invariant ne diverge pas.
     //
-    // `submissions` part en cascade avec l'utilisateur (cle etrangere ON DELETE CASCADE), mais
-    // la base ne sait rien des fichiers sur le disque. Il faut donc les nettoyer nous-memes,
-    // AVANT de perdre les lignes qui donnent leur nom.
-    //
-    // Et surtout : UNIQUEMENT ceux des depots `en_attente`.
-    //
-    //   - `en_attente` -> le fichier est dans `uploads/`, il n'appartient qu'a ce depot, et
-    //     personne ne le reclamera jamais : on le supprime.
-    //   - `approuve`   -> le fichier a ete DEPLACE dans `public/` a l'approbation. La ligne de
-    //     `submissions` porte encore son nom, mais ce fichier est desormais celui du CATALOGUE.
-    //     Le supprimer rendrait un morceau public injouable — et s'il s'agit d'une pochette,
-    //     elle est peut-etre partagee par plusieurs morceaux (cf. la regle du projet : ne jamais
-    //     supprimer un fichier partage). On n'y touche pas.
-    //   - `refuse`     -> le fichier a deja ete supprime au moment du refus. Rien a faire.
-    //
-    // Le morceau approuve reste donc au catalogue apres la suppression du compte. C'est
-    // volontaire : il y est sous licence libre, l'auteur l'a place la, et le retirer casserait
-    // les playlists et les favoris de tous les autres utilisateurs.
-    // -----------------------------------------------------------------------
-    const [depotsEnAttente] = await db.query(
-      "SELECT fichier_audio, fichier_image FROM submissions WHERE id_user = ? AND statut = 'en_attente'",
-      [idUser],
-    );
-
-    const DOSSIER_UPLOADS = path.join(process.cwd(), "uploads");
-
-    for (const depot of depotsEnAttente) {
-      for (const nom of [depot.fichier_audio, depot.fichier_image]) {
-        if (!nom) continue;
-        try {
-          // `path.basename` : la colonne ne contient qu'un nom de fichier, mais on ne construit
-          // jamais un chemin a partir d'une valeur de base sans le neutraliser.
-          await fs.unlink(path.join(DOSSIER_UPLOADS, path.basename(nom)));
-        } catch (error) {
-          // Fichier deja absent : ce n'est pas une raison de faire echouer la suppression du
-          // compte. L'utilisateur a demande a partir, il part.
-          if (error.code !== "ENOENT") console.error(error);
-        }
-      }
-    }
+    // Le morceau approuve reste donc au catalogue apres la suppression du compte : il y est sous
+    // licence libre, l'auteur l'a place la, et le retirer casserait les playlists et les favoris
+    // de tous les autres utilisateurs.
+    await nettoyerDepotsEnAttente(idUser);
 
     // Les likes, playlists, playlists_musics, submissions et password_resets partent en cascade
     // (ON DELETE CASCADE, voir schema.sql). Une seule requete suffit donc.
