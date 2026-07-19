@@ -1,9 +1,11 @@
 import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
+import rateLimit from "express-rate-limit";
 import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+import { limitesDesactivees } from "../config.js";
 import {
   licenceValide,
   urlDeLicence,
@@ -13,6 +15,21 @@ import {
 } from "../validation.js";
 
 const router = express.Router();
+
+// /ecoute est publique et incremente `play_count`, qui alimente le Top 5. Sans limite, un script
+// gonfle le compteur a l'infini et fausse le classement. Limite GENEREUSE et par IP : un vrai
+// auditeur qui reecoute beaucoup n'est jamais gene (chaque lecture appelle la route), mais
+// l'inflation automatisee est stoppee. `skip` coupe la limite en test (comme les autres limiteurs).
+const limiteEcoute = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  skip: () => limitesDesactivees,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Trop d'écoutes enregistrées d'affilée. Réessaye dans un moment.",
+  },
+});
 //http://localhost:3000/api/musics
 //affiche toutes les musiques
 router.get("/", async (req, res) => {
@@ -48,7 +65,7 @@ router.get("/top", async (req, res) => {
 
 // Enregistre une ecoute (incremente le compteur qui alimente le Top 5).
 // Volontairement publique : un visiteur non connecte peut ecouter, et son ecoute compte.
-router.post("/ecoute/:id", async (req, res) => {
+router.post("/ecoute/:id", limiteEcoute, async (req, res) => {
   try {
     const id = req.params.id;
     const [resultat] = await db.query(

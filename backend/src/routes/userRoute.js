@@ -16,6 +16,12 @@ import {
   MESSAGE_MOT_DE_PASSE,
 } from "../validation.js";
 
+// Faux hash bcrypt calcule une fois au demarrage. Sert a EGALISER le temps de reponse de la
+// connexion : voir /connexion plus bas. Le mot de passe en clair n'a aucune importance (personne
+// ne l'utilise pour se connecter), seul compte le fait que verifier ce hash coute le meme temps
+// que verifier un vrai.
+const FAUX_HASH = bcrypt.hashSync("faux-mot-de-passe-pour-egaliser-le-temps", 10);
+
 // Anti brute-force : sans cette limite, un script peut tester des milliers de mots de passe
 // a la seconde sur /connexion. bcrypt ralentit chaque tentative, mais ne les empeche pas.
 // 10 tentatives par IP toutes les 15 minutes ; seuls les ECHECS sont comptes, donc un
@@ -542,6 +548,12 @@ router.post("/inscription", limiteInscription, async (req, res) => {
       [email],
     );
     if (uniqueEmail.length > 0) {
+      // COMPROMIS ASSUME : ce message revele qu'un compte existe pour cet email (enumeration).
+      // C'est l'oppose de la posture de "mot de passe oublie", qui repond neutre a dessein. On le
+      // garde ICI parce que l'UX prime a l'inscription (un echec muet laisserait l'utilisateur
+      // sans comprendre pourquoi ca bloque) et que sur cette vitrine, savoir qu'un email est
+      // inscrit n'est pas une donnee sensible. C'est un choix, pas un oubli : la ou ca compte
+      // vraiment (le reset, qui cible des comptes existants), l'anti-enumeration est stricte.
       return res.status(400).json({
         message: "L'email est déjà utilisée.",
       });
@@ -580,43 +592,43 @@ router.post("/connexion", limiteConnexion, async (req, res) => {
       "SELECT * FROM `users` WHERE email = ?",
       [email],
     );
-    if (uniqueEmail.length === 0) {
+    const user = uniqueEmail[0];
+
+    // On lance TOUJOURS bcrypt.compare, meme quand l'email n'existe pas (contre un faux hash).
+    // Sans ca, un email inconnu repond instantanement (rien a verifier) la ou un email connu
+    // prend le temps d'un bcrypt : l'ecart de temps trahit l'existence du compte (enumeration
+    // par timing), alors meme que le MESSAGE, lui, est deja identique dans les deux cas.
+    const motDePasseCorrect = await bcrypt.compare(
+      password,
+      user?.password_hash ?? FAUX_HASH,
+    );
+
+    if (!user || !motDePasseCorrect) {
       return res.status(400).json({
-        message: "Identifiants incorrect",
+        message: "Identifiants incorrect.",
       });
-    } else {
-      const user = uniqueEmail[0];
-      const isPasswordValid = await bcrypt.compare(
-        password,
-        user.password_hash,
-      );
-      if (isPasswordValid === true) {
-        const token = jwt.sign(
-          { id_user: user.id_user, email: user.email },
-          process.env.JWT_SECRET,
-          { expiresIn: "24h" },
-        );
-        return res.status(200).json({
-          message: "Connexion réussie.",
-          token: token,
-          user: {
-            id_user: user.id_user,
-            email: user.email,
-            pseudo: user.pseudo,
-            // Le front s'en sert UNIQUEMENT pour afficher ou masquer le lien "Modération".
-            // Ce n'est pas une protection : quelqu'un qui modifierait son localStorage verrait
-            // le lien, mais chacune de ses requetes se heurterait a `adminMiddleware` (403).
-            // Le role n'est volontairement PAS mis dans le JWT : il est relu en base a chaque
-            // requete, pour qu'un retrait de droits prenne effet immediatement.
-            role: user.role,
-          },
-        });
-      } else {
-        return res.status(400).json({
-          message: "Identifiant incorrect.",
-        });
-      }
     }
+
+    const token = jwt.sign(
+      { id_user: user.id_user, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" },
+    );
+    return res.status(200).json({
+      message: "Connexion réussie.",
+      token: token,
+      user: {
+        id_user: user.id_user,
+        email: user.email,
+        pseudo: user.pseudo,
+        // Le front s'en sert UNIQUEMENT pour afficher ou masquer le lien "Modération".
+        // Ce n'est pas une protection : quelqu'un qui modifierait son localStorage verrait
+        // le lien, mais chacune de ses requetes se heurterait a `adminMiddleware` (403).
+        // Le role n'est volontairement PAS mis dans le JWT : il est relu en base a chaque
+        // requete, pour qu'un retrait de droits prenne effet immediatement.
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error(error);
 

@@ -2,6 +2,7 @@ import express from "express";
 import nodemailer from "nodemailer";
 import rateLimit from "express-rate-limit";
 import { limitesDesactivees } from "../config.js";
+import { emailValide } from "../validation.js";
 const router = express.Router();
 
 // Cette route envoie un VRAI mail a chaque appel. Sans limite, un bot (et ils scannent les
@@ -40,9 +41,9 @@ router.post("/", limiteContact, async (req, res) => {
 
     // Le format de l'email est verifie ici et pas seulement par le `type="email"` du
     // formulaire : un appel direct a l'API le contournerait, et `replyTo` finirait avec une
-    // valeur arbitraire.
-    const emailValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!emailValide) {
+    // valeur arbitraire. On importe `emailValide` de validation.js (source de verite unique)
+    // plutot que de reecrire la regex : une regle d'email a un seul endroit dans tout le backend.
+    if (!emailValide(email)) {
       return res.status(400).json({
         message: "L'adresse email n'est pas valide.",
       });
