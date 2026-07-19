@@ -15,7 +15,6 @@ import {
 
 export default function ButtonAddPlaylist({
   setPlaylists,
-  playlists,
   children = "",
   variant = "ghost",
   size = "icon-sm",

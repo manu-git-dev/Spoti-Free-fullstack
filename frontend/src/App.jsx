@@ -296,12 +296,7 @@ function App() {
             <Route
               path="/connexion"
               element={
-                <Login
-                  user={user}
-                  setUser={setUser}
-                  token={token}
-                  setToken={setToken}
-                />
+                <Login setUser={setUser} setToken={setToken} />
               }
             />
             <Route path="/inscription" element={<Register />} />
@@ -417,7 +412,7 @@ function App() {
         setIsPlaying={setIsPlaying}
       />
       <div className="md:hidden">
-        <BottomNav user={user} />
+        <BottomNav />
       </div>
       {/* Point de montage unique des toasts : toute l'app appelle toast() sans rien monter */}
       <Toaster />

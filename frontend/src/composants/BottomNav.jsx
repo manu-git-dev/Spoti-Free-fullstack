@@ -1,7 +1,7 @@
 import { NavLink, } from "react-router-dom";
 import { Home, Library, ListMusic, Heart, User } from "lucide-react";
 
-export default function BottomNav({ user }) {
+export default function BottomNav() {
   const tabs = [
     { to: "/", label: "Accueil", icon: Home, end: true },
     { to: "/bibliotheque", label: "Biblio", icon: Library },
