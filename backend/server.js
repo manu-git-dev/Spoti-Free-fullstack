@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import musicRoutes from "./src/routes/musicRoute.js";
 import userRoutes from "./src/routes/userRoute.js";
 import playlistRoute from "./src/routes/playlistRoute.js";
@@ -18,6 +19,21 @@ const app = express();
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+// helmet pose une serie d'en-tetes HTTP de securite (X-Content-Type-Options: nosniff,
+// X-Frame-Options, Strict-Transport-Security, etc.). A placer TOT, avant les routes, pour que
+// tout ce qui sort du serveur les porte.
+//
+// LE piege : par defaut helmet pose `Cross-Origin-Resource-Policy: same-origin`. Or le front
+// (`FRONTEND_URL`, autre origine) charge l'audio et les pochettes servis ici par
+// `express.static("public")`. Avec le defaut, le navigateur BLOQUERAIT ces medias cross-origin.
+// On passe donc explicitement la politique a `cross-origin` : les fichiers du catalogue sont
+// publics par nature, ils sont faits pour etre charges depuis le front.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // CORS : `cors()` sans option autorise TOUTES les origines — n'importe quel site pourrait
 // appeler cette API depuis le navigateur de ses visiteurs. On restreint a l'origine du
