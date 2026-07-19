@@ -1,3 +1,7 @@
+// Garde-fou de configuration : DOIT rester le tout premier import. Il vérifie les variables
+// d'environnement et refuse de démarrer si une variable critique manque — avant que db.js
+// (tiré par les routes) ne tente sa connexion. Voir src/verifierEnv.js.
+import "./src/verifierEnv.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";

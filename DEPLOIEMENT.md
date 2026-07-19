@@ -208,7 +208,13 @@ FRONTEND_URL=https://spotifree.manuel-mattana.fr
 
 MAIL_USER=ton.adresse@gmail.com
 MAIL_PASS=<mot de passe d'application Gmail, 16 caractères>
+MAIL_TO=ton.adresse@gmail.com    # où arrivent les messages de contact et les notifs de dépôt
 ```
+
+> **`MAIL_TO` n'est pas optionnel** : sans lui, le formulaire de contact tombe en erreur et les
+> notifications de nouveau dépôt ne partent pas. Le serveur AVERTIT au démarrage si l'une des trois
+> variables `MAIL_*` manque (voir `src/verifierEnv.js`), mais il démarre quand même — le mail est
+> une fonctionnalité annexe, pas le cœur.
 
 Générer les deux secrets :
 

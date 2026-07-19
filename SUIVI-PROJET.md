@@ -31,19 +31,6 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### En attente de TRAVAIL
 
-- **⭐ Passe « echecs silencieux » AVANT tout deploiement** (demandee par Manuel le 2026-07-19, a
-  faire a la reprise) : relire CHAQUE endroit du backend qui depend d'une variable d'env et produire
-  un document « si cette variable manque ou est fausse en prod, voila ce qui casse — et comment tu
-  t'en apercois ». Le but est de ne decouvrir aucun probleme APRES la mise en ligne. Livrable = une
-  **check-list a cocher**, pas du code. Cas connus a couvrir au minimum (repere pendant la revue) :
-  - `MAIL_USER`/`MAIL_PASS` absents -> « mot de passe oublie » repond OK mais **n'envoie AUCUN mail**
-    (echec muet, `userRoute.js` : l'envoi est sous `if (MAIL_USER && MAIL_PASS)`) ; idem contact/depot.
-  - `FRONTEND_URL` absent -> **CORS bloque le vrai front** (seul `localhost:5173` reste autorise) ET
-    le lien de reset de mot de passe pointe vers `http://localhost:5173`.
-  - `NODE_ENV` != `production` -> `trust proxy` desactive (mauvaise IP pour le rate-limit) **et** le
-    bypass `RATE_LIMIT_DISABLED` redevient possible.
-  - `JWT_SECRET` faible ou reutilise depuis le dev ; `IP_HASH_SALT` absent -> hash d'IP cassable.
-  - Croiser avec la §6 (Configuration) et la §10 (Verifications) de `DEPLOIEMENT.md`.
 - **Passe responsive — 2 verifications HUMAINES restantes** (#7/#8, la passe auto est faite le
   2026-07-18 : 13 pages x 5 largeurs, 0 debordement, 0 erreur JS) :
   - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en page)
@@ -93,6 +80,11 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
     renvoie -1. Il faut donc **remplacer le `currentIndex` derive par un pointeur de contexte
     explicite** qui reste fige pendant qu'on depile la file utilisateur, et ne reprend qu'a
     l'epuisement de celle-ci. C'est LA decision de conception du chantier.
+
+> **Fait aussi le 2026-07-19** : la **passe « echecs silencieux »** (etait #3 ici). Livrables :
+> `backend/src/verifierEnv.js` (garde-fou fail-fast : refuse de demarrer si une var d'env critique
+> manque, avertit pour le mail/NODE_ENV) + `CHECKLIST-ECHECS-SILENCIEUX.md` (doc a cocher jour-J) +
+> correction du `.env` d'exemple de `DEPLOIEMENT.md` (§6 oubliait `MAIL_TO`). 189 tests verts.
   - Restait a trancher cote UI (repris a la reprise) : placement propose par Claude = **3e colonne
     grille a droite** (bureau) + **dans le Dialog plein ecran existant** (mobile) ; drag = `@dnd-kit`
     (effet vitrine) vs boutons haut/bas (a11y gratuite, cocherait #20) ; persistance = en memoire.
