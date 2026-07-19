@@ -41,6 +41,19 @@ function melangerOrdre(taille, indexEnTete) {
   return ordre;
 }
 
+// Raccourcis clavier « ambiants » : ils n'agissent que si AUCUN controle n'a le focus. Des
+// qu'un champ, un bouton, un lien ou un slider est focus, son clavier natif gagne — on evite
+// ainsi les trois pieges de la barre d'espace (taper une espace dans la recherche, activer
+// deux fois un bouton focus, bloquer le defilement) et le vol des fleches d'un slider. C'est
+// la regle la plus sure : elle ne peut structurellement rien casser.
+function focusSurUnControle() {
+  const actif = document.activeElement;
+  if (!actif || actif === document.body) return false;
+  return actif.matches(
+    "input, textarea, select, button, a[href], [role='button'], [role='slider'], [contenteditable='true']",
+  );
+}
+
 export default function MediaPlayer({
   music,
   currentIndex,
@@ -207,6 +220,40 @@ export default function MediaPlayer({
       : repeatMode === "all"
         ? "Répéter la file"
         : "Répétition désactivée";
+
+  // Pilotage au clavier. L'ecouteur est global (window) et pose UNE SEULE FOIS (deps []) : le
+  // lecteur se re-rend ~4x/seconde pendant la lecture (barre de progression), on ne veut pas
+  // retirer/reposer un listener a cette frequence. Mais les gestionnaires qu'il appelle
+  // capturent l'etat courant (isPlaying, currentIndex...) et changent a chaque rendu : on les
+  // garde donc a jour dans une ref, que l'ecouteur lit AU MOMENT de la frappe (pattern
+  // "latest ref"). Sans ca, le listener fige appellerait des gestionnaires perimes.
+  const actionsClavier = useRef({});
+  useEffect(() => {
+    actionsClavier.current = { handlePlay, handleNext, handlePrevious };
+  });
+
+  useEffect(() => {
+    const onKeyDown = (evenement) => {
+      // Pas de piste chargee (l'element <audio> n'est pas monte) : rien a piloter.
+      if (!audioRef.current) return;
+      // Regle ambiante : si un controle a le focus, on lui laisse son clavier natif.
+      if (focusSurUnControle()) return;
+
+      if (evenement.code === "Space") {
+        evenement.preventDefault(); // sans quoi la barre d'espace fait defiler la page
+        actionsClavier.current.handlePlay();
+      } else if (evenement.code === "ArrowRight") {
+        evenement.preventDefault();
+        actionsClavier.current.handleNext();
+      } else if (evenement.code === "ArrowLeft") {
+        evenement.preventDefault();
+        actionsClavier.current.handlePrevious();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   if (!music) {
     return (
@@ -415,7 +462,7 @@ export default function MediaPlayer({
 
           <div className="flex items-center gap-5">
             <button
-              className={`cursor-pointer hover:scale-110 transition ${
+              className={`cursor-pointer p-2 -m-2 rounded-full hover:scale-110 transition ${
                 isShuffle
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -428,7 +475,7 @@ export default function MediaPlayer({
               <Shuffle className="w-4 h-4" />
             </button>
             <button
-              className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
+              className="cursor-pointer p-2 -m-2 rounded-full text-muted-foreground hover:text-foreground hover:scale-110 transition"
               onClick={handlePrevious}
               aria-label="Titre précédent"
             >
@@ -446,14 +493,14 @@ export default function MediaPlayer({
               )}
             </Button>
             <button
-              className="cursor-pointer text-muted-foreground hover:text-foreground hover:scale-110 transition"
+              className="cursor-pointer p-2 -m-2 rounded-full text-muted-foreground hover:text-foreground hover:scale-110 transition"
               onClick={handleNext}
               aria-label="Titre suivant"
             >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
             <button
-              className={`cursor-pointer hover:scale-110 transition ${
+              className={`cursor-pointer p-2 -m-2 rounded-full hover:scale-110 transition ${
                 repeatMode !== "off"
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
