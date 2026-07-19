@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { apiFetch, urlFichier } from "@/lib/api";
+import { formaterDuree } from "@/lib/utils";
 import Attribution from "./Attribution";
 
 // Melange de Fisher-Yates : on parcourt le tableau de la fin au debut et on echange chaque element
@@ -106,27 +107,19 @@ export default function MediaPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue]);
 
-  const affichageDuration =
-    Math.trunc(duration / 60)
-      .toString()
-      .padStart(2, "0") +
-    ":" +
-    Math.floor(duration % 60)
-      .toString()
-      .padStart(2, "0");
-  const affichageCurrentTime =
-    Math.trunc(timeUpdate / 60)
-      .toString()
-      .padStart(2, "0") +
-    ":" +
-    Math.floor(timeUpdate % 60)
-      .toString()
-      .padStart(2, "0");
+  const affichageDuration = formaterDuree(duration);
+  const affichageCurrentTime = formaterDuree(timeUpdate);
+
+  // Lance la lecture en AVALANT le rejet de `play()`. La promesse rejette (AbortError) quand une
+  // nouvelle piste se charge avant que la precedente ait demarre — benin, mais non gere ca remonte
+  // un "unhandled promise rejection" a chaque changement rapide de titre. Le `?.` protege le cas
+  // (theorique) ou l'element audio n'est pas encore monte.
+  const lire = () => audioRef.current?.play().catch(() => {});
 
   const handlePlay = () => {
     if (isPlaying == false) {
       setIsPlaying(true);
-      audioRef.current.play();
+      lire();
     } else {
       setIsPlaying(false);
       audioRef.current.pause();
@@ -179,7 +172,7 @@ export default function MediaPlayer({
   const handleEnded = () => {
     if (repeatMode === "one") {
       audioRef.current.currentTime = 0;
-      audioRef.current.play();
+      lire();
       return;
     }
     const estDernier = ordreLecture.indexOf(currentIndex) === ordreLecture.length - 1;
@@ -240,7 +233,7 @@ export default function MediaPlayer({
         ref={audioRef}
         onLoadedMetadata={() => {
           setDuration(audioRef.current.duration);
-          audioRef.current.play();
+          lire();
           setIsPlaying(true);
         }}
         onTimeUpdate={() => setTimeUpdate(audioRef.current.currentTime)}
