@@ -26,13 +26,19 @@ export default function AddMusicPlaylist({ idMusic }) {
   const [selectedPlaylist, setSelectedPlaylist] = useState("");
   const [open, setOpen] = useState(false);
 
+  // On charge les playlists SEULEMENT quand le menu s'ouvre, pas au montage. Ce composant est
+  // rendu une fois par piste : un effet `[]` tirait donc ~N fois `GET /api/playlists` au chargement
+  // d'une page de catalogue (100 morceaux = 100 requetes identiques), alors que l'utilisateur
+  // n'ouvre au plus qu'UN de ces menus. Dependre de `open` = 1 requete par ouverture reelle, et des
+  // donnees toujours fraiches (une playlist creee entre-temps apparait).
   useEffect(() => {
+    if (!open) return;
     apiFetch("/api/playlists")
       .then(({ donnees }) => {
         setPlaylists(Array.isArray(donnees) ? donnees : []);
       })
       .catch((error) => console.error(error));
-  }, []);
+  }, [open]);
 
   // La correspondance valeur -> libelle, que Base UI attend sous la forme d'un objet.
   //
