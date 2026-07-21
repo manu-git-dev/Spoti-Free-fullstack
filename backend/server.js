@@ -99,6 +99,29 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log("Serveur démarré !");
+// On écoute la BOUCLE LOCALE uniquement, pas toutes les interfaces (le défaut de Node).
+//
+// POURQUOI ce n'est pas cosmétique. En production, `NODE_ENV=production` active `trust proxy` :
+// Express cesse de lire l'IP de la connexion et prend celle annoncée dans l'en-tête
+// `X-Forwarded-For`. C'est INDISPENSABLE derrière nginx — sans ça, tout le trafic paraîtrait
+// venir du proxy et `express-rate-limit` bloquerait tous les visiteurs d'un coup.
+//
+// Mais `trust proxy` repose sur une hypothèse : que nginx soit le SEUL chemin d'accès. Si le
+// port reste ouvert sur l'extérieur, n'importe qui l'atteint directement et écrit lui-même
+// `X-Forwarded-For` — une IP différente à chaque requête, donc un compteur qui ne monte jamais.
+// La limite de tentatives sur /api/users/connexion, l'anti-spam du contact et la limite sur
+// /ecoute deviennent alors décoratifs. Vérifié en vrai le 2026-07-21 : `curl` depuis une autre
+// machine sur http://<ip>:3000/api/musics répondait 200, en-tête forgé compris.
+//
+// Écouter 127.0.0.1 rend la chose impossible par construction : le socket n'existe pas hors de
+// la machine. nginx, lui, parle en local (`proxy_pass http://127.0.0.1:3000`) et n'est pas gêné.
+// Le pare-feu (ufw) reste une seconde barrière : celle-ci ferme CETTE porte, lui ferme aussi
+// celles qu'on ouvrirait par erreur.
+//
+// HOST reste surchargeable : un déploiement en conteneur devra écouter 0.0.0.0, puisque
+// l'isolation y est assurée par le réseau Docker et non par l'interface d'écoute.
+const HOST = process.env.HOST ?? "127.0.0.1";
+
+app.listen(process.env.PORT, HOST, () => {
+  console.log(`Serveur démarré sur ${HOST}:${process.env.PORT}`);
 });
