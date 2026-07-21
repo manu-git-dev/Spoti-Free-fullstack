@@ -2334,3 +2334,40 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 La passphrase est tapée **une fois** et rangée dans le trousseau macOS ; l'agent signe ensuite à ma place, y compris après redémarrage. Ça désamorce la vraie tentation du soir de déploiement : **retirer la passphrase parce qu'elle agace**.
 
 ---
+
+## 2026-07-21 — Le mail muet du soir de mise en ligne
+
+### 73. Un secret « invisible » : 19 caractères là où on en attend 16
+
+*Cas réel : soir du déploiement. Ni la notification de dépôt (vers `MAIL_TO`, mon Gmail), ni le mail de réinitialisation (vers l'adresse du compte, mon hotmail) n'arrivaient. Aucune erreur visible sur le site.*
+
+**Pourquoi l'interface ne pouvait PAS m'aider.** Ma route « mot de passe oublié » répond `200` avec un message neutre **même quand l'envoi échoue** — c'est volontaire : révéler l'échec reviendrait à révéler quelles adresses ont un compte (énumération). L'interface est donc *conçue* pour ne rien dire. Mais elle ne ment qu'à l'utilisateur : le `catch` fait `console.error(error)`, et le journal, lui, disait tout — **6 minutes avant que je ne m'inquiète** :
+```
+Jul 21 19:59:20  Notification admin impossible : Invalid login: 535-5.7.8 …
+```
+**Leçon n°1 : quand une réponse est neutre par conception, le journal est la seule source de vérité.** Le premier réflexe n'est pas de retenter, c'est `journalctl -u <service>`.
+
+**La méthode de diagnostic, en deux coups.**
+1. **Un discriminant gratuit** : deux mails partent vers **deux destinataires différents** (`MAIL_TO` pour les dépôts, l'adresse du compte pour la réinitialisation). Si **un seul** manque → problème de *réception* (filtrage, spam). Si **les deux** manquent → problème d'*envoi*. Aucun des deux n'était arrivé : donc l'envoi.
+2. **Isoler l'authentification de l'envoi** avec `transporter.verify()` (nodemailer) : il ouvre la connexion SMTP et s'authentifie **sans rien expédier**. Tant qu'on n'a pas répondu à « mes identifiants passent-ils ? », chercher du côté de la délivrabilité est du temps perdu.
+
+Le script de test affichait **la longueur** du mot de passe et **la présence d'espaces**, jamais sa valeur — tout ce qu'il fallait pour trancher, rien qui expose le secret.
+
+**La cause.** Google affiche un mot de passe d'application en **4 groupes de 4 séparés par des espaces** (`abcd efgh ijkl mnop`) pour qu'il soit lisible. **Le mot de passe réel, ce sont les 16 caractères collés.** Je l'avais saisi tel qu'affiché → 19 caractères → `535-5.7.8 Username and Password not accepted` (code `EAUTH`).
+
+**Le piège DERRIÈRE le piège : `sed` et JavaScript ne définissent pas « espace » pareil.** Mon premier correctif,
+`sed -i -E '/^MAIL_PASS=/ s/[[:space:]]+//g' .env`, **n'a rien changé** — toujours 19. `/\s/` en JavaScript reconnaît aussi l'**espace insécable** (U+00A0) ; `[[:space:]]` en POSIX travaille sur des octets et ne le reconnaît pas (l'insécable s'écrit `0xC2 0xA0` en UTF-8). Deux outils, deux définitions, et un diagnostic qui se contredit lui-même.
+
+**Le correctif robuste : décrire ce qui est AUTORISÉ, pas ce qu'il faut retirer.**
+```bash
+NET=$(printf '%s' "$BRUT" | tr -cd 'A-Za-z0-9')   # -d supprime, -c inverse : « garde uniquement »
+[ ${#NET} -eq 16 ] && sed -i "s|^MAIL_PASS=.*|MAIL_PASS=$NET|" .env
+```
+Un mot de passe d'application est fait de 16 lettres, **rien d'autre n'a le droit d'y être** : espace, insécable, tabulation, guillemet, retour chariot — tout saute, sans avoir à deviner lequel c'était. Je n'ai d'ailleurs **jamais eu besoin de savoir** quel caractère c'était : la bonne formulation a rendu la question sans objet. C'est le principe de la **liste blanche** (autoriser explicitement) contre la **liste noire** (interdire au cas par cas) — le même qui vaut en validation d'entrée utilisateur.
+Et le `[ ${#NET} -eq 16 ]` garde : on ne réécrit le fichier **que** si le nettoyage donne le résultat attendu. Sinon l'hypothèse est fausse, et on s'arrête au lieu d'écrire n'importe quoi.
+
+**Troisième piège, silencieux lui aussi : `sed -i` ne modifie pas « en place ».** Il écrit un **fichier temporaire** puis le renomme par-dessus. Le nouveau fichier appartient à **celui qui lance la commande** — root. Or mon `.env` doit être lisible par **`www-data`**, l'utilisateur du service systemd. Sans un `chown www-data:www-data .env && chmod 600 .env` derrière, le service refuserait de démarrer au prochain redémarrage en annonçant que **toutes** ses variables sont absentes — alors qu'elles sont là, juste inaccessibles. Un message trompeur pour une cause de permissions.
+
+**Ce que je retiens, transférable :** trois échecs muets empilés (réponse neutre par conception, `sed` qui ne matche pas, `sed -i` qui change le propriétaire). Aucun ne produit d'erreur. **Ce qui les a tous révélés, c'est de mesurer au lieu de supposer** — une longueur, un `verify()`, un `ls -l`. Même réflexe que la note 72 sur SSH.
+
+---
