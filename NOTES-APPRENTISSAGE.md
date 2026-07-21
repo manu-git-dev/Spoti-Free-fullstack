@@ -2262,3 +2262,41 @@ Règle d'or : *tout ce qui doit survivre au redémarrage/à la reconstruction du
 **La leçon de méthode (la plus importante) : dockeriser APRÈS avoir déployé une fois à la main.** Un premier déploiement manuel (reverse-proxy, service systemd, certificats, variables d'env) fait *toucher* chaque rouage — et c'est ça qui s'apprend et se défend en entretien. Docker par-dessus des rouages qu'on ne maîtrise pas encore n'apprend que des incantations. Une fois chaque pièce familière, la dockerisation devient un exercice de **traduction** (« je connais les étapes → je les code »), pas de découverte. Même logique que mes autres reports (auth cookie, file d'attente) : ne pas empiler une couche qui *cache* ce qu'on a besoin de voir, surtout pas juste avant une mise en ligne.
 
 ---
+
+## 2026-07-21 — Le DNS de la mise en production
+
+### 71. Le TTL : à quoi je m'engage vis-à-vis du reste d'Internet
+
+*Cas réel : au moment de créer les enregistrements `A` de `manuelmattana.fr` vers mon VPS, le panneau Hostinger m'a demandé un **TTL**. Je ne savais pas quoi mettre.*
+
+**Ce que c'est.** *Time To Live* : la durée pendant laquelle **n'importe quel résolveur DNS de la planète** a le droit de garder ma réponse en cache avant de redemander au serveur autoritaire. Ce n'est pas un réglage local à mon compte : c'est une **promesse faite au reste d'Internet** — « tu peux croire ça pendant X secondes ».
+
+**Le compromis :**
+- **TTL bas (300 s)** → agilité : je me trompe d'IP, je corrige, tout le monde le sait en 5 minutes. Coût : un peu plus de requêtes vers les serveurs autoritaires — nul à mon échelle, et encaissé par les serveurs de l'hébergeur, pas par mon VPS.
+- **TTL haut (4 h, 24 h)** → moins de trafic DNS, et une résilience (si les serveurs de noms tombent, les caches font vivre le site). Coût : **une erreur coûte la durée du TTL**.
+
+**La règle retenue : TTL bas tant que ça bouge, on le monte une fois stable.** Pendant un déploiement, je suis *en train* de faire des erreurs — c'est le pire moment pour un TTL long. Valeur choisie : **300 s** sur `@` et `spotifree`.
+
+**L'asymétrie qui piège tout le monde : baisser un TTL est lui-même soumis à l'ANCIEN TTL.** Si je suis à 4 h et que je passe à 5 min, les résolveurs qui ont déjà la vieille réponse la gardent 4 h — ils n'apprendront la nouvelle valeur qu'après. Le nouveau TTL ne s'applique qu'à ceux qui redemandent. D'où la pratique professionnelle : **on baisse le TTL la veille d'une migration**, jamais le jour même. (Ma zone était déjà à 300 : meilleur cas, rien à anticiper — mais c'est aussi l'argument pour ne pas le monter maintenant.)
+
+**Le piège du cache NÉGATIF (rencontré pour de vrai).** J'avais interrogé `spotifree.manuelmattana.fr` **avant** de créer l'enregistrement. Or la réponse « ce nom n'existe pas » (NXDOMAIN) est **mise en cache elle aussi** — mais **pas avec mon TTL** : avec le **dernier champ du SOA** de la zone.
+
+```
+atlas.dns-parking.com. dns.hostinger.com. 2026072102 10000 2400 604800 600
+                                          serial  refresh retry expire  └── cache négatif = 600 s
+```
+
+Conséquence concrète : **si `dig` ne renvoie rien juste après la création de l'enregistrement, c'est normal** — c'est le « ça n'existe pas » d'il y a dix minutes qui répond. Ne pas recréer la ligne, ne pas « réparer » ce qui n'est pas cassé. C'est exactement le genre de fausse piste qui fait perdre une heure et casser une config qui marchait.
+
+**Le test de vérité : interroger le serveur autoritaire directement, il ne cache jamais.**
+```bash
+dig +short spotifree.manuelmattana.fr @atlas.dns-parking.com   # la vérité, sans cache
+dig +short spotifree.manuelmattana.fr                          # ce que voit MON résolveur
+```
+S'il renvoie l'IP du VPS, l'enregistrement est correct : tout le reste n'est que de l'attente. Séparer « ma config est-elle juste ? » de « le monde le sait-il déjà ? » est **la** compétence de débogage DNS.
+
+**Deux autres choses apprises au passage :**
+- **Ne jamais AJOUTER un second `A` sur un nom qui en a déjà un** (pour « pointer ailleurs ») : deux `A` sur le même nom n'est pas une erreur, c'est du **round-robin** — le résolveur en choisit un au hasard. J'aurais eu mon site une fois sur deux et la page de parking l'autre fois. Le pire type de bug : non reproductible. → **modifier** l'existant.
+- **`www` était déjà un CNAME vers l'apex**, pas un `A`. Un CNAME dit « pour ce nom, va lire cet autre nom » : il **suit** automatiquement la modification de `@`. C'est mieux qu'un second `A` en double — une seule adresse à changer le jour où je migre de VPS (échéance ~juin 2027). J'ai corrigé `DEPLOIEMENT.md` §1, qui prévoyait 3 enregistrements `A`.
+
+---
