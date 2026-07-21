@@ -53,9 +53,13 @@ export default function TrackRow({
         aria-label={`Lire ${musique.title} par ${musique.artist}`}
         className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
+        {/* Meme raison que dans Card.jsx : une liste de 100 lignes = 100 requetes d'image au
+            montage, qui saturent les connexions et retardent le mp3. Voir le commentaire la-bas. */}
         <img
           src={urlFichier(musique.src_image)}
           alt={`Pochette album ${musique.title}`}
+          loading="lazy"
+          decoding="async"
           className={`w-12 h-12 rounded-lg object-cover transition-transform group-hover:scale-105 ${
             isPlaying ? "ring-2 ring-primary" : ""
           }`}

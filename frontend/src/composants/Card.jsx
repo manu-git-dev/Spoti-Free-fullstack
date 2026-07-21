@@ -44,9 +44,18 @@ export default function Card({
         aria-label={`Lire ${musique.title} par ${musique.artist}`}
         className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
+        {/* loading="lazy" : le catalogue affiche 100 pochettes. Sans lui, le navigateur les
+            demande TOUTES au montage — et comme il plafonne a ~6 connexions simultanees par
+            domaine en HTTP/1.1, la requete du mp3 qu'on vient de cliquer se retrouve en file
+            d'attente DERRIERE des dizaines d'images. C'est la cause principale des 2-3 s avant
+            que le son ne demarre : ce n'est pas le fichier audio qui est lent, c'est qu'il
+            attend son tour. Lazy ne charge que ce qui approche du viewport.
+            decoding="async" : le decodage JPEG ne bloque plus le thread principal. */}
         <img
           src={urlFichier(musique.src_image)}
           alt={`Pochette album ${musique.title}`}
+          loading="lazy"
+          decoding="async"
           className="w-full aspect-square object-cover rounded-xl transition-transform group-hover:scale-[1.02]"
         />
         <h2
