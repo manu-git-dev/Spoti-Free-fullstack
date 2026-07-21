@@ -4,9 +4,15 @@ Guide pour déployer Spoti-Free sur un **VPS** (Hostinger, OVH, Hetzner… — n
 Ubuntu avec un accès SSH).
 
 > **Une machine, plusieurs sites.** Ce VPS héberge le **portfolio** à la racine
-> (`manuel-mattana.fr`), et **chaque projet sur son sous-domaine** — Spoti-Free vit donc sur
-> `spotifree.manuel-mattana.fr`. Un sous-domaine est gratuit et illimité : chaque futur projet
+> (`manuelmattana.fr`), et **chaque projet sur son sous-domaine** — Spoti-Free vit donc sur
+> `spotifree.manuelmattana.fr`. Un sous-domaine est gratuit et illimité : chaque futur projet
 > aura son adresse sans racheter de domaine. nginx aiguille tout ça (§8).
+>
+> **Machine et domaine réels (2026-07-21)** : VPS Hostinger KVM 2, Ubuntu 24.04, IP
+> **`72.62.236.82`**. Domaine **`manuelmattana.fr`**, acheté à part (~12 €/an) et **non** le
+> domaine « offert » : celui-ci n'était proposé qu'en `.tech`/`.cloud`, dont le renouvellement
+> monte à **70 €/an** dès l'année 2. Un portfolio finit sur un CV et sur LinkedIn — on ne bâtit
+> pas son adresse professionnelle sur un nom qu'on sait qu'on abandonnera à l'échéance.
 >
 > **Déployer Spoti-Free en premier, seul**, avant le portfolio et le WordPress. Quand quelque
 > chose casse — et quelque chose cassera —, il faut n'avoir changé qu'une seule chose depuis le
@@ -26,11 +32,11 @@ Chaque point ci-dessous correspond à un vrai risque, pas à une formalité.
 ## 0. Ce qu'on met en place
 
 ```
-                       manuel-mattana.fr ──────────► le portfolio
+                       manuelmattana.fr ───────────► le portfolio
                       /                              (plus tard)
-   Internet ──► nginx ── blog.manuel-mattana.fr ───► WordPress + PHP-FPM
+   Internet ──► nginx ── blog.manuelmattana.fr ────► WordPress + PHP-FPM
       (HTTPS)      \                                 (plus tard)
-                    \ spotifree.manuel-mattana.fr ─┬── /  ──────────────► le build React
+                    \ spotifree.manuelmattana.fr ──┬── /  ─────────────► le build React
                                                    │                      (fichiers statiques)
                                                    ├── /api ───────────► Node/Express
                                                    │                      (127.0.0.1:3000)
@@ -52,11 +58,11 @@ temps, **on la lance en premier** : elle travaillera pendant que tu installes le
 Dans le panneau de ton registrar (ici Hostinger), zone DNS du domaine, créer des enregistrements de
 type **A** — un enregistrement `A` associe un **nom** à une **adresse IPv4** :
 
-| Type | Nom         | Valeur        | Adresse obtenue                                |
-|------|-------------|---------------|------------------------------------------------|
-| A    | `@`         | `<ip-du-vps>` | `manuel-mattana.fr` → le portfolio (plus tard) |
-| A    | `www`       | `<ip-du-vps>` | `www.manuel-mattana.fr`                        |
-| A    | `spotifree` | `<ip-du-vps>` | `spotifree.manuel-mattana.fr` → **Spoti-Free** |
+| Type | Nom         | Valeur           | Adresse obtenue                               |
+|------|-------------|------------------|-----------------------------------------------|
+| A    | `@`         | `72.62.236.82`   | `manuelmattana.fr` → le portfolio (plus tard) |
+| A    | `www`       | `72.62.236.82`   | `www.manuelmattana.fr`                        |
+| A    | `spotifree` | `72.62.236.82`   | `spotifree.manuelmattana.fr` → **Spoti-Free** |
 
 `@` désigne le domaine nu (la racine, ou *apex*). Les autres lignes sont des **sous-domaines** :
 gratuits et illimités, c'est ce qui permet de loger tous les projets sur une seule machine et un
@@ -71,7 +77,7 @@ seul domaine. Un futur projet = une ligne de plus, rien à racheter.
 Vérifier **depuis ton Mac** (pas depuis le VPS) :
 
 ```bash
-dig +short spotifree.manuel-mattana.fr
+dig +short spotifree.manuelmattana.fr
 # doit afficher l'IP du VPS. Tant que la réponse est vide, c'est que ça propage encore :
 # attendre, et ne surtout pas passer au HTTPS (§8).
 ```
@@ -81,7 +87,7 @@ dig +short spotifree.manuel-mattana.fr
 ## 2. Préparer le serveur
 
 ```bash
-ssh root@<ip-du-vps>
+ssh root@72.62.236.82
 
 apt update && apt upgrade -y
 apt install -y nginx mysql-server git curl
@@ -160,7 +166,7 @@ Deux façons de les obtenir sur le VPS. **La première est la bonne** :
 # rsync et pas scp : il reprend là où il s'est arrêté. Sur ~590 Mo et une connexion qui
 # lâche à 80 %, scp recommence tout depuis zéro, rsync reprend au fichier suivant.
 # Le `-z` compresse à la volée, le `--progress` évite de se demander si c'est planté.
-rsync -avz --progress backend/public/ root@<ip>:/var/www/spotifree/backend/public/
+rsync -avz --progress backend/public/ root@72.62.236.82:/var/www/spotifree/backend/public/
 ```
 
 ```bash
@@ -204,7 +210,7 @@ DB_NAME=spotifree
 JWT_SECRET=<une NOUVELLE clé, voir ci-dessous>
 IP_HASH_SALT=<un autre sel aléatoire>
 
-FRONTEND_URL=https://spotifree.manuel-mattana.fr
+FRONTEND_URL=https://spotifree.manuelmattana.fr
 
 MAIL_USER=ton.adresse@gmail.com
 MAIL_PASS=<mot de passe d'application Gmail, 16 caractères>
@@ -235,7 +241,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 **`frontend/.env`** :
 
 ```env
-VITE_API_URL=https://spotifree.manuel-mattana.fr
+VITE_API_URL=https://spotifree.manuelmattana.fr
 ```
 
 > Les variables `VITE_*` sont **compilées dans le bundle** envoyé au navigateur : n'y mettre
@@ -303,7 +309,7 @@ server {
     listen 80;
     # C'est CETTE ligne qui fait que nginx sert Spoti-Free et pas le portfolio : elle doit
     # correspondre exactement à l'enregistrement DNS créé au §1.
-    server_name spotifree.manuel-mattana.fr;
+    server_name spotifree.manuelmattana.fr;
 
     # ⚠️ SANS CETTE LIGNE, LES DÉPÔTS DE MUSIQUE ÉCHOUENT.
     # nginx limite les envois à 1 Mo par défaut ; les morceaux montent à 10 Mo. Le dépôt
@@ -316,7 +322,7 @@ server {
 
     # LE FALLBACK SPA. React Router gère les routes CÔTÉ NAVIGATEUR : le serveur, lui, n'a aucun
     # fichier "/favoris" sur son disque. Sans cette ligne, ouvrir directement
-    # https://spotifree.manuel-mattana.fr/favoris renvoie un 404 — alors que la navigation interne
+    # https://spotifree.manuelmattana.fr/favoris renvoie un 404 — alors que la navigation interne
     # fonctionne.
     # C'est LE piège classique du déploiement d'une SPA.
     location / {
@@ -360,7 +366,7 @@ systemctl reload nginx
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d spotifree.manuel-mattana.fr
+certbot --nginx -d spotifree.manuelmattana.fr
 ```
 
 > **Le HTTPS n'est pas optionnel.** Le jeton JWT circule dans les en-têtes de chaque requête : en
@@ -391,7 +397,7 @@ SELECT id_user, email, role FROM users WHERE role = 'admin';
 ## 10. Vérifications, une fois en ligne
 
 - [ ] Le site s'ouvre en **HTTPS** (cadenas dans le navigateur).
-- [ ] **Ouvrir directement `https://spotifree.manuel-mattana.fr/favoris`** dans un nouvel onglet → l'app
+- [ ] **Ouvrir directement `https://spotifree.manuelmattana.fr/favoris`** dans un nouvel onglet → l'app
       s'affiche (et non un 404). C'est le test du fallback SPA.
 - [ ] Une musique **se lit** (les fichiers audio sont bien servis).
 - [ ] Inscription, connexion, like, playlist.

@@ -4,7 +4,7 @@ Etat d'avancement et prochaines etapes, pour reprendre le travail sans perdre le
 peu importe la machine utilisee. Mis a jour au fil de l'eau (pas un historique complet,
 voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
-## EN SUSPENS — a lire en premier (mis a jour le 2026-07-19, fin de session)
+## EN SUSPENS — a lire en premier (mis a jour le 2026-07-21, fin de session)
 
 > Ce qui attend une decision ou du travail. **Rien de ce qui est fait ne figure ici** : c'est
 > dans les commits et `NOTES-APPRENTISSAGE.md`. Tenu a jour a chaque fin de session (protocole
@@ -50,13 +50,45 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 - **⚠️ RAPPEL AVANT DEPLOIEMENT — coordonnees de l'HEBERGEUR dans `MentionsLegales.jsx`** (#11) :
   directeur de publication (Manuel Mattana) et contact (renvoi vers `/contact`) sont **faits** le
   2026-07-18. Reste **le seul `A_COMPLETER`** : nom + adresse + telephone de l'hebergeur, a prendre
-  sur la page legale d'Hostinger / le mail de commande **une fois le paiement passe** (#12). Manuel a
-  explicitement demande qu'on le lui **rappelle avant tout deploiement** : les mentions legales sont
-  incompletes tant que ce bloc reste en `A_COMPLETER`.
-- **La validation du paiement Hostinger** (#12) : la seule chose qui bloque encore le deploiement
-  cote machine.
+  sur la page legale d'Hostinger / le mail de commande — **desormais disponible**, le paiement est
+  passe (voir ci-dessous). Manuel a explicitement demande qu'on le lui **rappelle avant tout
+  deploiement** : les mentions legales sont incompletes tant que ce bloc reste en `A_COMPLETER`.
+- **Verifier que la cle SSH est bien sur le BON serveur** : la 1re commande (16/07) est restee 5
+  jours en « paiement en cours de traitement » (verification anti-fraude Hostinger : commande
+  enregistree mais **aucune autorisation envoyee a la banque**, d'ou le « rien du tout » cote
+  banque — les deux infos contradictoires etaient vraies). Elle a ete **annulee par le support**,
+  et une **2e commande avec code promo est passee immediatement**. L'ecran « Securisez l'acces a
+  votre VPS » (mot de passe root + cle SSH) a peut-etre ete rempli sur la commande annulee : si
+  `ssh root@72.62.236.82` demande un **mot de passe** au lieu de la **passphrase de la cle**, il
+  faut reposer la cle publique sur la machine active.
+- **Garder la preuve ecrite de l'annulation** (mail / conversation support) et **surveiller le
+  compte bancaire 7-10 jours** : en theorie rien a rembourser (aucune autorisation n'a eu lieu),
+  mais si **deux debits ~110 €** apparaissent, contacter le support avec cette preuve. Ne rien
+  faire de preventif cote banque : une opposition bloquerait aussi le VPS actif.
+- **Desactiver la reconduction automatique** du domaine et noter son prix de renouvellement.
+
+### ETAT DE LA MACHINE (2026-07-21) — c'est ici qu'on reprend
+
+- **VPS actif** : Hostinger KVM 2, Ubuntu 24.04, IP **`72.62.236.82`**. Port 22 ouvert et
+  repondant (verifie le 21/07). Mot de passe root genere et range dans le gestionnaire.
+- **Domaine** : **`manuelmattana.fr`** (achete a part, ~12 €/an). Le domaine « offert » n'existait
+  qu'en `.tech`/`.cloud`, renouvellement **70 €/an** -> refuse : il aurait fallu changer d'adresse
+  en pleine recherche d'emploi (nov. 2026) ou payer. Sans tiret, pour la dictee a l'oral.
+- **Cle SSH** : `~/.ssh/id_ed25519` sur le Mac (ed25519, protegee par passphrase), publique posee
+  chez Hostinger sous le nom `MacBook-Manuel`.
+- **PROCHAINE ETAPE** : `ssh root@72.62.236.82` depuis le Terminal (repondre `yes` au TOFU), puis
+  dérouler `DEPLOIEMENT.md` — les 3 enregistrements DNS `A` (§1), l'IP et le domaine y sont
+  desormais en dur, plus aucun placeholder.
 
 ### Decisions reportees (avec leur raison)
+
+- **Nommage en anglais : `composants/` -> `components/`** (tranche par Manuel le 2026-07-20) :
+  il bascule tous ses **nouveaux** travaux en anglais (portfolio compris), parce que c'est la
+  convention du metier meme en France (doc, API, equipes) et qu'il veut s'habituer aux termes
+  anglais. **Sur Spoti-Free, le renommage se fera APRES le deploiement** : ca touche tous les
+  imports du front, la regle correspondante de `CLAUDE.md` et potentiellement les tests e2e —
+  meme raison que l'auth (note 67) et la file d'attente, on ne refactore pas avant une mise en
+  ligne. Jusque-la, la convention `composants/` de `CLAUDE.md` **reste en vigueur ici**.
 
 - **Auth : `localStorage` -> cookie `httpOnly`** (#9, tranche le 2026-07-18) : on **garde
   `localStorage`** pour l'instant — choix courant et defendable sur une vitrine sans donnees
