@@ -58,15 +58,30 @@ temps, **on la lance en premier** : elle travaillera pendant que tu installes le
 Dans le panneau de ton registrar (ici Hostinger), zone DNS du domaine, créer des enregistrements de
 type **A** — un enregistrement `A` associe un **nom** à une **adresse IPv4** :
 
-| Type | Nom         | Valeur           | Adresse obtenue                               |
-|------|-------------|------------------|-----------------------------------------------|
-| A    | `@`         | `72.62.236.82`   | `manuelmattana.fr` → le portfolio (plus tard) |
-| A    | `www`       | `72.62.236.82`   | `www.manuelmattana.fr`                        |
-| A    | `spotifree` | `72.62.236.82`   | `spotifree.manuelmattana.fr` → **Spoti-Free** |
+| Action                  | Type  | Nom         | Valeur             | TTL   | Adresse obtenue                               |
+|-------------------------|-------|-------------|--------------------|-------|-----------------------------------------------|
+| **MODIFIER** l'existant | A     | `@`         | `72.62.236.82`     | `300` | `manuelmattana.fr` → le portfolio (plus tard) |
+| **AJOUTER**             | A     | `spotifree` | `72.62.236.82`     | `300` | `spotifree.manuelmattana.fr` → **Spoti-Free** |
+| ne rien toucher         | CNAME | `www`       | `manuelmattana.fr` | —     | `www.manuelmattana.fr`                        |
 
 `@` désigne le domaine nu (la racine, ou *apex*). Les autres lignes sont des **sous-domaines** :
 gratuits et illimités, c'est ce qui permet de loger tous les projets sur une seule machine et un
 seul domaine. Un futur projet = une ligne de plus, rien à racheter.
+
+> **MODIFIER le `@`, surtout pas en ajouter un second.** Deux enregistrements `A` sur le même nom
+> n'est pas une erreur DNS : c'est du **round-robin**, le résolveur en choisit un au hasard. On
+> aurait le site une fois sur deux et la page de parking l'autre fois — le pire type de bug, celui
+> qui n'est pas reproductible.
+
+> **`www` est un CNAME vers l'apex, on le laisse tel quel.** Un CNAME dit « pour ce nom, va lire cet
+> autre nom » : il suivra automatiquement la modification du `@`. C'est mieux qu'un `A` en double —
+> une seule adresse à changer le jour où on migre de VPS (échéance ~juin 2027).
+
+> **TTL : 300 s (5 minutes) tant que ça bouge.** C'est la durée pendant laquelle n'importe quel
+> résolveur garde la réponse en cache avant de redemander. Bas = une erreur d'IP se corrige en 5
+> minutes ; haut (4 h, le défaut « Auto » d'Hostinger) = une erreur coûte 4 heures. Et attention :
+> **baisser un TTL est soumis à l'ANCIEN TTL** — d'où la pratique de le baisser *la veille* d'une
+> migration. On le remontera à 3600 une fois le site stable, si on veut.
 
 > **Pourquoi en premier ?** Un changement DNS met de quelques minutes à quelques heures à se
 > propager. Et surtout : **certbot refuse de délivrer un certificat s'il ne peut pas vérifier que
