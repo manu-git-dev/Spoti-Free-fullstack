@@ -271,11 +271,12 @@ node scripts/importer-jamendo.mjs --nombre 100
 > de ta base. Si tu la choisis, rejoue le seed qu'elle vient d'écrire (§4) — sinon la base et les
 > fichiers ne parleront pas des mêmes morceaux.
 
-Et créer le dossier des dépôts en attente (vide, mais il **doit** exister) :
+Le dossier des dépôts en attente (`backend/uploads/`) **existe déjà après le `git clone`** : le
+dépôt versionne le dossier sans son contenu, via un `.gitignore` qui contient `*` puis
+`!.gitignore`. Rien à créer.
 
-```bash
-mkdir -p /var/www/spotifree/backend/uploads
-```
+Ce qui compte, en revanche, c'est qu'il appartienne à `www-data` — sinon le premier dépôt échoue
+faute de droit d'écriture. C'est fait au §7 (`chown -R www-data:www-data … public uploads`).
 
 > Sans les fichiers, le catalogue s'affiche mais rien ne se lit.
 
