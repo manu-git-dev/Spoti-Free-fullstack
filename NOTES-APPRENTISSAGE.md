@@ -2300,3 +2300,37 @@ S'il renvoie l'IP du VPS, l'enregistrement est correct : tout le reste n'est que
 - **`www` était déjà un CNAME vers l'apex**, pas un `A`. Un CNAME dit « pour ce nom, va lire cet autre nom » : il **suit** automatiquement la modification de `@`. C'est mieux qu'un second `A` en double — une seule adresse à changer le jour où je migre de VPS (échéance ~juin 2027). J'ai corrigé `DEPLOIEMENT.md` §1, qui prévoyait 3 enregistrements `A`.
 
 ---
+
+### 72. Un test d'authentification SSH dans un wrapper non-interactif ne prouve rien
+
+*Cas réel : soir du déploiement. Pour savoir si ma clé publique était bien sur le VPS actif (doute légitime — elle avait pu être posée sur une commande annulée), on a testé `ssh root@<ip>` depuis un contexte **sans vrai terminal** (`-o BatchMode=yes`, puis le préfixe `!` de Claude Code). ssh a sauté directement au mot de passe sans jamais réclamer la passphrase → conclusion : « le serveur n'a pas ma clé ». **Faux.** `ssh-copy-id` a répondu `All keys were skipped because they already exist on the remote system` : elle y était depuis le début.*
+
+**Le mécanisme.** SSH essaie les méthodes d'authentification dans l'ordre, `publickey` en premier. Pour s'authentifier avec une clé protégée par passphrase, il doit la **déchiffrer**. Sans TTY (et sans `SSH_ASKPASS`), il ne peut pas me la réclamer : il **abandonne la clé en silence** et passe à la méthode suivante, le mot de passe.
+
+Résultat : **« je n'ai pas pu déverrouiller ma clé » et « le serveur refuse ma clé » produisent exactement la même trace à l'écran.** J'ai lu un symptôme d'**outillage** comme un symptôme de **serveur**.
+
+**La règle générale : tester une authentification depuis l'environnement où elle doit réellement fonctionner.** Un test dans un contexte plus **contraint** que la réalité (pas de TTY, pas d'agent) donne des **faux négatifs** ; un test dans un contexte plus **permissif** (clé déjà chargée dans l'agent, variables d'env qui traînent) donne des **faux positifs**. Ni l'un ni l'autre ne renseigne. C'est la même famille d'idée que la note 68 sur la CI — sauf qu'ici l'erreur était dans l'autre sens : ce n'est pas mon environnement qui était trop riche, c'est celui du test qui était trop pauvre.
+
+**Le bon outil de diagnostic : `ssh -v`**, et trois lignes à chercher :
+```bash
+ssh -v root@<ip> 'echo OK' 2>&1 | grep -E 'Offering|Server accepts|Authenticated to'
+```
+- `Offering public key: …` → ssh **propose** ma clé (côté client, tout va bien) ;
+- `Server accepts key: …` → le serveur la **reconnaît** (elle est bien dans `authorized_keys`) ;
+- `Authenticated to … using "publickey"` → c'est plié.
+
+La lecture qui tranche :
+- `Offering` **sans** `Server accepts` → la clé n'est vraiment **pas** sur le serveur ;
+- **pas même** `Offering` → le problème est **côté client** (clé illisible, passphrase non saisissable, `IdentitiesOnly`…).
+
+C'est précisément cette distinction que le test muet ne permettait pas de faire.
+
+**Corollaire — `ssh-copy-id` est sans risque, donc c'est aussi un outil de diagnostic.** Il **ajoute** à `authorized_keys` (il n'écrase jamais), et il **corrige les permissions** : `700` sur `~/.ssh`, `600` sur `authorized_keys`. Ce dernier point compte : **`sshd` refuse silencieusement une clé si les permissions sont trop ouvertes** — clé bien installée, connexion refusée, aucun message côté client. Le lancer « pour rien » ne coûte donc rien : au pire il répond que tout est déjà en place, ce qui est en soi la réponse cherchée.
+
+**Confort à ne pas sauter un soir de déploiement** (où on se connecte vingt fois) :
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+```
+La passphrase est tapée **une fois** et rangée dans le trousseau macOS ; l'agent signe ensuite à ma place, y compris après redémarrage. Ça désamorce la vraie tentation du soir de déploiement : **retirer la passphrase parce qu'elle agace**.
+
+---
