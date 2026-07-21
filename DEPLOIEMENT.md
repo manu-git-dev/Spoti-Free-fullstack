@@ -107,18 +107,57 @@ ssh root@72.62.236.82
 apt update && apt upgrade -y
 apt install -y nginx mysql-server git curl
 
-# Node.js 22
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# Node.js 22 — télécharger, INSPECTER, puis exécuter LE MÊME fichier
+curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/ns.sh
+grep -nE 'NODE_MAJOR|nodesource|apt-get|gpg|deb ' /tmp/ns.sh   # ce qu'il fait vraiment
+bash /tmp/ns.sh
 apt install -y nodejs
 
 node -v && nginx -v && mysql --version
 ```
 
-Sécuriser MySQL (mot de passe root, suppression des comptes anonymes) :
+> **Pourquoi pas le `curl … | bash -` que donne la doc de NodeSource ?** Parce qu'avec un tube, on
+> inspecte un téléchargement puis on en exécute **un second** : rien ne garantit que ce sont les
+> mêmes octets. Télécharger, lire, puis exécuter **ce fichier-là** supprime l'écart. C'est la
+> différence entre « j'ai regardé quelque chose » et « j'exécute ce que j'ai regardé ».
+
+> **Node 22 et pas la version d'Ubuntu (18), ni celle du Mac (24)** : la prod s'aligne sur
+> l'environnement **testé**, c'est-à-dire la CI (`node-version: 22` dans `ci.yml`). Même
+> raisonnement que pour MySQL 8.0.
+
+Sécuriser MySQL (suppression des comptes anonymes et de la base `test`) :
 
 ```bash
 mysql_secure_installation
 ```
+
+Les réponses, et **le piège** :
+
+| Question | Réponse | Pourquoi |
+|---|---|---|
+| `Setup VALIDATE PASSWORD component?` | **`n`** | Voir l'encadré ci-dessous |
+| *(mot de passe root)* | *(passé tout seul)* | `Skipping password set for root…` — c'est voulu, voir plus bas |
+| `Remove anonymous users?` | **`y`** | Ils permettent de se connecter sans s'identifier |
+| `Disallow root login remotely?` | **`y`** | Déjà impossible via `auth_socket`, mais gratuit |
+| `Remove test database and access to it?` | **`y`** | La base `test` est livrée accessible en écriture à tous |
+| `Reload privilege tables now?` | **`y`** | Applique immédiatement |
+
+> **`VALIDATE PASSWORD` → non, et c'est délibéré.** Ce composant vérifie la **forme** des mots de
+> passe, pas leur **force** : `Password1!` passe, un aléatoire de 32 caractères sans ponctuation est
+> refusé. Il rejette le fort et accepte le faible. Concrètement, il ferait échouer le
+> `CREATE USER … IDENTIFIED BY` du §4 (`ERROR 1819`) sur un mot de passe généré par
+> `openssl rand -base64 24`. Ce qui compte est l'**entropie**, pas la présence d'un `@` — les règles
+> de complexité répondent au problème des mots de passe *choisis par un humain*, or les nôtres sont
+> *générés*. Décision réversible :
+> `INSTALL COMPONENT 'file://component_validate_password';`
+
+> **Le `root` MySQL reste en `auth_socket` (le défaut Ubuntu), sans mot de passe.** Seul
+> l'utilisateur système `root` peut se connecter en `root` MySQL, par la socket Unix locale.
+> C'est **plus sûr** qu'un mot de passe : celui qui n'existe pas ne peut être ni volé, ni deviné,
+> ni oublié dans un `~/.bash_history` — et une socket Unix est un fichier local, elle ne traverse
+> pas le réseau. Vérifiable par
+> `mysql -e "SELECT user, host, plugin FROM mysql.user;"`.
+> **Conséquence pour la suite : les commandes `root` du §4 s'écrivent `mysql`, sans `-u root -p`.**
 
 ---
 
@@ -137,13 +176,23 @@ npm ci --prefix frontend
 
 ## 4. La base de données
 
+Générer d'abord le mot de passe du compte applicatif, **dans le terminal du VPS** (jamais dans une
+conversation, jamais recopié à la main) :
+
 ```bash
-mysql -u root -p
+openssl rand -base64 24
+```
+
+Puis ouvrir MySQL — **`mysql` tout court** : le `root` est en `auth_socket` (§2), il n'y a pas de
+mot de passe à donner.
+
+```bash
+mysql
 ```
 
 ```sql
 CREATE DATABASE spotifree CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER 'spotifree'@'localhost' IDENTIFIED BY 'un-mot-de-passe-long-et-aleatoire';
+CREATE USER 'spotifree'@'localhost' IDENTIFIED BY 'le-resultat-du-openssl-rand';
 GRANT ALL PRIVILEGES ON spotifree.* TO 'spotifree'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
