@@ -204,8 +204,8 @@ EXIT;
 Créer les tables et le catalogue :
 
 ```bash
-mysql -u spotifree -p spotifree < backend/scripts/schema.sql       # les 8 tables
-mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # le catalogue
+mysql -u spotifree -p spotifree < backend/scripts/schema.sql       # les 9 tables
+mysql -u spotifree -p spotifree < backend/scripts/seed-musics.sql  # le catalogue (100 morceaux)
 ```
 
 > Les scripts `add-*.sql` du même dossier sont des **migrations historiques** : leurs
