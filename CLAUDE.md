@@ -191,6 +191,13 @@ rouge, c'est qu'une régression est réapparue.
   `alignItemWithTrigger={false}` sur `SelectContent` : par défaut le popup se pose **sur** le
   déclencheur et le masque. Même famille de piège que le `Slider` ci-dessus — les wrappers shadcn
   de Base UI ont des défauts qui ne se voient qu'à l'usage.
+- **`Button` (Base UI) dans un `<form>` : TOUJOURS `type="submit"` explicite.** Un `<button>`
+  natif vaut `type="submit"` par défaut dans un formulaire ; `@base-ui/react/button` pose
+  `type="button"` pour éviter les soumissions accidentelles. Sans l'attribut, le clic **ne
+  soumet rien** : le `onSubmit` n'est jamais appelé, donc **ni requête, ni erreur, ni toast** —
+  un silence total, le pire symptôme à diagnostiquer. Bug réel du 2026-07-21, découvert *en
+  production* le soir de la mise en ligne (`Contact.jsx` était le seul formulaire de l'app où
+  l'attribut manquait). Même famille que le `Slider` et le `Select` ci-dessus.
 - **Typographie** : `EnTetePage` = le `<h1>` de la page (avec son icône) ; `TitreSection` = un
   `<h2>` dans une page de prose (À propos, Mentions légales). Ne pas redéfinir un composant `Titre`
   local dans une page — c'est exactement comme ça que les tailles ont divergé.

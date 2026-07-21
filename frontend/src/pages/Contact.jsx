@@ -118,7 +118,11 @@ export default function Contact() {
               required
             ></textarea>
           </fieldset>
-          <Button className="my-4 w-fit" disabled={isSending}>
+          {/* type="submit" est INDISPENSABLE : `Button` enveloppe @base-ui/react/button, qui
+              pose type="button" par defaut (contrairement a un <button> natif dans un <form>,
+              qui vaut "submit"). Sans lui, le clic ne soumet rien, handleSubmit n'est jamais
+              appele, et il n'y a NI requete NI erreur NI toast — un silence total. */}
+          <Button type="submit" className="my-4 w-fit" disabled={isSending}>
             Envoyer le message
             {isSending ? <Loader2 className="animate-spin" /> : <Send />}
           </Button>
