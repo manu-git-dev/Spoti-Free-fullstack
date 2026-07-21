@@ -10,75 +10,119 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 > dans les commits et `NOTES-APPRENTISSAGE.md`. Tenu a jour a chaque fin de session (protocole
 > dans `CLAUDE.md`). Manuel dit « reprenons » -> Claude restitue cette liste.
 >
-> **Fait le 2026-07-19** (voir les 8 derniers commits) : la grande **revue d'architecture +
-> securite + fonctionnel** de toute l'app (le gros chantier qui figurait ici). Bilan : 1 vrai bug
-> corrige (fichiers de depot orphelins quand un admin supprime un compte -> module `src/depots.js`
-> partage + test de non-regression), durcissement backend (timing de connexion egalise contre
-> l'enumeration, `helmet`, rate-limit sur `/ecoute`, DRY email), garde d'autorisation admin
-> centralise dans `ProtectedRoute`, **lint front passe de 23 a 0 erreur**, lecture au clavier
-> (`Card`/`TrackRow`), `play()` catche, et `AddMusicPlaylist` qui ne tire plus N requetes au
-> montage. Tout est reste vert (189 tests, build, lint) apres chaque commit.
+> # 🚀 SPOTI-FREE EST EN LIGNE — https://spotifree.manuelmattana.fr
 >
-> **Fait aussi le 2026-07-19** (2e session) : (1) la **passe « echecs silencieux »** — garde-fou
-> `backend/src/verifierEnv.js` (fail-fast : refuse de demarrer si une var d'env critique manque,
-> avertit pour le mail / `NODE_ENV`) + `CHECKLIST-ECHECS-SILENCIEUX.md` (doc a cocher jour-J) + fix
-> du `.env` d'exemple de `DEPLOIEMENT.md` §6 (oubliait `MAIL_TO`). (2) La **fin de la passe a11y
-> (#20)** — lecteur pilotable au clavier (Espace = play/pause, fleches = prec/suiv, regle
-> « ambiante » : ne tire pas si un controle a le focus) + zone de clic des boutons de transport
-> desktop agrandie (`p-2 -m-2`). 189 tests verts, lint front vert.
+> Mis en production le **2026-07-21 au soir**. `DEPLOIEMENT.md` §1→§11 deroule en entier,
+> checklist §10 **entierement verte**, redemarrage de la machine valide (tout revient seul).
+> Les 3 bugs reels trouves en chemin sont documentes : **notes 71 a 73** de
+> `NOTES-APPRENTISSAGE.md`, et `DEPLOIEMENT.md` a ete corrige au fur et a mesure.
+
+### A FAIRE — PROCHAINE SESSION (par ordre)
+
+1. **Lancer les 2 rsync de sauvegarde.** Manuel a demande un rappel systematique en debut de
+   session. Le VPS produit les dumps, mais **une sauvegarde qui vit sur la machine qu'elle protege
+   ne protege de rien** — le rapatriement est ce qui la rend reelle, et il est forcement manuel
+   (le Mac n'est pas toujours allume et son IP change, donc c'est lui qui doit TIRER).
+   ```bash
+   rsync -av root@72.62.236.82:/var/backups/spotifree/ ~/Sauvegardes/spotifree/
+   rsync -av --partial --progress root@72.62.236.82:/var/www/spotifree/backend/public/ ~/Spoti-free-FULLSTACK/backend/public/
+   ```
+   **Jamais de `--delete`** : la rotation de 14 jours cote VPS sert a ne pas remplir son disque,
+   pas a decider ce que Manuel a le droit de conserver.
+   Et **verifier la toute premiere execution automatique** du minuteur (00:05, non declenchee a la
+   main) : `journalctl -u sauvegarde-spotifree -n 20 --no-pager`.
+
+2. **En-tetes de securite sur le HTML** — le seul point de durcissement restant qui ait de la
+   valeur. `helmet` couvre `/api/` (CSP, HSTS, X-Frame-Options, nosniff — verifie en ligne le
+   21/07) mais **pas la page HTML servie par nginx**, or c'est elle que le navigateur execute.
+   A ajouter en `add_header` dans `/etc/nginx/sites-available/spotifree`.
+   **Au passage, corriger un vrai defaut du meme fichier** : le bloc
+   `location ~ ^/(musiques|images)/` renvoie **DEUX en-tetes `Cache-Control`** (`expires 30d` en
+   genere un, `add_header Cache-Control "public"` en ajoute un second). A fusionner en
+   `add_header Cache-Control "public, max-age=2592000"` et supprimer le `expires`.
+
+3. **Durcissement de l'unite systemd** (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`).
+   Volontairement reporte le 21/07 : on ne met en service qu'une unite **minimale et connue**, pour
+   qu'en cas de panne il n'y ait qu'un seul suspect. L'app tournant deja en `www-data`, le gain
+   marginal est faible — c'est de la defense en profondeur, pas une urgence.
 
 ### En attente d'une DECISION de Manuel
 
+- **Statut d'un depot approuve dont le morceau est ensuite retire du catalogue** (nouveau, 21/07).
+  Le depot n°1 reste marque `approuve` alors que son morceau a ete supprime du catalogue apres le
+  test. L'historique est juste — l'approbation a bien eu lieu — mais « Mes depots » affichera
+  « approuve » pour un morceau introuvable. Faut-il un statut distinct (`retire` ?), ou laisse-t-on
+  l'historique tel quel ? **Ce n'est pas un bug, c'est une question de conception non tranchee.**
 - **Agent de relecture** (`.claude/agents/relecteur.md`) : relirait un diff AVANT commit contre les
   invariants du projet (surfaces, `apiFetch`, licence `NOT NULL`, fichiers partages jamais
   supprimes…) — ce qu'un relecteur generique ignore. Discute le 2026-07-17, pas cree. **En attente
   du feu vert** (le monter sur ce projet, ou en perso).
-- **Note d'apprentissage a ecrire ?** (question posee le 2026-07-18, sans reponse) : Claude a propose de
-  consigner dans `NOTES-APPRENTISSAGE.md` la lecon « echantillonnage discret vs paliers de rupture »
-  (des captures a 5 largeurs isolees avaient rate le bug d'en-tete de la bande 1024-1077px). A decider.
+- **Note d'apprentissage a ecrire ?** (question posee le 2026-07-18, toujours sans reponse) :
+  consigner la lecon « echantillonnage discret vs paliers de rupture » — des captures a 5 largeurs
+  isolees avaient rate le bug d'en-tete de la bande 1024-1077 px. A decider.
 
-### En attente de TRAVAIL
+### En attente de TRAVAIL (hors deploiement)
 
-- **Passe responsive — 2 verifications HUMAINES restantes** (#7/#8, la passe auto est faite le
+- **Passe responsive — 2 verifications HUMAINES restantes** (#7/#8 ; la passe auto est faite le
   2026-07-18 : 13 pages x 5 largeurs, 0 debordement, 0 erreur JS) :
-  - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en page)
-    — bloque par le wifi de l'armee (isole les clients ; hotspot du tel KO, l'iPhone route par la 4G) ;
+  - le **vrai test tactile du lecteur sur le tel de Manuel** (la cible au doigt, pas la mise en
+    page) — bloque par le wifi de l'armee (il isole les clients ; hotspot du tel KO, l'iPhone route
+    par la 4G). **Desormais testable directement sur https://spotifree.manuelmattana.fr en 4G**,
+    sans dependre du wifi : le site est en ligne.
   - la **verif visuelle des grands ecrans (1920/2560) sur le PC de la formation** — pas d'ecran plus
     grand que le portable a la maison. Les captures 2560 sont saines, mais il veut voir en vrai.
-### A faire par MANUEL (bloquant pour la mise en ligne)
 
-- **⚠️ RAPPEL AVANT DEPLOIEMENT — coordonnees de l'HEBERGEUR dans `MentionsLegales.jsx`** (#11) :
-  directeur de publication (Manuel Mattana) et contact (renvoi vers `/contact`) sont **faits** le
-  2026-07-18. Reste **le seul `A_COMPLETER`** : nom + adresse + telephone de l'hebergeur, a prendre
-  sur la page legale d'Hostinger / le mail de commande — **desormais disponible**, le paiement est
-  passe (voir ci-dessous). Manuel a explicitement demande qu'on le lui **rappelle avant tout
-  deploiement** : les mentions legales sont incompletes tant que ce bloc reste en `A_COMPLETER`.
-- **Verifier que la cle SSH est bien sur le BON serveur** : la 1re commande (16/07) est restee 5
-  jours en « paiement en cours de traitement » (verification anti-fraude Hostinger : commande
-  enregistree mais **aucune autorisation envoyee a la banque**, d'ou le « rien du tout » cote
-  banque — les deux infos contradictoires etaient vraies). Elle a ete **annulee par le support**,
-  et une **2e commande avec code promo est passee immediatement**. L'ecran « Securisez l'acces a
-  votre VPS » (mot de passe root + cle SSH) a peut-etre ete rempli sur la commande annulee : si
-  `ssh root@72.62.236.82` demande un **mot de passe** au lieu de la **passphrase de la cle**, il
-  faut reposer la cle publique sur la machine active.
-- **Garder la preuve ecrite de l'annulation** (mail / conversation support) et **surveiller le
-  compte bancaire 7-10 jours** : en theorie rien a rembourser (aucune autorisation n'a eu lieu),
-  mais si **deux debits ~110 €** apparaissent, contacter le support avec cette preuve. Ne rien
-  faire de preventif cote banque : une opposition bloquerait aussi le VPS actif.
+### A faire par MANUEL (hors technique, non bloquant)
+
+- **Surveiller le compte bancaire 7-10 jours.** Cote Hostinger, **une seule facture existe**
+  (`HCY-27587200`, 110,03 €, `PAID`) — donc en theorie rien a craindre. Si **deux debits ~110 €**
+  apparaissent, contacter le support avec la preuve d'annulation de la 1re commande (celle restee
+  5 jours en verification anti-fraude). **Rien de preventif cote banque** : une opposition
+  bloquerait aussi le VPS actif.
 - **Desactiver la reconduction automatique** du domaine et noter son prix de renouvellement.
+- **Poser une alerte agenda au ~21 juin 2027.** Le VPS se renouvelle le **21 juillet 2027 a
+  ~244,66 € TTC** (203,88 € HT) contre 110,03 € payes la 1re annee grace a 112,19 € de remise —
+  soit **plus du double**. C'est la que le choix Hostinger vs Hetzner (~63 €/an) se rejoue pour de
+  vrai, site deja en ligne et sans pression. `DEPLOIEMENT.md` etant agnostique (`ssh` + `apt`),
+  migrer = rejouer les memes commandes ailleurs.
 
-### ETAT DE LA MACHINE (2026-07-21) — c'est ici qu'on reprend
+### ETAT DE LA PRODUCTION (2026-07-21) — la machine telle qu'elle est
 
-- **VPS actif** : Hostinger KVM 2, Ubuntu 24.04, IP **`72.62.236.82`**. Port 22 ouvert et
-  repondant (verifie le 21/07). Mot de passe root genere et range dans le gestionnaire.
-- **Domaine** : **`manuelmattana.fr`** (achete a part, ~12 €/an). Le domaine « offert » n'existait
-  qu'en `.tech`/`.cloud`, renouvellement **70 €/an** -> refuse : il aurait fallu changer d'adresse
-  en pleine recherche d'emploi (nov. 2026) ou payer. Sans tiret, pour la dictee a l'oral.
-- **Cle SSH** : `~/.ssh/id_ed25519` sur le Mac (ed25519, protegee par passphrase), publique posee
-  chez Hostinger sous le nom `MacBook-Manuel`.
-- **PROCHAINE ETAPE** : `ssh root@72.62.236.82` depuis le Terminal (repondre `yes` au TOFU), puis
-  dérouler `DEPLOIEMENT.md` — les 3 enregistrements DNS `A` (§1), l'IP et le domaine y sont
-  desormais en dur, plus aucun placeholder.
+- **https://spotifree.manuelmattana.fr** — VPS Hostinger KVM 2, Ubuntu 24.04, IP `72.62.236.82`
+  (`srv1845397.hstgr.cloud`). Node 22.23.1 / nginx 1.24 (**HTTP/2**) / MySQL 8.0.46.
+  Code dans `/var/www/spotifree`.
+- **Service** : `spotifree.service` (systemd, `User=www-data`, `WorkingDirectory` obligatoire,
+  `Restart=always`, `enabled` au boot). Node ecoute **`127.0.0.1:3000` uniquement**
+  (`HOST` surchargeable pour un futur conteneur, qui devra ecouter `0.0.0.0`).
+- **Securite** : `ufw` (22/80/443 seulement) ; SSH **par cle uniquement**
+  (`/etc/ssh/sshd_config.d/01-durcissement.conf` — le prefixe **`01-` est indispensable** : dans
+  `sshd_config` c'est la **PREMIERE** occurrence d'un mot-cle qui gagne, un fichier `99-` aurait ete
+  ignore derriere `50-cloud-init.conf`) ; MySQL `root` en `auth_socket` (aucun mot de passe) ;
+  compte applicatif `spotifree` limite a sa seule base ; `.env` en `600 www-data`.
+- **Certificat** Let's Encrypt jusqu'au **19/10/2026**, `certbot.timer` a 00:40.
+- **Sauvegardes** : `sauvegarde-spotifree.timer` a 00:05 -> `mysqldump --single-transaction`
+  gzippe dans `/var/backups/spotifree/`, rotation 14 jours. **Restauration testee pour de vrai**
+  le 21/07 (9 tables, 100 morceaux) dans une base jetable.
+- **Domaine** : `manuelmattana.fr` — racine reservee au **portfolio** (a venir),
+  `blog.` pour un **WordPress** plus tard. DNS chez Hostinger, **TTL 300**.
+
+### Perfs — la mesure du 21/07, pour ne pas la refaire
+
+Latence ressentie de 2-3 s avant que le son ne demarre. **Le serveur n'etait PAS en cause** :
+TTFB 60 ms, `Accept-Ranges: bytes` fonctionnel, **256 premiers Ko en 0,15 s**. La cause etait que
+les **100 pochettes se chargeaient d'un coup** et saturaient les ~6 connexions simultanees
+d'HTTP/1.1 — le mp3 attendait son tour dans la file. Corrige le 21/07 : `loading="lazy"` +
+`decoding="async"` (`Card.jsx`, `TrackRow.jsx`), `preload="auto"` sur le `<audio>`
+(`MediaPlayer.jsx`), et **HTTP/2 active** sur nginx.
+
+> nginx 1.24 exige `listen 443 ssl http2;` — la directive `http2 on;` separee n'existe qu'a partir
+> de 1.25.1. Certbot n'active pas HTTP/2 tout seul.
+
+**S'il reste de la latence perceptible**, le suspect suivant est le **debit binaire des fichiers**
+(~200 kbit/s, 5 a 12 Mo par morceau). Deux pistes, dans cet ordre : (1) **precharger le morceau
+suivant** de la file — la vraie solution, et elle rejoint directement le chantier « file d'attente »
+ci-dessous ; (2) reencoder le catalogue en 128 kbit/s (~40 % de poids en moins, mais c'est un
+chantier de **contenu** : 100 fichiers a regenerer, re-rsync, et le seed a ne pas desynchroniser).
 
 ### Decisions reportees (avec leur raison)
 
