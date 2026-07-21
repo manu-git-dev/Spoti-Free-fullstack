@@ -176,27 +176,47 @@ npm ci --prefix frontend
 
 ## 4. La base de données
 
-Générer d'abord le mot de passe du compte applicatif, **dans le terminal du VPS** (jamais dans une
-conversation, jamais recopié à la main) :
+Tout se fait en **un seul collage**, et il n'y a **rien à remplacer dedans** — c'est délibéré,
+voir l'encadré juste après :
 
 ```bash
-openssl rand -base64 24
-```
-
-Puis ouvrir MySQL — **`mysql` tout court** : le `root` est en `auth_socket` (§2), il n'y a pas de
-mot de passe à donner.
-
-```bash
-mysql
-```
-
-```sql
+PW=$(openssl rand -base64 24)
+mysql <<SQL
 CREATE DATABASE spotifree CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER 'spotifree'@'localhost' IDENTIFIED BY 'le-resultat-du-openssl-rand';
+CREATE USER 'spotifree'@'localhost' IDENTIFIED BY '$PW';
 GRANT ALL PRIVILEGES ON spotifree.* TO 'spotifree'@'localhost';
 FLUSH PRIVILEGES;
-EXIT;
+SQL
+echo "$PW"
 ```
+
+**Ranger la sortie du `echo` dans un gestionnaire de mots de passe immédiatement** : elle resservira
+au chargement du schéma (ci-dessous) et dans le `backend/.env` du §6.
+
+> ⚠️ **JAMAIS de valeur à remplacer dans un bloc destiné à être collé.** Dans un terminal, chaque
+> retour à la ligne d'un collage **est un appui sur Entrée** : il n'existe aucun instant où l'on
+> pourrait éditer le texte. Un `IDENTIFIED BY 'mets-ton-mot-de-passe-ici'` au milieu d'un bloc
+> **crée un compte dont le mot de passe est la phrase d'exemple** — erreur réellement commise le
+> 2026-07-21. Le motif ci-dessus l'évite par construction : le shell génère le secret et l'injecte
+> lui-même, la main humaine n'y touche jamais. Si ça arrive quand même, le correctif est
+> `ALTER USER 'spotifree'@'localhost' IDENTIFIED BY '$PW';` — il **remplace** le mot de passe, la
+> base et les `GRANT` sont conservés, il n'y a rien à recréer.
+
+> `mysql` tout court : le `root` est en `auth_socket` (§2), il n'y a aucun mot de passe à fournir.
+> Le `<<SQL … SQL` est un *here-document* : il envoie à `mysql` tout ce qui suit jusqu'au marqueur
+> de fin, ce qui permet de scripter la session au lieu de la taper.
+
+> **`utf8mb4` et pas `utf8`** : le `utf8` historique de MySQL est un faux UTF-8, limité à 3 octets
+> par caractère — il ne stocke ni les emoji ni certains idéogrammes. Sur un catalogue alimenté par
+> une API internationale, un seul titre exotique fait échouer l'insertion.
+> **`utf8mb4_0900_ai_ci`** est la *collation* (règles de tri et de comparaison) : `ai` = insensible
+> aux accents, `ci` = insensible à la casse — c'est ce qui fait qu'une recherche « eric » trouve
+> « Éric ».
+
+> **`ON spotifree.*` et pas `ON *.*`** : le compte applicatif n'a de droits que sur **sa** base. Si
+> l'application est un jour compromise (injection SQL, dépendance vérolée), l'attaquant hérite
+> exactement de ces droits, pas plus. C'est la réduction du *rayon d'explosion*, et c'est la même
+> raison qui interdit de faire tourner l'app en `root`.
 
 > **Ne pas utiliser `root`** pour l'application : un compte dédié, limité à cette seule base,
 > réduit les dégâts si l'application est un jour compromise.
@@ -225,12 +245,18 @@ les morceaux, mais le serveur n'a pas un seul fichier à servir.
 Deux façons de les obtenir sur le VPS. **La première est la bonne** :
 
 ```bash
-# A. Depuis ton Mac : envoyer les fichiers déjà téléchargés par le script d'import.
+# A. Depuis ton MAC : envoyer les fichiers déjà téléchargés par le script d'import.
 #
-# rsync et pas scp : il reprend là où il s'est arrêté. Sur ~590 Mo et une connexion qui
-# lâche à 80 %, scp recommence tout depuis zéro, rsync reprend au fichier suivant.
-# Le `-z` compresse à la volée, le `--progress` évite de se demander si c'est planté.
-rsync -avz --progress backend/public/ root@72.62.236.82:/var/www/spotifree/backend/public/
+# rsync et pas scp : il reprend là où il s'est arrêté. Sur ~566 Mo et une connexion qui
+# lâche à 80 %, scp recommence tout depuis zéro.
+#   --partial : reprend le FICHIER EN COURS (sans lui, rsync reprend au fichier suivant
+#               mais jette le mp3 partiellement transféré)
+#   --progress : évite de se demander si c'est planté
+# PAS de -z : la compression à la volée n'apporte rien sur du mp3 et du jpg, DÉJÀ
+# compressés — elle ne fait que brûler du CPU des deux côtés.
+# Le `/` final des deux côtés est significatif : `public/` = « le CONTENU de public ».
+# Sans lui, tout atterrirait dans public/public/.
+rsync -av --partial --progress public/ root@72.62.236.82:/var/www/spotifree/backend/public/
 ```
 
 ```bash
@@ -251,9 +277,14 @@ Et créer le dossier des dépôts en attente (vide, mais il **doit** exister) :
 mkdir -p /var/www/spotifree/backend/uploads
 ```
 
-> Sans les fichiers, le catalogue s'affiche mais rien ne se lit. Pour une démo sans télécharger
-> les vraies musiques : `node tests/preparer-medias.mjs` génère des médias de test (un mp3
-> silencieux par morceau du seed).
+> Sans les fichiers, le catalogue s'affiche mais rien ne se lit.
+
+> 🚫 **`tests/preparer-medias.mjs` n'a RIEN à faire en production.** Il fabrique un mp3
+> **silencieux de 3 secondes** et une **image noire** par morceau du seed — c'est un outil pour la
+> CI et les tests e2e, qui doivent tourner sur une machine neuve sans télécharger 566 Mo. Lancé sur
+> le VPS, il donne un site qui *a l'air* complet : 100 titres au catalogue, 100 pochettes… vides.
+> Erreur réellement commise le 2026-07-21 sur une autre machine. **Pour la production, l'option A
+> et elle seule.**
 
 ---
 
