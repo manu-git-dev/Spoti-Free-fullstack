@@ -275,8 +275,15 @@ export default function MediaPlayer({
           attribut HTML. React ecrivait donc sagement `volume="0.5"` dans le balisage, et le
           navigateur l'ignorait — le curseur affichait 50 % pendant que le son sortait a 100 %.
           C'est l'effet ci-dessus qui l'applique, sur la propriete. */}
+      {/* preload="auto" : sans attribut, les navigateurs s'arretent en pratique aux METADONNEES
+          et n'entament le tampon qu'au play(). Or ici le <audio> n'est monte QUE lorsqu'une piste
+          est selectionnee — donc precharger ne gaspille rien : on telecharge le morceau que
+          l'utilisateur vient de cliquer, au plus vite. Le gain se cumule avec le lazy-loading des
+          pochettes (Card.jsx) : moins de requetes concurrentes, donc plus de bande passante pour
+          celle-ci. */}
       <audio
         src={urlFichier(music.src_audio)}
+        preload="auto"
         ref={audioRef}
         onLoadedMetadata={() => {
           setDuration(audioRef.current.duration);
