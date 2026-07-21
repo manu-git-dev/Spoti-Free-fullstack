@@ -308,9 +308,35 @@ IP_HASH_SALT=<un autre sel aléatoire>
 FRONTEND_URL=https://spotifree.manuelmattana.fr
 
 MAIL_USER=ton.adresse@gmail.com
-MAIL_PASS=<mot de passe d'application Gmail, 16 caractères>
+MAIL_PASS=<mot de passe d'application Gmail, 16 caractères SANS ESPACES>
 MAIL_TO=ton.adresse@gmail.com    # où arrivent les messages de contact et les notifs de dépôt
 ```
+
+> ⚠️ **`MAIL_PASS` : 16 caractères, SANS les espaces.** Google affiche le mot de passe
+> d'application en **4 groupes de 4 séparés par des espaces** (`abcd efgh ijkl mnop`) pour qu'il
+> soit lisible — mais le mot de passe réel, ce sont les **16 caractères collés**. Saisi tel
+> qu'affiché, il fait 19 caractères et Gmail répond
+> `535-5.7.8 Username and Password not accepted` (`EAUTH`). Erreur réellement commise le
+> 2026-07-21, et **invisible depuis le site** : la route « mot de passe oublié » répond `200`
+> neutre même quand l'envoi échoue (pour ne pas révéler quelles adresses ont un compte). Seul le
+> journal le dit : `journalctl -u spotifree | grep -i 535`.
+>
+> Vérifier sans afficher le secret, et corriger sans le retaper :
+> ```bash
+> cd /var/www/spotifree/backend
+> BRUT=$(grep '^MAIL_PASS=' .env | cut -d= -f2-)
+> NET=$(printf '%s' "$BRUT" | tr -cd 'A-Za-z0-9')   # garde UNIQUEMENT lettres et chiffres
+> echo "avant ${#BRUT} / apres ${#NET}"
+> if [ ${#NET} -eq 16 ]; then
+>   sed -i "s|^MAIL_PASS=.*|MAIL_PASS=$NET|" .env
+>   chown www-data:www-data .env && chmod 600 .env   # sed -i recree le fichier EN ROOT
+> fi
+> systemctl restart spotifree
+> ```
+> Ne pas se contenter de `s/[[:space:]]//g` : les séparateurs copiés depuis une page web sont
+> souvent des **espaces insécables** (U+00A0), que `[[:space:]]` ne reconnaît pas — alors que le
+> `\s` de JavaScript, lui, les voit. D'où un diagnostic qui semble se contredire. Voir la
+> **note 73** de `NOTES-APPRENTISSAGE.md`.
 
 > **`MAIL_TO` n'est pas optionnel** : sans lui, le formulaire de contact tombe en erreur et les
 > notifications de nouveau dépôt ne partent pas. Le serveur AVERTIT au démarrage si l'une des trois
