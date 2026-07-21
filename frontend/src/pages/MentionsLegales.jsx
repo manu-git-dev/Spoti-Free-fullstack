@@ -3,12 +3,16 @@ import { Scale } from "lucide-react";
 import Page from "../composants/Page";
 import TitreSection from "../composants/TitreSection";
 
-// ATTENTION — une valeur reste a completer avant la mise en ligne : les coordonnees de
-// l'HEBERGEUR (bloc « Hebergement », marque A_COMPLETER ci-dessous). Elle depend du paiement
-// Hostinger (#12) : l'entite facturante exacte et ses coordonnees figurent sur la page legale
-// d'Hostinger / le mail de confirmation de commande. Ne pas la deviner : des mentions legales
-// qui affichent un hebergeur approximatif sont pires que pas de mentions du tout, puisqu'elles
-// affirment quelque chose de faux.
+// Les coordonnees de l'HEBERGEUR (bloc « Hebergement ») sont celles de la FACTURE Hostinger
+// HCY-27587200 du 21/07/2026 — la seule source qui dise quelle entite a reellement vendu le
+// service : les CGU d'Hostinger listent plusieurs entites selon le pays (Chypre, Luxembourg, UK,
+// Singapour, Indonesie), et la facture tranche. Ne pas la « mettre a jour » depuis un annuaire
+// tiers : des mentions legales qui affichent un hebergeur approximatif sont pires que pas de
+// mentions du tout, puisqu'elles affirment quelque chose de faux.
+//
+// Le TELEPHONE de l'hebergeur, demande par l'article 6-III de la LCEN, n'est pas publie par
+// Hostinger (assistance en chat et par ticket uniquement). On l'ecrit explicitement plutot que
+// de recopier un numero trouve sur un annuaire tiers et invérifiable.
 
 // La taille du corps de texte (`leading-relaxed`, sans `text-sm`) est celle des paragraphes de
 // la page A propos. Les deux pages sont de la prose : rien ne justifiait qu'on lise l'une plus
@@ -55,8 +59,22 @@ export default function MentionsLegales() {
 
         <Bloc titre="Hébergement">
           <p>
-            <strong>A_COMPLETER</strong> (nom, adresse et téléphone de
-            l'hébergeur).
+            Ce site est hébergé par <strong>Hostinger International Ltd.</strong>
+            , 61 Lordou Vironos Street, 6023 Larnaca, Chypre — TVA
+            CY&nbsp;10301365E.
+          </p>
+          <p>
+            L'hébergeur ne publie pas de numéro de téléphone : son assistance
+            s'effectue par messagerie et par ticket, depuis{" "}
+            <a
+              href="https://www.hostinger.com/fr/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              hostinger.com
+            </a>
+            .
           </p>
         </Bloc>
 
