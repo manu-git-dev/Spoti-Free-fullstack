@@ -32,14 +32,23 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    Et **verifier la toute premiere execution automatique** du minuteur (00:05, non declenchee a la
    main) : `journalctl -u sauvegarde-spotifree -n 20 --no-pager`.
 
-2. **En-tetes de securite sur le HTML** — le seul point de durcissement restant qui ait de la
-   valeur. `helmet` couvre `/api/` (CSP, HSTS, X-Frame-Options, nosniff — verifie en ligne le
-   21/07) mais **pas la page HTML servie par nginx**, or c'est elle que le navigateur execute.
-   A ajouter en `add_header` dans `/etc/nginx/sites-available/spotifree`.
-   **Au passage, corriger un vrai defaut du meme fichier** : le bloc
-   `location ~ ^/(musiques|images)/` renvoie **DEUX en-tetes `Cache-Control`** (`expires 30d` en
-   genere un, `add_header Cache-Control "public"` en ajoute un second). A fusionner en
-   `add_header Cache-Control "public, max-age=2592000"` et supprimer le `expires`.
+2. **BASCULER LA CSP EN MODE BLOQUANT** — le seul reste du chantier « en-tetes de securite »,
+   fait le 2026-07-22. Les en-tetes sont **en ligne et verifies** (nosniff, X-Frame-Options,
+   Referrer-Policy, Permissions-Policy, HSTS, + le double `Cache-Control` corrige), via
+   `/etc/nginx/snippets/securite.conf` inclus dans chaque bloc `location`. La CSP, elle, est
+   posee en **`Content-Security-Policy-Report-Only`** : elle ne bloque rien pour l'instant.
+
+   **Ce qui reste a faire, et c'est MANUEL qui doit le faire** : ouvrir
+   https://spotifree.manuelmattana.fr avec la **console du navigateur** (F12 -> Console), puis
+   parcourir tout le site — lecture d'un morceau, playlists, favoris, depot, bascule du theme
+   clair/sombre, connexion, formulaire de contact — et **relever les messages
+   « Content Security Policy »**. Chacun designe une ressource que la CSP bloquerait. Tant que
+   ce releve n'est pas fait, on ne retire PAS le suffixe `-Report-Only` : c'est exactement la
+   verification pour laquelle le mode Report-Only existe.
+
+   Rappel a ne pas perdre : **`frame-ancestors` est ignore en Report-Only**. C'est
+   `X-Frame-Options: DENY` qui protege du clickjacking pendant la transition — ne pas le retirer
+   en basculant la CSP.
 
 3. **Durcissement de l'unite systemd** (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`).
    Volontairement reporte le 21/07 : on ne met en service qu'une unite **minimale et connue**, pour
@@ -56,11 +65,10 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
   nouveau statut. Le statut stocke une **decision humaine** (irreversible, historique) ; la presence
   du morceau au catalogue est un **etat courant**, donc deductible. Les mettre dans la meme colonne,
   c'est perdre l'information « il a bien ete approuve » le jour ou on le retire.
-  **Attention — le lien n'existe pas encore** : `submissions` n'a aucune colonne vers `musics`
-  (l'approbation fait un `INSERT INTO musics` puis un `UPDATE submissions`, sans relier les deux,
-  `submissionRoute.js:502` et `:518`). Deriver suppose donc d'abord d'ajouter
-  `submissions.id_music INT NULL` + FK `ON DELETE SET NULL` (migration sur base de PROD, plus
-  rattrapage des lignes existantes). **Reste a faire.**
+  **FAIT le 2026-07-22** : `submissions` n'avait aucune colonne vers `musics`, il a fallu creer
+  le lien (`add-submissions-id-music.sql` : colonne + FK `ON DELETE SET NULL` + rattrapage).
+  Migration **appliquee en local ET en production**, code deploye, 4 tests de non-regression.
+  Raisonnement complet : **note 74** de `NOTES-APPRENTISSAGE.md`.
 - **Agent de relecture** (`.claude/agents/relecteur.md`) -> **abandonne**. Ne pas rouvrir le sujet.
 - **Note « echantillonnage discret vs paliers de rupture »** -> **abandonnee**, pas ecrite.
 

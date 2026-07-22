@@ -449,6 +449,22 @@ server {
     # C'est LE piège classique du déploiement d'une SPA.
     location / {
         try_files $uri $uri/ /index.html;
+
+        # ⚠️ `include`, et pas des `add_header` au niveau `server` : nginx n'ADDITIONNE pas les
+        # `add_header` d'un niveau à l'autre. Dès qu'un bloc `location` en déclare UN, il perd
+        # la TOTALITÉ de ceux hérités du bloc `server`. Le bloc des médias plus bas en déclare
+        # un (Cache-Control) : sans cet include, les mp3 et les pochettes sortiraient sans aucun
+        # en-tête de sécurité — et personne ne le verrait, on teste la page d'accueil, pas un mp3.
+        include /etc/nginx/snippets/securite.conf;
+
+        # La CSP n'est posée QUE sur les documents : un mp3 n'exécute rien.
+        # `-Report-Only` : le navigateur SIGNALE en console ce qu'il aurait bloqué, sans rien
+        # casser. On parcourt le site, on corrige, puis on retire le suffixe. Poser une CSP
+        # directement en mode bloquant sur un site en ligne, c'est le casser sans le voir.
+        # `style-src 'unsafe-inline'` est inévitable : Base UI positionne ses popups en écrivant
+        # dans l'attribut `style`. Un style injecté ne s'exécute pas — sans commune mesure avec
+        # `script-src 'unsafe-inline'`, qui annulerait tout l'intérêt de la CSP.
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'" always;
     }
 
     # L'API
@@ -471,11 +487,57 @@ server {
     location ~ ^/(musiques|images)/ {
         root /var/www/spotifree/backend/public;
         try_files $uri =404;
-        expires 30d;
-        add_header Cache-Control "public";
+
+        include /etc/nginx/snippets/securite.conf;
+
+        # UN SEUL en-tête de cache. Avant, ce bloc en produisait DEUX : `expires 30d` en génère
+        # un (`Cache-Control: max-age=2592000`) et `add_header Cache-Control "public"` en
+        # ajoutait un second. Le navigateur recevait deux fois le même en-tête avec des valeurs
+        # différentes. Deux directives qui produisent le même en-tête ne se complètent pas,
+        # elles se dupliquent.
+        add_header Cache-Control "public, max-age=2592000" always;
     }
 }
 ```
+
+`/etc/nginx/snippets/securite.conf` — les en-têtes communs, inclus dans **chaque** bloc `location` :
+
+```nginx
+# `always` : poser l'en-tête AUSSI sur les réponses d'erreur (404, 500…). Sans lui, nginx ne le
+# fait que sur les réponses 2xx/3xx — or une page d'erreur est justement un endroit où du
+# contenu inattendu peut s'afficher.
+
+# Interdit au navigateur de « deviner » le type d'un fichier à partir de son contenu plutôt que
+# de son Content-Type : un fichier téléversé servi comme du texte ne peut pas être réinterprété
+# comme du JavaScript et s'exécuter.
+add_header X-Content-Type-Options "nosniff" always;
+
+# Clickjacking : interdit l'affichage du site dans une iframe. `frame-ancestors` de la CSP fait
+# mieux, mais il est IGNORÉ en mode Report-Only — tant que la CSP n'est pas bloquante, c'est
+# CETTE ligne qui protège vraiment.
+add_header X-Frame-Options "DENY" always;
+
+# Vers l'extérieur, seul le nom de domaine part dans le `Referer`, jamais l'URL complète.
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# Coupe les API du navigateur dont le site n'a aucun usage : même en cas de faille, le code
+# injecté ne pourrait pas demander la position, la caméra ou le micro.
+add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
+
+# HSTS : pendant un an, le navigateur refuse toute connexion en clair à ce domaine, même si
+# l'URL est tapée en `http://`. Protège du « SSL stripping » (un réseau hostile qui intercepte
+# la toute première requête, avant la redirection vers HTTPS).
+# PAS de `preload` volontairement : il ferait inscrire le domaine dans une liste embarquée DANS
+# les navigateurs, dont on ne ressort qu'après plusieurs mois. On garde une porte de sortie.
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+```
+
+> **Vérifier que ça marche vraiment**, et surtout sur le bloc des médias (celui qui aurait perdu
+> les en-têtes) :
+> ```bash
+> curl -sSI https://spotifree.manuelmattana.fr/ | grep -iE "content-security|x-frame|nosniff"
+> curl -sSI https://spotifree.manuelmattana.fr/musiques/UN-FICHIER.mp3 | grep -iE "cache-control|nosniff"
+> ```
 
 ```bash
 ln -s /etc/nginx/sites-available/spotifree /etc/nginx/sites-enabled/
