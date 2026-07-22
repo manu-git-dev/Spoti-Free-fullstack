@@ -29,35 +29,31 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
    ```
    **Jamais de `--delete`** : la rotation de 14 jours cote VPS sert a ne pas remplir son disque,
    pas a decider ce que Manuel a le droit de conserver.
-   Et **verifier la toute premiere execution automatique** du minuteur (00:05, non declenchee a la
-   main) : `journalctl -u sauvegarde-spotifree -n 20 --no-pager`.
+   (Le minuteur est **valide** : premiere execution automatique verifiee le 2026-07-22 a 00:05:48,
+   apres redemarrage de la machine. Le decalage constate — annonce a 00:14 — vient de
+   `RandomizedDelaySec=15m`, c'est voulu, pas une derive.)
 
-2. **BASCULER LA CSP EN MODE BLOQUANT** — le seul reste du chantier « en-tetes de securite »,
-   fait le 2026-07-22. Les en-tetes sont **en ligne et verifies** (nosniff, X-Frame-Options,
-   Referrer-Policy, Permissions-Policy, HSTS, + le double `Cache-Control` corrige), via
-   `/etc/nginx/snippets/securite.conf` inclus dans chaque bloc `location`. La CSP, elle, est
-   posee en **`Content-Security-Policy-Report-Only`** : elle ne bloque rien pour l'instant.
-
-   **Ce qui reste a faire, et c'est MANUEL qui doit le faire** : ouvrir
-   https://spotifree.manuelmattana.fr avec la **console du navigateur** (F12 -> Console), puis
-   parcourir tout le site — lecture d'un morceau, playlists, favoris, depot, bascule du theme
-   clair/sombre, connexion, formulaire de contact — et **relever les messages
-   « Content Security Policy »**. Chacun designe une ressource que la CSP bloquerait. Tant que
-   ce releve n'est pas fait, on ne retire PAS le suffixe `-Report-Only` : c'est exactement la
-   verification pour laquelle le mode Report-Only existe.
-
-   Rappel a ne pas perdre : **`frame-ancestors` est ignore en Report-Only**. C'est
-   `X-Frame-Options: DENY` qui protege du clickjacking pendant la transition — ne pas le retirer
-   en basculant la CSP.
-
-3. **Durcissement de l'unite systemd** (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`).
+2. **Durcissement de l'unite systemd** (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`).
    Volontairement reporte le 21/07 : on ne met en service qu'une unite **minimale et connue**, pour
    qu'en cas de panne il n'y ait qu'un seul suspect. L'app tournant deja en `www-data`, le gain
    marginal est faible — c'est de la defense en profondeur, pas une urgence.
 
 ### En attente d'une DECISION de Manuel
 
-- (rien en attente — les trois questions ouvertes ont ete tranchees le 2026-07-22, voir ci-dessous)
+- **Faut-il afficher « retire du catalogue » cote ADMIN aussi ?** (pose le 2026-07-22, sans
+  reponse). L'affichage derive a ete mis cote deposant (`MesDepots.jsx`) ; `GET /api/submissions`
+  et `AdminDepots.jsx` n'ont pas ete touches. Un admin qui modere voit donc encore « approuve »
+  sur un depot dont le morceau a ete retire. Argument pour laisser tel quel : l'admin a le
+  catalogue sous les yeux, lui. Argument contre : c'est la meme information trompeuse, au meme
+  endroit du modele.
+
+- **Index `UNIQUE (id_playlist, id_music)` sur `playlists_musics` ?** (constate le 2026-07-22 en
+  verifiant un 409 signale par Manuel). Le doublon est aujourd'hui refuse par le **code**
+  (`playlistRoute.js:111` fait un SELECT puis decide) — correctement, avec un 409 et un toast.
+  Mais l'invariant n'est pas dans le schema : un autre chemin d'ecriture pourrait creer le
+  doublon. **Meme leçon que la FK `id_music` (note 74) : deplacer l'invariant du code vers la
+  base.** Pas urgent — le risque de course entre le SELECT et l'INSERT est theorique sur une app
+  a un utilisateur. C'est une piste, pas un defaut.
 
 **Tranche le 2026-07-22 :**
 

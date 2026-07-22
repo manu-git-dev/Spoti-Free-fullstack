@@ -458,13 +458,26 @@ server {
         include /etc/nginx/snippets/securite.conf;
 
         # La CSP n'est posée QUE sur les documents : un mp3 n'exécute rien.
-        # `-Report-Only` : le navigateur SIGNALE en console ce qu'il aurait bloqué, sans rien
-        # casser. On parcourt le site, on corrige, puis on retire le suffixe. Poser une CSP
-        # directement en mode bloquant sur un site en ligne, c'est le casser sans le voir.
+        #
+        # ELLE A ÉTÉ DÉPLOYÉE EN DEUX TEMPS, et c'est la seule façon raisonnable de s'y prendre
+        # sur un site déjà en ligne :
+        #   1. d'abord `Content-Security-Policy-Report-Only` — le navigateur applique toute sa
+        #      logique et SIGNALE en console ce qu'il aurait bloqué, sans rien casser ;
+        #   2. on parcourt tout le site console ouverte, on corrige ce qui remonte ;
+        #   3. seulement ensuite on retire le suffixe `-Report-Only` (fait le 2026-07-22, après
+        #      un parcours complet sans aucune violation).
+        # Poser une CSP directement en mode bloquant, c'est casser le site sans le voir.
+        #
+        # ⚠️ `frame-ancestors` est IGNORÉ en mode Report-Only. Pendant toute la phase 1, c'est
+        # `X-Frame-Options: DENY` (dans le snippet) qui protège réellement du clickjacking — ne
+        # pas le retirer en croyant que la CSP le remplace déjà.
+        #
         # `style-src 'unsafe-inline'` est inévitable : Base UI positionne ses popups en écrivant
         # dans l'attribut `style`. Un style injecté ne s'exécute pas — sans commune mesure avec
-        # `script-src 'unsafe-inline'`, qui annulerait tout l'intérêt de la CSP.
-        add_header Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'" always;
+        # `script-src 'unsafe-inline'`, qui annulerait tout l'intérêt de la CSP. S'en passer
+        # imposerait des *nonces* régénérés à chaque requête, donc du HTML dynamique : impossible
+        # sur un fichier statique servi par nginx.
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'" always;
     }
 
     # L'API
