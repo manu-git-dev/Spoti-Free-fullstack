@@ -12,7 +12,15 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Source+Code+Pro:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- `viewport-fit=cover` n'est PAS decoratif : sans lui, iOS renvoie 0 pour toutes les
+         `env(safe-area-inset-*)`, et les protections ecrites dans le CSS (BottomNav, plein ecran
+         du lecteur) ne font litteralement rien. Il fait aussi s'etendre la mise en page SOUS la
+         barre d'etat et l'indicateur d'accueil : c'est pourquoi il doit toujours s'accompagner
+         des paddings `env(safe-area-inset-*)` correspondants, sinon il empire le probleme. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Spoti-Free — écouter de la musique libre</title>
     <meta
       name="description"

@@ -238,8 +238,21 @@ function App() {
     //
     // Si le contenu du lecteur grandit encore, c'est CE NOMBRE qu'il faut revoir, pas
     // l'attribution. Le test e2e « le contenu ne deborde pas de la carte » le dira.
-    <section className="box-border h-screen overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_104px] md:gap-3 md:p-3">
-      <div className="md:hidden">
+    // `h-dvh` et non `h-screen` (= 100vh). Sur mobile, `100vh` vaut la hauteur de l'ecran
+    // BARRE D'OUTILS DU NAVIGATEUR MASQUEE (le "large viewport" de la spec) — pas la hauteur
+    // visible. Or ici la barre reste affichee en permanence : la page elle-meme ne defile pas
+    // (`overflow-hidden`), seuls des conteneurs internes le font, et ca ne declenche pas sa
+    // retractation sur iOS. La mise en page mesurait donc plus haut que l'ecran, et ce qui
+    // debordait etait le dernier element de la colonne flex : la BottomNav.
+    //
+    // `100dvh` (dynamic viewport height) suit la barre au lieu de l'ignorer. Le bug etait
+    // invisible sur certains telephones et flagrant sur d'autres : le debordement vaut
+    // exactement la hauteur de la barre d'outils, qui depend du navigateur et du modele.
+    <section className="box-border h-dvh overflow-hidden flex flex-col bg-background md:grid md:grid-cols-[260px_1fr] md:grid-rows-[minmax(0,1fr)_104px] md:gap-3 md:p-3">
+      {/* `viewport-fit=cover` (index.html) fait passer la mise en page SOUS la barre d'etat.
+          Sans ce padding, le logo et le bouton de menu glisseraient derriere l'heure et
+          l'encoche. Il vaut 0 partout ou il n'y a rien a eviter. */}
+      <div className="md:hidden pt-[env(safe-area-inset-top)]">
         <HeaderMobile user={user} isPlaying={isPlaying} />
       </div>
       <Aside

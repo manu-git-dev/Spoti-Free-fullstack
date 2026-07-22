@@ -2487,3 +2487,52 @@ Le symptôme trompeur : l'invite **s'affiche** (elle part sur la sortie d'erreur
 Sur macOS, `SSH_AUTH_SOCK` pointe vers un agent géré par **launchd**, partagé par toute la session : une clé ajoutée depuis n'importe quelle fenêtre de terminal devient utilisable par toutes les autres. Et `--apple-use-keychain` range la passphrase dans le Trousseau — la sécurité de la clé devient alors celle de la session macOS, ce qui est un compromis raisonnable sur un portable chiffré par FileVault, mais qui reste un compromis.
 
 ---
+
+## 2026-07-22 — La barre de navigation qui disparaît sur le téléphone des autres
+
+### 79. `100vh` ne vaut pas la hauteur visible sur mobile
+
+*Cas réel : signalé après la mise en ligne. Sur mon iPhone, la BottomNav est « presque collée » à la barre de Safari. Sur le téléphone d'un collègue, **elle disparaît**. Le même code, deux symptômes différents.*
+
+**Ce qui m'a d'abord fait croire à un bug aléatoire** : « chez moi ça ne le fait pas forcément ». Ce n'était pas aléatoire du tout — c'était le même défaut avec des valeurs différentes.
+
+**La cause.** `App.jsx` posait `h-screen`, c'est-à-dire `height: 100vh`. Sur mobile, **`100vh` vaut la hauteur de l'écran barre d'outils du navigateur MASQUÉE** — ce que la spécification appelle le *large viewport*. Ce n'est pas la hauteur visible.
+
+Et ici la barre reste affichée **en permanence** : la page elle-même ne défile pas (le shell est `overflow-hidden`, seuls des conteneurs internes défilent), et un défilement interne **ne déclenche pas** la rétractation de la barre sur iOS. La mise en page mesurait donc systématiquement plus haut que l'écran. Ce qui débordait, c'était le dernier élément de la colonne flex : la BottomNav.
+
+**Pourquoi ça variait d'un téléphone à l'autre** : le débordement vaut *exactement* la hauteur de la barre d'outils, qui dépend du navigateur, du modèle et de la version d'OS. Assez pour rogner chez moi, assez pour faire disparaître chez lui.
+
+**Le correctif : `100dvh`** (*dynamic viewport height*), une unité qui suit la barre au lieu de l'ignorer. En Tailwind, `h-dvh`. La famille complète vaut d'être connue :
+
+| Unité | Ce qu'elle mesure | Quand l'utiliser |
+|---|---|---|
+| `vh` | écran **barre masquée** (large viewport) | quasiment jamais sur une app mobile |
+| `svh` | écran **barre affichée** (small viewport) | quand on veut ne JAMAIS rien cacher, quitte à laisser une bande vide |
+| `lvh` | identique à `vh` | rare |
+| `dvh` | la hauteur **courante**, elle suit la barre | une coquille d'application comme ici |
+
+**Leçon transférable :** un symptôme qui « ne le fait pas chez tout le monde » n'est presque jamais aléatoire. C'est une valeur qui diffère — ici la hauteur d'une barre d'outils. La bonne question n'est pas « pourquoi c'est intermittent » mais **« qu'est-ce qui n'a pas la même valeur d'un appareil à l'autre »**.
+
+---
+
+### 80. Une protection `env(safe-area-inset-*)` qui ne servait à rien
+
+*Cas réel, découvert en corrigeant le précédent : `MediaPlayer.jsx` portait déjà `pb-[max(1.5rem,env(safe-area-inset-bottom))]` pour éviter l'indicateur d'accueil des iPhone sans bouton. Cette ligne ne faisait rien.*
+
+**Pourquoi.** `index.html` déclarait :
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+```
+**Sans `viewport-fit=cover`, iOS renvoie 0 pour toutes les `env(safe-area-inset-*)`.** Le CSS était correct, il s'appuyait simplement sur une valeur qui valait toujours zéro. Du **code mort qui a l'air actif** — le pire genre, parce qu'il donne l'illusion que le problème est traité.
+
+**Le piège de la correction.** Ajouter `viewport-fit=cover` **seul aggrave la situation** : la mise en page s'étend alors *sous* la barre d'état et *sous* l'indicateur d'accueil. Il faut donc, dans le même changement :
+- `viewport-fit=cover` dans le `<meta>` ;
+- un padding **bas** sur la BottomNav : `pb-[max(21px,env(safe-area-inset-bottom))]` ;
+- un padding **haut** sur l'en-tête mobile : `pt-[env(safe-area-inset-top)]` ;
+- des paddings **gauche/droite** pour l'encoche en paysage.
+
+**Pourquoi `max(21px, env(…))` et pas `env(…)` seul** : sur un Android, un iPhone à bouton ou un navigateur de bureau, l'inset vaut 0 — la barre se retrouverait collée au bord. `max()` garde l'espacement voulu et ne l'élargit que là où le système dessine réellement quelque chose. **Une seule valeur, correcte partout, sans détection d'appareil.**
+
+**Ce que je retiens :** j'ai vérifié que le CSS compilé contenait bien `height:100dvh` et les quatre `env(safe-area-inset-*)`, plus le `viewport-fit=cover` dans le HTML final. Les tests e2e (90, tous verts) prouvent l'**absence de régression** — ils ne prouvent PAS la correction : Chromium en mode test n'a pas de barre d'outils rétractable, `100vh` et `100dvh` y valent la même chose. **Un test qui ne peut pas reproduire le bug ne peut pas valider le correctif** ; la validation réelle se fait sur l'appareil qui avait le symptôme.
+
+---
