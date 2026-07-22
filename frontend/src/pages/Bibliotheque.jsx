@@ -17,7 +17,9 @@ function Pastille({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer ${
+      // `shrink-0` : sur mobile la rangee ne passe plus a la ligne, elle DEFILE. Sans ca, flexbox
+      // comprimerait les pastilles pour les faire tenir de force et casserait les libelles.
+      className={`shrink-0 rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer ${
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-background/60 text-muted-foreground hover:border-accent hover:text-foreground"
@@ -88,9 +90,24 @@ export default function Bibliotheque({
       {/* Les pastilles de genre.
           Elles vivent DANS la zone de defilement et non dans l'en-tete : l'en-tete accueille
           deja la recherche et le choix d'affichage, et sur un ecran etroit une troisieme rangee
-          le ferait grossir au point de manger la liste qu'il est cense coiffer. */}
+          le ferait grossir au point de manger la liste qu'il est cense coiffer.
+
+          SUR MOBILE, UNE SEULE RANGEE QUI DEFILE (tranche par Manuel le 2026-07-22). Le
+          `flex-wrap` les repartissait sur QUATRE rangees aux bords en dents de scie : les 10
+          pastilles font de 58 a 101px de large, et a 390px la largeur utile (~334px) n'en laisse
+          passer que trois. Une grille reglerait l'alignement mais garderait les 4 rangees, avec
+          un trou en fin de derniere ligne — et elle regrossirait a chaque genre ajoute au
+          catalogue.
+          La rangee qui defile a une hauteur FIXE quel que soit le nombre de genres. C'est le
+          modele des applications musicales, et l'indice de defilement est gratuit : la derniere
+          pastille visible est coupee par le bord, ce qui se lit comme « il y en a d'autres ».
+          A partir de `sm`, la place ne manque plus : on revient au `flex-wrap`.
+
+          La barre de defilement est masquee (`scrollbar-width` + le pseudo-element WebKit) : sur
+          mobile elle est deja en surimpression et disparait au repos, mais elle apparaitrait sur
+          un ecran tactile de bureau entre `xs` et `sm` et couperait la rangee en deux. */}
       {genresDisponibles?.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
           <Pastille
             active={genreFiltre === null}
             onClick={() => setGenreFiltre(null)}

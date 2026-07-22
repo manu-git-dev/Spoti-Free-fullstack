@@ -89,13 +89,16 @@ export default function Home({
       // Il correspondait pourtant exactement au modele d'`EnTetePage` : un titre, un sous-titre,
       // et un bloc a droite. Le cas particulier n'en etait pas un.
       //
-      // Deconnecte, ce bloc est masque sous `md` : connexion et inscription sont reprises dans le
-      // menu du `HeaderMobile`, ou elles ont davantage leur place (ce sont des navigations, pas
-      // des actions de page). Elles restent ICI sur bureau, ou il n'existe aucune autre porte
+      // DECONNECTE -> masque sous `md` : connexion et inscription sont reprises dans le menu du
+      // `HeaderMobile`, ou elles ont davantage leur place (ce sont des navigations, pas des
+      // actions de page). Elles restent ICI sur bureau, ou il n'existe aucune autre porte
       // d'entree — l'`Aside` n'en porte pas.
-      // Connecte, en revanche, le bloc reste visible partout : la deconnexion et l'acces au
-      // profil ne sont dupliques nulle part ailleurs sur mobile.
-      actionsBureauSeulement={user === null}
+      //
+      // CONNECTE -> au-dessus du titre. La deconnexion et l'acces au profil ne sont dupliques
+      // nulle part ailleurs sur mobile, donc ils restent visibles ; mais ils n'appartiennent pas
+      // a l'accueil, ils appartiennent a la SESSION. Les poser sous « Bonjour Manu » les faisait
+      // lire comme une action de la page. En haut, ils se lisent comme la barre de l'utilisateur.
+      actionsMobile={user === null ? "masquees" : "dessus"}
       actions={
         user === null ? (
           <div className="flex items-center justify-end gap-4 shrink-0">

@@ -22,6 +22,26 @@ const RUPTURES = {
   xl: { conteneur: "xl:flex-row xl:items-center xl:gap-4", actions: "xl:ml-auto xl:w-auto" },
 };
 
+// Ce que devient le bloc `actions` tant que l'en-tete est EMPILE (donc sous `lg`, ou sous `xl`
+// pour les actions larges). Une seule prop a trois valeurs plutot que deux booleens : les trois
+// cas s'excluent, ils repondent a la meme question.
+//
+//   "sous"      (defaut) — sous le titre. Le cas general : une recherche, un bouton d'ajout…
+//                          appartiennent a la page, ils viennent apres son titre.
+//   "dessus"             — au-dessus du titre. Pour ce qui appartient a la SESSION et non a la
+//                          page (deconnexion, acces au profil) : ce n'est pas une action de
+//                          l'accueil, c'est la barre de l'utilisateur, sa place est en haut.
+//   "masquees"           — retire, conteneur compris. Pour ce qui est repris ailleurs sur mobile
+//                          (l'accueil met sa connexion/inscription dans le menu du HeaderMobile).
+//                          Un `hidden` pose sur le CONTENU ne suffirait pas : le conteneur
+//                          resterait un enfant du flex, et son `gap-3` ajouterait un vide sous le
+//                          titre pour un bloc de hauteur nulle.
+const DISPOSITIONS_MOBILE = {
+  sous: { direction: "flex-col", actions: "" },
+  dessus: { direction: "flex-col-reverse", actions: "" },
+  masquees: { direction: "flex-col", actions: "max-md:hidden" },
+};
+
 export default function EnTetePage({
   icone: Icone,
   titre,
@@ -29,14 +49,13 @@ export default function EnTetePage({
   actions,
   classeIcone,
   actionsLarges = false,
-  // Masque le bloc `actions` sous `md`, conteneur compris. Un simple `hidden md:flex` pose sur le
-  // contenu ne suffirait pas : le conteneur ci-dessous resterait un enfant du flex, donc un `gap-3`
-  // s'ajouterait sous le titre pour un bloc de hauteur nulle. C'est le conteneur qu'il faut retirer.
-  actionsBureauSeulement = false,
+  // "sous" | "dessus" | "masquees" — voir DISPOSITIONS_MOBILE ci-dessus.
+  actionsMobile = "sous",
 }) {
   const rupture = actionsLarges ? RUPTURES.xl : RUPTURES.lg;
+  const mobile = DISPOSITIONS_MOBILE[actionsMobile] ?? DISPOSITIONS_MOBILE.sous;
   return (
-    <div className={`flex flex-col gap-3 mb-6 ${rupture.conteneur}`}>
+    <div className={`flex ${mobile.direction} gap-3 mb-6 ${rupture.conteneur}`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
           <Icone className={`w-6 h-6 text-white ${classeIcone ?? ""}`} />
@@ -51,7 +70,7 @@ export default function EnTetePage({
 
       {actions ? (
         <div
-          className={`w-full shrink-0 ${actionsBureauSeulement ? "max-md:hidden" : ""} ${rupture.actions}`}
+          className={`w-full shrink-0 ${mobile.actions} ${rupture.actions}`}
         >
           {actions}
         </div>
