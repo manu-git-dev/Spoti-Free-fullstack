@@ -94,11 +94,10 @@ export default function Home({
       // actions de page). Elles restent ICI sur bureau, ou il n'existe aucune autre porte
       // d'entree — l'`Aside` n'en porte pas.
       //
-      // CONNECTE -> au-dessus du titre. La deconnexion et l'acces au profil ne sont dupliques
-      // nulle part ailleurs sur mobile, donc ils restent visibles ; mais ils n'appartiennent pas
-      // a l'accueil, ils appartiennent a la SESSION. Les poser sous « Bonjour Manu » les faisait
-      // lire comme une action de la page. En haut, ils se lisent comme la barre de l'utilisateur.
-      actionsMobile={user === null ? "masquees" : "dessus"}
+      // CONNECTE -> sur la meme ligne que le titre, cale a droite. Sur mobile il ne reste que
+      // l'avatar (voir plus bas), et un seul element etroit tient sans probleme a cote de
+      // « Bonjour Manu » — c'est la place naturelle d'un acces au profil, en haut a droite.
+      actionsMobile={user === null ? "masquees" : "a_cote"}
       actions={
         user === null ? (
           <div className="flex items-center justify-end gap-4 shrink-0">
@@ -117,7 +116,18 @@ export default function Home({
           </div>
         ) : (
           <div className="flex items-center justify-end gap-3 shrink-0">
-            <Deconnexion setUser={setUser} setToken={setToken} />
+            {/* Masquee sur mobile : le bouton et l'avatar ne tiennent pas ensemble a cote du
+                titre a 390px. On garde l'avatar, parce qu'il MENE a la page Profil — et c'est
+                precisement la que vit l'autre bouton « Se deconnecter » (`Profil.jsx`), a un
+                appui de la BottomNav. Rien n'est donc perdu : la deconnexion reste joignable,
+                elle n'est simplement plus dupliquee sur l'accueil.
+
+                Ici un simple `hidden` SUFFIT, contrairement au bloc `actions` d'EnTetePage :
+                l'element masque est lui-meme l'enfant du flex, et `display:none` le retire
+                entierement du calcul — donc aucun `gap-3` fantome. */}
+            <div className="hidden md:block">
+              <Deconnexion setUser={setUser} setToken={setToken} />
+            </div>
             <Link
               to={"/profil"}
               className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-sm font-bold text-white ring-2 ring-primary/30 hover:ring-primary transition"
