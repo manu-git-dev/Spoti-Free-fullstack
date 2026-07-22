@@ -306,7 +306,11 @@ router.post(
 router.get("/mes-depots", authMiddleware, async (req, res) => {
   try {
     const [depots] = await db.query(
-      `SELECT id_submission, title, artist, genre, statut, motif_refus, created_at
+      // `id_music` est renvoye brut plutot qu'un booleen « retire » deja machouille : c'est la
+      // relation reelle, et elle servira aussi le jour ou la carte proposera d'aller ecouter le
+      // morceau. L'interpretation (approuve + id_music absent = retire du catalogue) appartient
+      // a l'affichage.
+      `SELECT id_submission, title, artist, genre, statut, motif_refus, created_at, id_music
          FROM submissions
         WHERE id_user = ?
         ORDER BY created_at DESC`,
@@ -499,7 +503,7 @@ router.patch(
       // La licence et la source declarees par le deposant suivent le morceau jusqu'au
       // catalogue : c'est tout l'interet de les avoir recueillies. `source_url` peut etre NULL
       // (une creation originale n'a pas d'origine externe a citer).
-      await db.query(
+      const [morceauCree] = await db.query(
         `INSERT INTO musics (title, artist, genre, src_image, src_audio, duration, licence, licence_url, source_url)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -515,9 +519,14 @@ router.patch(
         ],
       );
 
+      // On enregistre le morceau CREE en meme temps que le statut : ce sont les deux moities de
+      // la meme decision. Sans ce lien, un morceau retire du catalogue laisserait son depot
+      // marque « approuve — tu le retrouves dans la Bibliotheque » pour un morceau introuvable
+      // (bug reel du 2026-07-21). La cle etrangere est en ON DELETE SET NULL : c'est MySQL qui
+      // defera le lien a la suppression, pas nous.
       await db.query(
-        "UPDATE submissions SET statut = 'approuve' WHERE id_submission = ?",
-        [depot.id_submission],
+        "UPDATE submissions SET statut = 'approuve', id_music = ? WHERE id_submission = ?",
+        [morceauCree.insertId, depot.id_submission],
       );
 
       return res.status(200).json({
