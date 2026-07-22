@@ -39,9 +39,9 @@ export default function Page({
   // Passe a `true` quand le bloc `actions` est large (cf. EnTetePage) : il reste empile sous le
   // titre jusqu'a `xl` au lieu de `lg`.
   actionsLarges,
-  // Masque le bloc `actions` sous `md` (cf. EnTetePage), pour ce qui est repris ailleurs sur
-  // mobile — l'accueil met sa connexion/inscription dans le menu du HeaderMobile.
-  actionsBureauSeulement,
+  // Ou vit le bloc `actions` tant que l'en-tete est empile : "sous" (defaut), "dessus" ou
+  // "masquees". Voir DISPOSITIONS_MOBILE dans EnTetePage.
+  actionsMobile,
   // Pour ce qui doit s'appliquer a la zone de defilement elle-meme (une grille, un `max-w`…).
   classeContenu,
   children,
@@ -55,7 +55,7 @@ export default function Page({
         actions={actions}
         classeIcone={classeIcone}
         actionsLarges={actionsLarges}
-        actionsBureauSeulement={actionsBureauSeulement}
+        actionsMobile={actionsMobile}
       />
 
       {/* `-mx-1 px-1` : la zone de defilement rogne ce qui depasse d'elle. Sans cette marge
