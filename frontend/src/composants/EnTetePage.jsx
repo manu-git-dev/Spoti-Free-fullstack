@@ -29,6 +29,10 @@ export default function EnTetePage({
   actions,
   classeIcone,
   actionsLarges = false,
+  // Masque le bloc `actions` sous `md`, conteneur compris. Un simple `hidden md:flex` pose sur le
+  // contenu ne suffirait pas : le conteneur ci-dessous resterait un enfant du flex, donc un `gap-3`
+  // s'ajouterait sous le titre pour un bloc de hauteur nulle. C'est le conteneur qu'il faut retirer.
+  actionsBureauSeulement = false,
 }) {
   const rupture = actionsLarges ? RUPTURES.xl : RUPTURES.lg;
   return (
@@ -46,7 +50,11 @@ export default function EnTetePage({
       </div>
 
       {actions ? (
-        <div className={`w-full shrink-0 ${rupture.actions}`}>{actions}</div>
+        <div
+          className={`w-full shrink-0 ${actionsBureauSeulement ? "max-md:hidden" : ""} ${rupture.actions}`}
+        >
+          {actions}
+        </div>
       ) : null}
     </div>
   );

@@ -88,6 +88,14 @@ export default function Home({
       // L'accueil avait son propre en-tete, plus grand que celui des autres pages et sans icone.
       // Il correspondait pourtant exactement au modele d'`EnTetePage` : un titre, un sous-titre,
       // et un bloc a droite. Le cas particulier n'en etait pas un.
+      //
+      // Deconnecte, ce bloc est masque sous `md` : connexion et inscription sont reprises dans le
+      // menu du `HeaderMobile`, ou elles ont davantage leur place (ce sont des navigations, pas
+      // des actions de page). Elles restent ICI sur bureau, ou il n'existe aucune autre porte
+      // d'entree — l'`Aside` n'en porte pas.
+      // Connecte, en revanche, le bloc reste visible partout : la deconnexion et l'acces au
+      // profil ne sont dupliques nulle part ailleurs sur mobile.
+      actionsBureauSeulement={user === null}
       actions={
         user === null ? (
           <div className="flex items-center justify-end gap-4 shrink-0">

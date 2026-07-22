@@ -28,7 +28,11 @@ export default function BottomNav() {
     // Ces `env()` ne valent quelque chose QUE parce que le `<meta name="viewport">` de
     // index.html porte `viewport-fit=cover`. Sans lui, iOS les renvoie a 0 et ces protections
     // ne font rien du tout — c'etait le cas avant le 2026-07-22.
-    <div className="pt-3 pb-[max(21px,env(safe-area-inset-bottom))] pl-[max(21px,env(safe-area-inset-left))] pr-[max(21px,env(safe-area-inset-right))] bg-background">
+    // Plancher a 12px en bas (et non 21 comme sur les cotes) : sur un iPhone recent, le
+    // `env(safe-area-inset-bottom)` s'ajoute deja a la barre d'URL de Safari, et 21px de plus
+    // creusaient un vide trop marque. 12px suffit la ou l'inset vaut 0 (Android, iPhone a
+    // bouton, bureau), et l'inset prend le relais la ou le systeme dessine quelque chose.
+    <div className="pt-3 pb-[max(12px,env(safe-area-inset-bottom))] pl-[max(21px,env(safe-area-inset-left))] pr-[max(21px,env(safe-area-inset-right))] bg-background">
       <nav className="flex items-center gap-1 h-[62px] bg-card border border-border rounded-[36px] p-1">
         {tabs.map(({ to, label, icon: Icon, end }) => (
           <NavLink

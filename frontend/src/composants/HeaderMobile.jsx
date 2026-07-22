@@ -10,6 +10,8 @@ import {
   Users,
   Music,
   Scale,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BasculeTheme from "./BasculeTheme";
@@ -48,6 +50,27 @@ export default function HeaderMobile({ user, isPlaying }) {
           <div className="fixed inset-0 z-10" onClick={fermer} />
 
           <nav className="absolute right-0 top-14 z-20 flex flex-col gap-1 w-56 max-h-[70vh] overflow-y-auto bg-popover text-popover-foreground border border-border rounded-xl p-2 shadow-lg">
+            {/* Connexion et inscription vivaient dans l'en-tete de l'accueil, a cote du titre
+                « Bonjour ». Sur mobile, elles y prenaient toute une ligne au-dessus du contenu,
+                alors que ce sont des actions de NAVIGATION — leur place est avec les autres.
+                Elles restent sur l'accueil a partir de `md` : l'Aside du bureau n'en porte
+                aucune, les retirer partout enfermerait dehors un visiteur sur ordinateur.
+                Elles sont EN PREMIER dans le menu : pour un visiteur non connecte, c'est la
+                seule action qui compte. */}
+            {user === null ? (
+              <>
+                <Link to="/connexion" onClick={fermer} className={lien}>
+                  <LogIn className="w-4 h-4" />
+                  Connexion
+                </Link>
+                <Link to="/inscription" onClick={fermer} className={lien}>
+                  <UserPlus className="w-4 h-4" />
+                  S'inscrire
+                </Link>
+                <div className="h-px bg-border my-1" />
+              </>
+            ) : null}
+
             {user ? (
               <>
                 {/* Pas de « Mes demandes » ici, comme dans l'Aside : `Deposer.jsx` y mene par
