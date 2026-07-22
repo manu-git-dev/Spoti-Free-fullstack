@@ -27,7 +27,20 @@ export default function Logo({
       className={`group flex items-center gap-2.5 ${className}`}
       aria-label="Spoti-Free — retour à l'accueil"
     >
-      {/* Purement decoratif : un lecteur d'ecran n'a rien a y lire, le lien porte deja son nom. */}
+      {/* Le degrade fait 200% de large, ce qui permet de le faire GLISSER a travers les lettres
+          au lieu d'en changer les couleurs. Un degrade fige ne se remarque pas — c'est son
+          MOUVEMENT qu'on voit. Il defile donc en boucle pendant la lecture (`.nom-logo`), et au
+          survol quand rien ne joue. */}
+      <span
+        data-lecture={enLecture}
+        className={`nom-logo ${tailleTexte} font-serif font-bold bg-gradient-to-r from-primary via-foreground to-primary bg-[length:200%_auto] bg-clip-text text-transparent transition-[background-position] duration-700 group-hover:bg-right`}
+      >
+        Spoti-Free
+      </span>
+
+      {/* L'egaliseur passe APRES le nom (tranche par Manuel le 2026-07-22) : le mot se lit en
+          premier, l'animation le prolonge au lieu de le preceder.
+          Purement decoratif : un lecteur d'ecran n'a rien a y lire, le lien porte deja son nom. */}
       <span
         className={`flex items-end gap-[3px] ${tailleBarres}`}
         aria-hidden="true"
@@ -44,17 +57,6 @@ export default function Logo({
             }}
           />
         ))}
-      </span>
-
-      {/* Le degrade fait 200% de large, ce qui permet de le faire GLISSER a travers les lettres
-          au lieu d'en changer les couleurs. Un degrade fige ne se remarque pas — c'est son
-          MOUVEMENT qu'on voit. Il defile donc en boucle pendant la lecture (`.nom-logo`), et au
-          survol quand rien ne joue. */}
-      <span
-        data-lecture={enLecture}
-        className={`nom-logo ${tailleTexte} font-serif font-bold bg-gradient-to-r from-primary via-foreground to-primary bg-[length:200%_auto] bg-clip-text text-transparent transition-[background-position] duration-700 group-hover:bg-right`}
-      >
-        Spoti-Free
       </span>
     </NavLink>
   );
