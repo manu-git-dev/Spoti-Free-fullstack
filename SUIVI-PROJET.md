@@ -48,18 +48,21 @@ voir les commits Git et `NOTES-APPRENTISSAGE.md` pour ca).
 
 ### En attente d'une DECISION de Manuel
 
-- **Statut d'un depot approuve dont le morceau est ensuite retire du catalogue** (nouveau, 21/07).
-  Le depot n°1 reste marque `approuve` alors que son morceau a ete supprime du catalogue apres le
-  test. L'historique est juste — l'approbation a bien eu lieu — mais « Mes depots » affichera
-  « approuve » pour un morceau introuvable. Faut-il un statut distinct (`retire` ?), ou laisse-t-on
-  l'historique tel quel ? **Ce n'est pas un bug, c'est une question de conception non tranchee.**
-- **Agent de relecture** (`.claude/agents/relecteur.md`) : relirait un diff AVANT commit contre les
-  invariants du projet (surfaces, `apiFetch`, licence `NOT NULL`, fichiers partages jamais
-  supprimes…) — ce qu'un relecteur generique ignore. Discute le 2026-07-17, pas cree. **En attente
-  du feu vert** (le monter sur ce projet, ou en perso).
-- **Note d'apprentissage a ecrire ?** (question posee le 2026-07-18, toujours sans reponse) :
-  consigner la lecon « echantillonnage discret vs paliers de rupture » — des captures a 5 largeurs
-  isolees avaient rate le bug d'en-tete de la bande 1024-1077 px. A decider.
+- (rien en attente — les trois questions ouvertes ont ete tranchees le 2026-07-22, voir ci-dessous)
+
+**Tranche le 2026-07-22 :**
+
+- **Depot approuve dont le morceau est retire du catalogue** -> **affichage derive**, pas de
+  nouveau statut. Le statut stocke une **decision humaine** (irreversible, historique) ; la presence
+  du morceau au catalogue est un **etat courant**, donc deductible. Les mettre dans la meme colonne,
+  c'est perdre l'information « il a bien ete approuve » le jour ou on le retire.
+  **Attention — le lien n'existe pas encore** : `submissions` n'a aucune colonne vers `musics`
+  (l'approbation fait un `INSERT INTO musics` puis un `UPDATE submissions`, sans relier les deux,
+  `submissionRoute.js:502` et `:518`). Deriver suppose donc d'abord d'ajouter
+  `submissions.id_music INT NULL` + FK `ON DELETE SET NULL` (migration sur base de PROD, plus
+  rattrapage des lignes existantes). **Reste a faire.**
+- **Agent de relecture** (`.claude/agents/relecteur.md`) -> **abandonne**. Ne pas rouvrir le sujet.
+- **Note « echantillonnage discret vs paliers de rupture »** -> **abandonnee**, pas ecrite.
 
 ### En attente de TRAVAIL (hors deploiement)
 

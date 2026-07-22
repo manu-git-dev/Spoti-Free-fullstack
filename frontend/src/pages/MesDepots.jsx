@@ -8,6 +8,7 @@ import {
   UploadCloud,
   ArrowLeft,
   Info,
+  Archive,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,29 @@ const STATUTS = {
     legende:
       "Le morceau n'a pas été retenu. Le motif est indiqué sur la demande concernée.",
   },
+  // `retire` n'existe PAS en base : la colonne `statut` ne connait que en_attente/approuve/refuse.
+  // C'est un etat d'affichage, deduit. Voir `cleDeStatut` juste en dessous.
+  retire: {
+    label: "Retiré du catalogue",
+    icone: Archive,
+    classe: "text-warning bg-warning/10 border-warning/40",
+    legende:
+      "Ton morceau a bien été approuvé, puis retiré du catalogue depuis. Ton dépôt reste dans ton historique.",
+  },
 };
+
+// Le seul endroit ou l'on traduit l'etat de la base en etat d'affichage.
+//
+// `statut` enregistre une DECISION humaine : l'approbation a eu lieu, c'est un fait historique
+// qu'on ne reecrit pas. La presence du morceau au catalogue est un etat COURANT, qui change sans
+// que personne ne re-modere quoi que ce soit — d'ou la cle etrangere `submissions.id_music`, mise
+// a NULL par MySQL (`ON DELETE SET NULL`) quand le morceau disparait.
+//
+// Un statut `retire` stocke en base aurait ecrase « il a ete approuve ». Ici on garde les deux.
+function cleDeStatut(depot) {
+  if (depot.statut === "approuve" && depot.id_music == null) return "retire";
+  return depot.statut;
+}
 
 export default function MesDepots({ user }) {
   const [depots, setDepots] = useState([]);
@@ -136,7 +159,7 @@ export default function MesDepots({ user }) {
         <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
         <ul className="flex flex-col gap-3">
           {depots.map((depot) => {
-            const statut = STATUTS[depot.statut] ?? STATUTS.en_attente;
+            const statut = STATUTS[cleDeStatut(depot)] ?? STATUTS.en_attente;
             const Icone = statut.icone;
 
             return (

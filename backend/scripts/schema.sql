@@ -110,9 +110,12 @@ CREATE TABLE `submissions` (
   `licence` varchar(50) DEFAULT NULL COMMENT 'Licence declaree par le deposant',
   `source_url` varchar(255) DEFAULT NULL COMMENT 'Origine declaree du morceau',
   `droits_confirmes_at` datetime DEFAULT NULL COMMENT 'Date de la certification de droits',
+  `id_music` int DEFAULT NULL COMMENT 'Morceau cree a l''approbation ; NULL si pas encore approuve ou retire du catalogue',
   PRIMARY KEY (`id_submission`),
   KEY `fk_submissions_users` (`id_user`),
-  CONSTRAINT `fk_submissions_users` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE
+  KEY `fk_submissions_musics` (`id_music`),
+  CONSTRAINT `fk_submissions_users` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE,
+  CONSTRAINT `fk_submissions_musics` FOREIGN KEY (`id_music`) REFERENCES `musics` (`id_music`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

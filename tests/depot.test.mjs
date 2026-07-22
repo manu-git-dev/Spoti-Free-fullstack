@@ -378,6 +378,72 @@ await etape("moderation : approbation et refus", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 3 bis. Un morceau retire du catalogue APRES approbation
+//
+// Non-regression d'un cas vu en production le 2026-07-21 : le depot restait marque « approuve »
+// alors que son morceau avait ete supprime, et « Mes depots » annoncait au deposant qu'il le
+// retrouverait dans la Bibliotheque. Il n'y etait plus.
+//
+// Ce que ce test verrouille, c'est le CHOIX de conception : on ne remplace pas le statut par un
+// `retire` (ca effacerait le fait que l'approbation a eu lieu), on garde `approuve` et on laisse
+// la cle etrangere `submissions.id_music` (ON DELETE SET NULL) porter l'etat courant. Si un jour
+// quelqu'un remplace la FK par une simple colonne applicative, ce test devient rouge.
+// ---------------------------------------------------------------------------
+await etape("moderation : un morceau retire garde son depot approuve", async () => {
+  const { token } = await creerCompte("DepotRetire");
+  await deposer(token, `A retirer ${MARQUEUR}`, {
+    audio: VRAI_MP3,
+    nomAudio: "c.mp3",
+  });
+
+  const admin = apiAuth(tokenAdmin());
+  const { donnees: enAttente } = await admin(
+    "/api/submissions?statut=en_attente",
+  );
+  const depot = enAttente.find((d) => d.title === `A retirer ${MARQUEUR}`);
+
+  await admin(`/api/submissions/${depot.id_submission}/approuver`, {
+    method: "PATCH",
+  });
+
+  const utilisateur = apiAuth(token);
+  const { donnees: avant } = await utilisateur("/api/submissions/mes-depots");
+  const lieAuMorceau = avant.find((d) => d.title === `A retirer ${MARQUEUR}`);
+  verifier(
+    "retrait : l'approbation enregistre le morceau cree (id_music)",
+    lieAuMorceau?.statut === "approuve" && Number(lieAuMorceau?.id_music) > 0,
+    JSON.stringify({
+      statut: lieAuMorceau?.statut,
+      id_music: lieAuMorceau?.id_music,
+    }),
+  );
+
+  // On retire le morceau du catalogue, par la vraie route d'administration.
+  const suppression = await admin(
+    `/api/musics/delete/${lieAuMorceau.id_music}`,
+    { method: "DELETE" },
+  );
+  verifier(
+    "retrait : le morceau est supprime du catalogue (200)",
+    suppression.reponse.status === 200,
+    `recu ${suppression.reponse.status}`,
+  );
+
+  const { donnees: apres } = await utilisateur("/api/submissions/mes-depots");
+  const retire = apres.find((d) => d.title === `A retirer ${MARQUEUR}`);
+  verifier(
+    "retrait : le depot reste `approuve` (l'historique n'est pas reecrit)",
+    retire?.statut === "approuve",
+    `statut = ${retire?.statut}`,
+  );
+  verifier(
+    "retrait : MySQL a defait le lien tout seul (id_music a NULL)",
+    retire?.id_music === null,
+    `id_music = ${JSON.stringify(retire?.id_music)}`,
+  );
+});
+
+// ---------------------------------------------------------------------------
 // 4. La pochette est OBLIGATOIRE
 //
 // Un depot sans pochette est refuse des l'envoi (400). Avant, il etait accepte, et l'approbation
