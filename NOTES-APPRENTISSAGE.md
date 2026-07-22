@@ -2576,3 +2576,36 @@ La mesure ne se fait qu'après. Un élément absent produit maintenant un messag
 **Ce que je retiens, transférable :** un résultat qui confirme ce qu'on espérait mérite plus de méfiance qu'un résultat qui contredit. Ici, l'écran montrait bien le bon rendu — j'aurais pu m'arrêter là et garder un script de vérification faux dans le dépôt. Ce sont les valeurs affichées (`hautDeLaDeconnexion: null`) qui ont trahi le problème, pas la conclusion. **Toujours faire afficher les valeurs mesurées, pas seulement le verdict.**
 
 ---
+
+## 2026-07-22 — Deux classes Tailwind qui règlent la même chose
+
+### 82. L'ordre dans l'attribut `class` ne décide de rien
+
+*Cas réel : en posant l'avatar sur la ligne du titre (accueil mobile), le titre s'est écrasé sur deux lignes et le sous-titre s'est effiloché mot par mot — « Prêt / à / écouter / quelque / chose ».*
+
+**Ce que j'avais écrit.** Le conteneur du bloc `actions` d'`EnTetePage` portait une largeur **en dur**, et ma nouvelle disposition ajoutait la sienne par-dessus :
+```jsx
+<div className={`w-full shrink-0 ${mobile.actions} …`}>   // mobile.actions = "ml-auto w-auto"
+```
+
+**Pourquoi ça n'a pas marché.** `w-full` et `w-auto` produisent toutes deux une règle `width`, avec **la même spécificité CSS**. Quand deux règles de même spécificité s'appliquent, c'est **la dernière écrite dans la feuille de style** qui gagne — pas la dernière écrite dans l'attribut `class`. Or cet ordre-là est décidé par Tailwind au moment de générer le CSS, et il **ne se lit nulle part dans le JSX**.
+
+Ici `w-full` l'a emporté. Combiné à `shrink-0` (« ne rétrécis jamais »), le bloc réclamait 100 % de la largeur **et** refusait de céder : il ne restait presque rien au titre.
+
+**Le réflexe à ne pas avoir : `!important`.** Il aurait « marché », et il aurait figé le problème en le rendant invisible — la prochaine disposition aurait dû surcharger un `!important`, donc en ajouter un autre. C'est ainsi qu'une feuille de style devient impossible à modifier.
+
+**Le bon correctif : ne pas générer la classe concurrente.** Chaque disposition décrit sa propre largeur, et le conteneur n'en pose plus aucune :
+```js
+const DISPOSITIONS_MOBILE = {
+  sous:     { direction: "flex-col",             actions: "w-full shrink-0" },
+  a_cote:   { direction: "flex-row items-start", actions: "ml-auto shrink-0" },
+  …
+};
+```
+Une seule règle `width` est émise par cas : il n'y a plus d'arbitrage, donc plus rien à deviner.
+
+**La règle générale, valable bien au-delà de Tailwind :** quand deux valeurs se disputent la même propriété, le problème n'est pas *laquelle gagne* — c'est **qu'il y en ait deux**. La solution est de rendre le conflit impossible, pas de le trancher. C'est exactement le même raisonnement que le `max()` du safe-area (note 80), que la clé étrangère (note 74) ou que la prop à trois valeurs qui remplace deux booléens : **rendre l'état invalide inexprimable**.
+
+**Ce qui l'a révélé :** la capture d'écran. Aucune erreur, aucun avertissement, aucun test rouge — un titre sur deux lignes ne casse rien. Sans un coup d'œil au rendu réel, ça partait en production. Même leçon que la note 81 : afficher/regarder le résultat, pas seulement le verdict.
+
+---
