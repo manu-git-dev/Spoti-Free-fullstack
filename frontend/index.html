@@ -2,15 +2,9 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Applique le theme AVANT le premier rendu, pour eviter le flash clair au chargement
-      // (la page s'afficherait sinon avec le `:root` clair avant que React ne monte).
-      // Sombre par defaut : seul un choix explicite memorise ("light") passe en clair.
-      // Cette regle doit rester d'accord avec src/lib/theme.js.
-      if (localStorage.getItem("theme") !== "light") {
-        document.documentElement.classList.add("dark");
-      }
-    </script>
+    <!-- Applique le theme avant le premier rendu (anti-flash). Fichier a part et non script
+         inline : la CSP de production interdit les scripts inline. Voir public/theme-init.js. -->
+    <script src="/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

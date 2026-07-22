@@ -5,12 +5,13 @@ import { useSyncExternalStore } from "react";
 // definies la-bas : `:root` = clair, `.dark` = sombre. Ce module ne fait donc que LIRE et
 // BASCULER cette classe — il ne touche a aucune couleur.
 //
-// Le theme est applique une premiere fois AVANT le rendu de React, par un petit script inline
-// dans index.html : sinon la page s'afficherait brievement en clair (le `:root`) avant que le
-// script ne monte, le fameux "flash of unstyled content". Ici, on reprend juste la main dessus.
+// Le theme est applique une premiere fois AVANT le rendu de React, par `public/theme-init.js`
+// (charge en tete de index.html) : sinon la page s'afficherait brievement en clair (le `:root`)
+// avant que le script ne monte, le fameux "flash of unstyled content". Ici, on reprend juste la
+// main dessus.
 //
 // Sombre par defaut (tranche avec Manuel) : seul un choix explicite memorise ("light") passe en
-// clair. La meme regle est ecrite dans index.html — les deux doivent rester d'accord.
+// clair. La meme regle est ecrite dans public/theme-init.js — les deux doivent rester d'accord.
 
 const CLE = "theme";
 const EVENEMENT = "theme-change";
