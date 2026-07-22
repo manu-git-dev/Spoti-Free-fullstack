@@ -2371,3 +2371,119 @@ Et le `[ ${#NET} -eq 16 ]` garde : on ne réécrit le fichier **que** si le nett
 **Ce que je retiens, transférable :** trois échecs muets empilés (réponse neutre par conception, `sed` qui ne matche pas, `sed -i` qui change le propriétaire). Aucun ne produit d'erreur. **Ce qui les a tous révélés, c'est de mesurer au lieu de supposer** — une longueur, un `verify()`, un `ls -l`. Même réflexe que la note 72 sur SSH.
 
 ---
+
+## 2026-07-22 — Le durcissement de la page, et un dépôt qui ment
+
+### 74. Un statut ne doit pas raconter deux histoires (état stocké vs état dérivé)
+
+*Cas réel : le dépôt n°1 en production, `testajout`, restait marqué « Approuvé » avec le message « tu le retrouves dans la Bibliothèque ». Son morceau avait été supprimé du catalogue après un test. Le message était faux.*
+
+**La mauvaise correction, celle qui vient en premier :** ajouter un statut `retire` à l'`enum`. Elle paraît évidente et elle est mauvaise, parce qu'elle **écrase** l'information précédente. Dans six mois, un dépôt `retire` ne se distingue plus d'un dépôt `refuse` : on a perdu le fait que la modération l'avait accepté.
+
+**Le vrai découpage.** Deux choses de nature différente s'étaient retrouvées dans la même colonne :
+- `statut` enregistre une **décision humaine** — irréversible, historique. Un admin a approuvé ce dépôt un jour donné. Ça ne se réécrit pas.
+- La présence du morceau au catalogue est un **état courant**, qui change sans que personne ne re-modère quoi que ce soit.
+
+**La règle : ne jamais stocker ce qu'on peut déduire.** On stocke la *relation* (un fait) et on déduit l'*affichage* :
+```
+statut = 'approuve' ET id_music IS NULL  →  approuvé, puis retiré du catalogue
+```
+
+**Le lien n'existait même pas.** L'approbation faisait deux écritures qui ne se connaissaient pas : un `INSERT INTO musics`, puis un `UPDATE submissions SET statut`. Rien ne les reliait — le rapport entre les deux lignes n'existait que dans la tête de celui qui lisait le code. D'où la migration : `submissions.id_music` + clé étrangère.
+
+**`ON DELETE SET NULL` est le cœur du correctif, pas un détail de syntaxe.** C'est MySQL qui défait le lien quand le morceau disparaît, **quel que soit le chemin emprunté** : la route d'administration, un script de nettoyage, ou un `DELETE` tapé à la main dans un client SQL. Un invariant tenu par du JavaScript n'est vrai que dans les chemins où j'ai pensé à l'écrire ; un invariant tenu par le schéma est vrai partout. Le vocabulaire : **déplacer l'invariant du code vers le schéma**.
+
+**Le rattrapage des lignes existantes** s'est fait par une jointure sur le nom de fichier (`m.src_audio = CONCAT('musiques/', …)`) — exactement le lien implicite et fragile que la clé étrangère supprime pour l'avenir. C'est acceptable ici parce qu'un rattrapage est une **réconciliation ponctuelle de données historiques**, pas un contrat permanent entre deux tables. La distinction vaut d'être gardée : le même SQL est une bonne idée en migration et une mauvaise idée en production continue.
+
+**Côté front, une seule fonction traduit base → affichage** (`cleDeStatut` dans `MesDepots.jsx`), et l'état `retire` n'existe que là. Si la règle métier change, il y a un seul endroit à modifier.
+
+---
+
+### 75. `add_header` dans nginx ne s'additionne pas : il remplace
+
+*Cas réel : ajout des en-têtes de sécurité sur la page HTML (helmet ne couvre que `/api/`, or c'est la page que le navigateur exécute).*
+
+**Le piège.** Un bloc `location` qui déclare **ne serait-ce qu'un seul** `add_header` **perd la totalité** de ceux hérités du bloc `server`. Ce n'est pas cumulatif, c'est un remplacement de niveau entier.
+
+Concrètement, si j'avais posé les en-têtes au niveau `server` :
+```nginx
+server {
+    add_header X-Content-Type-Options "nosniff";   # ← perdu plus bas
+    location ~ ^/(musiques|images)/ {
+        add_header Cache-Control "public";          # ← celui-ci annule celui du dessus
+    }
+}
+```
+…les fichiers audio et les pochettes seraient sortis **sans aucun en-tête de sécurité**. Et je ne l'aurais jamais vu : on teste la page d'accueil, pas un mp3.
+
+**La solution retenue :** un fichier `/etc/nginx/snippets/securite.conf`, `include` dans **chaque** bloc `location`. Une seule source de vérité, incluse là où il faut. L'alternative (répéter les `add_header` partout) a le même effet mais dérive dès qu'on modifie un en-tête.
+
+**`always` sur chaque ligne**, aussi : sans lui, nginx ne pose l'en-tête que sur les réponses « normales » (2xx, 3xx). Une page d'erreur sortirait nue — alors que c'est justement un endroit où du contenu inattendu peut s'afficher.
+
+**Le vrai défaut trouvé au passage :** le bloc médias renvoyait **deux** `Cache-Control`. `expires 30d` en génère un (`max-age=2592000`), et `add_header Cache-Control "public"` en ajoutait un second. Le navigateur en recevait deux, avec des valeurs différentes, et le résultat dépendait de son implémentation. Fusionnés en `add_header Cache-Control "public, max-age=2592000"`. **Deux directives qui produisent le même en-tête ne se complètent pas, elles se dupliquent.**
+
+---
+
+### 76. Le fallback SPA rend tout fichier manquant invisible
+
+*Cas réel : après avoir sorti le script du thème dans `/theme-init.js`, j'ai vérifié qu'il était en ligne. Le serveur a répondu **200**. Le fichier n'y était pas.*
+
+```
+HTTP/2 200
+content-type: text/html      ← du HTML, pas du JavaScript
+content-length: 1549
+```
+
+C'est `try_files $uri $uri/ /index.html` — le fallback qui permet à React Router de fonctionner sur une URL tapée directement. Conséquence inévitable : **toute URL inconnue renvoie la page d'accueil avec un 200**, y compris une image, un script ou une police manquants.
+
+**Ce que je retiens :** sur une SPA, « le fichier répond 200 » ne prouve **rien**. Le discriminant est le `Content-Type` (ou la taille : 1549 octets, c'est la page d'accueil, pas mon script de 1151). Même famille que la note 73 — **mesurer au lieu de supposer**.
+
+Petite consolation : le `X-Content-Type-Options: nosniff` posé le même jour fait que le navigateur **refuse** d'exécuter ce HTML comme du JavaScript. La panne devient visible en console au lieu d'être silencieuse. Un en-tête de sécurité qui améliore aussi la qualité du diagnostic.
+
+---
+
+### 77. Une CSP se déploie en Report-Only, et une migration passe avant le code
+
+*Cas réel : mise en place de la Content-Security-Policy sur un site déjà en ligne, puis déploiement de la migration `id_music`.*
+
+**Pourquoi la CSP ne pouvait pas être posée telle quelle.** Trois choses de la page l'auraient violée immédiatement :
+1. le `<script>` **inline** du thème (anti-flash) → bloqué par `script-src 'self'` ;
+2. **Google Fonts**, sur deux domaines distincts : `fonts.googleapis.com` (la feuille de style) et `fonts.gstatic.com` (les fichiers de police) ;
+3. les **styles inline injectés à l'exécution** par Base UI pour positionner ses popups (`Select`, `Slider`, `Dialog`).
+
+**Pour le script inline, trois options et un vrai arbitrage :**
+
+| Option | Gain | Coût |
+|---|---|---|
+| `'unsafe-inline'` | rien à changer | **la CSP ne protège plus du XSS** — c'est-à-dire de ce pour quoi on la met |
+| Empreinte SHA-256 dans la CSP | protection intacte | à recalculer à chaque modif du script ; un oubli casse le thème **en silence** |
+| Sortir le script dans un fichier | `script-src 'self'` suffit, rien à maintenir | une requête de 1 Ko (négligeable en HTTP/2) |
+
+J'ai pris la troisième — pas la plus savante, mais la seule qui ne peut pas dériver sans qu'on s'en aperçoive. Le fichier est chargé **sans `defer` ni `type="module"`** : les deux repousseraient son exécution après le premier rendu, donc ramèneraient le flash qu'il sert à éviter.
+
+**`style-src 'unsafe-inline'` reste, et c'est assumé.** Un style injecté ne s'exécute pas — le risque est sans commune mesure avec celui d'un script. S'en passer imposerait des *nonces* régénérés à chaque requête, donc du HTML dynamique : impossible sur un fichier statique servi par nginx.
+
+**La méthode : `Content-Security-Policy-Report-Only` d'abord.** Le navigateur applique toute sa logique et **signale** en console ce qu'il aurait bloqué, sans rien casser. On parcourt le site, on lit les violations, on corrige, et seulement ensuite on retire le suffixe. Poser une CSP directement en mode bloquant sur un site en ligne, c'est le casser sans le voir.
+*Attention : `frame-ancestors` est **ignoré** en Report-Only. Tant que la CSP n'est pas bloquante, c'est `X-Frame-Options: DENY` qui protège réellement du clickjacking — les deux doivent coexister pendant la transition.*
+
+**L'ordre de déploiement d'une migration additive : la base d'abord, le code ensuite.** Le nouveau code lit et écrit `submissions.id_music`. S'il démarrait sur une base sans la colonne, `/mes-depots` répondrait 500 et toute approbation échouerait. Dans l'autre sens il ne se passe rien : **l'ancien code ignore une colonne qu'il ne connaît pas**. C'est ce qui rend une colonne *nullable ajoutée* sûre — et ce qui rendrait une colonne *supprimée* ou *renommée* dangereuse, puisque là, l'ancien code casse.
+
+**Et avant l'`UPDATE`, l'essai à blanc.** J'ai joué le `SELECT` équivalent au rattrapage sur la base de production pour voir exactement quelles lignes seraient modifiées, *avant* d'exécuter quoi que ce soit. Résultat : une seule ligne concernée, aucun lien à rétablir — le morceau n'existait plus, donc `NULL` était le bon résultat. Sur une base de production, on regarde toujours ce qu'on va changer avant de le changer.
+
+---
+
+### 78. La passphrase d'une clé SSH ne peut pas être lue par un tuyau
+
+*Cas réel : `ssh-add ~/.ssh/id_ed25519` lancé depuis un shell non interactif. L'invite « Enter passphrase » s'affiche, et la commande abandonne sans rien ajouter.*
+
+`ssh-add` refuse **par conception** de lire une passphrase ailleurs que sur un vrai terminal (`/dev/tty`) : précisément pour qu'elle ne puisse pas être aspirée par un script ou un pipe. La règle générale : **aucune commande qui demande un mot de passe ne fonctionne dans un shell sans terminal** (`sudo`, `mysql -p`, `ssh` sans clé…).
+
+Le symptôme trompeur : l'invite **s'affiche** (elle part sur la sortie d'erreur), ce qui donne l'impression que la commande attend. Elle n'attend rien.
+
+**Le diagnostic utile :** `ssh-add -l` répond `The agent has no identities` — la question « la clé est-elle chargée ? » se pose directement, elle ne se déduit pas d'un échec de connexion. Et `ssh -v` le disait aussi, en une ligne : `no identity pubkey loaded from …`, signe d'une clé chiffrée qu'on n'a pas pu déverrouiller.
+
+**Ce que fait `ssh-agent`, et pourquoi c'est la bonne pratique :** il garde la clé **déchiffrée en mémoire vive**, jamais sur le disque, et elle disparaît au redémarrage. Il ne donne jamais la clé à qui la demande — il **signe** à sa place. L'alternative (retirer la passphrase de la clé) donnerait le serveur à quiconque lit le fichier.
+
+Sur macOS, `SSH_AUTH_SOCK` pointe vers un agent géré par **launchd**, partagé par toute la session : une clé ajoutée depuis n'importe quelle fenêtre de terminal devient utilisable par toutes les autres. Et `--apple-use-keychain` range la passphrase dans le Trousseau — la sécurité de la clé devient alors celle de la session macOS, ce qui est un compromis raisonnable sur un portable chiffré par FileVault, mais qui reste un compromis.
+
+---
