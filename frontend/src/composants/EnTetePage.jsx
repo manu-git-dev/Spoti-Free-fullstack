@@ -28,18 +28,33 @@ const RUPTURES = {
 //
 //   "sous"      (defaut) — sous le titre. Le cas general : une recherche, un bouton d'ajout…
 //                          appartiennent a la page, ils viennent apres son titre.
-//   "dessus"             — au-dessus du titre. Pour ce qui appartient a la SESSION et non a la
-//                          page (deconnexion, acces au profil) : ce n'est pas une action de
-//                          l'accueil, c'est la barre de l'utilisateur, sa place est en haut.
+//   "a_cote"             — sur la MEME ligne que le titre, calees a droite. Reserve a un bloc
+//                          etroit (une seule pastille, un avatar) : deux boutons y tiendraient
+//                          mal a 390px, et c'est justement pour ca que l'empilement est le
+//                          defaut. `items-start` et non `items-center` : le bloc titre fait deux
+//                          lignes (titre + sous-titre), un centrage vertical poserait l'avatar
+//                          entre les deux au lieu de l'aligner sur le titre.
+//   "dessus"             — au-dessus du titre, sur sa propre ligne. Pour une barre de session
+//                          qui ne tient pas a cote du titre.
 //   "masquees"           — retire, conteneur compris. Pour ce qui est repris ailleurs sur mobile
 //                          (l'accueil met sa connexion/inscription dans le menu du HeaderMobile).
-//                          Un `hidden` pose sur le CONTENU ne suffirait pas : le conteneur
+//                          Un `hidden` pose sur le CONTENU ne suffirait pas ICI : le conteneur
 //                          resterait un enfant du flex, et son `gap-3` ajouterait un vide sous le
-//                          titre pour un bloc de hauteur nulle.
+//                          titre pour un bloc de hauteur nulle. (A l'interieur du bloc `actions`,
+//                          en revanche, un simple `hidden` suffit : l'element masque EST alors le
+//                          conteneur flex, et `display:none` le retire entierement du calcul.)
+//
+// Chaque disposition decrit la LARGEUR du bloc `actions` elle-meme, au lieu de corriger une
+// largeur posee en dur ailleurs. Deux utilitaires Tailwind qui reglent la meme propriete
+// (`w-full` et `w-auto`) ne s'arbitrent PAS selon leur ordre dans l'attribut `class` : c'est
+// l'ordre dans la feuille generee qui tranche, et il ne se lit nulle part dans le JSX. Le
+// premier jet posait `w-full shrink-0` en dur puis ajoutait `w-auto` par-dessus — `w-full`
+// gagnait, le bloc reclamait toute la largeur SANS pouvoir retrecir, et le titre etait ecrase.
 const DISPOSITIONS_MOBILE = {
-  sous: { direction: "flex-col", actions: "" },
-  dessus: { direction: "flex-col-reverse", actions: "" },
-  masquees: { direction: "flex-col", actions: "max-md:hidden" },
+  sous: { direction: "flex-col", actions: "w-full shrink-0" },
+  a_cote: { direction: "flex-row items-start", actions: "ml-auto shrink-0" },
+  dessus: { direction: "flex-col-reverse", actions: "w-full shrink-0" },
+  masquees: { direction: "flex-col", actions: "w-full shrink-0 max-md:hidden" },
 };
 
 export default function EnTetePage({
@@ -49,7 +64,7 @@ export default function EnTetePage({
   actions,
   classeIcone,
   actionsLarges = false,
-  // "sous" | "dessus" | "masquees" — voir DISPOSITIONS_MOBILE ci-dessus.
+  // "sous" | "a_cote" | "dessus" | "masquees" — voir DISPOSITIONS_MOBILE ci-dessus.
   actionsMobile = "sous",
 }) {
   const rupture = actionsLarges ? RUPTURES.xl : RUPTURES.lg;
@@ -69,9 +84,7 @@ export default function EnTetePage({
       </div>
 
       {actions ? (
-        <div
-          className={`w-full shrink-0 ${mobile.actions} ${rupture.actions}`}
-        >
+        <div className={`${mobile.actions} ${rupture.actions}`}>
           {actions}
         </div>
       ) : null}

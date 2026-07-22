@@ -39,8 +39,8 @@ export default function Page({
   // Passe a `true` quand le bloc `actions` est large (cf. EnTetePage) : il reste empile sous le
   // titre jusqu'a `xl` au lieu de `lg`.
   actionsLarges,
-  // Ou vit le bloc `actions` tant que l'en-tete est empile : "sous" (defaut), "dessus" ou
-  // "masquees". Voir DISPOSITIONS_MOBILE dans EnTetePage.
+  // Ou vit le bloc `actions` tant que l'en-tete est empile : "sous" (defaut), "a_cote",
+  // "dessus" ou "masquees". Voir DISPOSITIONS_MOBILE dans EnTetePage.
   actionsMobile,
   // Pour ce qui doit s'appliquer a la zone de defilement elle-meme (une grille, un `max-w`…).
   classeContenu,
