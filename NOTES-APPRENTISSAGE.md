@@ -2536,3 +2536,43 @@ Et ici la barre reste affichée **en permanence** : la page elle-même ne défil
 **Ce que je retiens :** j'ai vérifié que le CSS compilé contenait bien `height:100dvh` et les quatre `env(safe-area-inset-*)`, plus le `viewport-fit=cover` dans le HTML final. Les tests e2e (90, tous verts) prouvent l'**absence de régression** — ils ne prouvent PAS la correction : Chromium en mode test n'a pas de barre d'outils rétractable, `100vh` et `100dvh` y valent la même chose. **Un test qui ne peut pas reproduire le bug ne peut pas valider le correctif** ; la validation réelle se fait sur l'appareil qui avait le symptôme.
 
 ---
+
+## 2026-07-22 — Un test qui affiche « OK » sans avoir rien mesuré
+
+### 81. `null` dans une comparaison vaut `0`, et le test devient toujours vert
+
+*Cas réel : vérification que la barre de session (déconnexion + profil) passe bien AU-DESSUS du titre sur mobile. Le script a répondu « OK — les actions sont AU-DESSUS du titre ». Il n'avait rien mesuré du tout.*
+
+Le script comparait deux positions verticales :
+```js
+const deconnexion = [...document.querySelectorAll("button, a")]
+  .find((e) => /déconnex/i.test(e.textContent));   // <- ne trouve RIEN
+…
+ordre.hautDeLaDeconnexion < ordre.hautDuTitre       // null < 151  ->  true
+```
+
+**Deux fautes empilées, et c'est leur combinaison qui est dangereuse.**
+
+1. **Le sélecteur était faux** : je cherchais `déconnex`, le libellé est « décon**nect**er ». Pas de `x`. `find` renvoie `undefined`, la mesure vaut `null`.
+2. **`null` ne s'est pas plaint.** Dans une comparaison **relationnelle** (`<`, `>`, `<=`, `>=`), JavaScript convertit ses opérandes en nombres : `Number(null)` vaut **`0`**. Donc `null < 151` est `true`. Le test a « réussi » précisément parce qu'il avait échoué à trouver ce qu'il devait mesurer.
+
+**Le piège de langage à retenir**, parce qu'il est incohérent d'un opérateur à l'autre :
+```js
+null < 1     // true   — conversion numerique : Number(null) === 0
+null == 0    // false  — l'egalite lache ne convertit PAS null en nombre
+null >= 0    // true
+null > 0     // false
+```
+`null` se comporte comme `0` avec `<`/`>`/`<=`/`>=`, et comme rien du tout avec `==`. Ce n'est pas une règle à mémoriser : c'est une raison de **ne jamais comparer une valeur dont on n'a pas vérifié l'existence**.
+
+**Le vrai correctif n'est pas de réparer le regex.** C'est de rendre l'absence impossible à confondre avec un succès :
+```js
+if (!bouton) return { erreur: "bouton de deconnexion INTROUVABLE" };
+```
+La mesure ne se fait qu'après. Un élément absent produit maintenant un message explicite, jamais un « OK ».
+
+**Le principe général : un test qui ne peut pas échouer n'est pas un test.** Avant de faire confiance à une vérification qui passe au vert, il faut l'avoir vue passer au **rouge** — en cassant volontairement ce qu'elle surveille. C'est exactement pour ça que les tests de non-régression de ce projet valent quelque chose : chacun a été écrit **après** un bug réel, donc chacun a déjà été rouge une fois.
+
+**Ce que je retiens, transférable :** un résultat qui confirme ce qu'on espérait mérite plus de méfiance qu'un résultat qui contredit. Ici, l'écran montrait bien le bon rendu — j'aurais pu m'arrêter là et garder un script de vérification faux dans le dépôt. Ce sont les valeurs affichées (`hautDeLaDeconnexion: null`) qui ont trahi le problème, pas la conclusion. **Toujours faire afficher les valeurs mesurées, pas seulement le verdict.**
+
+---
