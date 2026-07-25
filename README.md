@@ -2,6 +2,14 @@
 
 [![CI](https://github.com/manu-git-dev/Spoti-Free-fullstack/actions/workflows/ci.yml/badge.svg)](https://github.com/manu-git-dev/Spoti-Free-fullstack/actions/workflows/ci.yml)
 
+### 🎧 [spotifree.manuelmattana.fr](https://spotifree.manuelmattana.fr)
+
+**L'application est en ligne** — déployée sur un VPS Ubuntu : nginx en façade, HTTPS (Let's
+Encrypt), backend en service `systemd`, MySQL. Le catalogue est fait de morceaux sous licence
+Creative Commons, librement écoutables : pas besoin de compte pour essayer.
+
+---
+
 Un lecteur de musique en full-stack : écoute, playlists, favoris, dépôt de morceaux avec
 modération, et un espace d'administration complet.
 
@@ -14,7 +22,7 @@ problèmes à régler quand ça casse.
 
 > **Le code, je l'explique.** À chaque difficulté rencontrée, j'ai écrit une note : le problème,
 > la cause, le raisonnement. Elles sont versionnées avec le code, dans
-> [`NOTES-APPRENTISSAGE.md`](NOTES-APPRENTISSAGE.md) — une cinquantaine à ce jour.
+> [`NOTES-APPRENTISSAGE.md`](NOTES-APPRENTISSAGE.md) — 85 à ce jour.
 
 ---
 
@@ -38,8 +46,8 @@ problèmes à régler quand ça casse.
 | **Frontend** | React 19, Vite, React Router 7, Tailwind CSS v4, shadcn/ui, lucide-react |
 | **Backend** | Node.js, Express 5 (ESM), MySQL (`mysql2/promise`) |
 | **Auth** | JWT (`jsonwebtoken`), mots de passe hachés (`bcryptjs`) |
-| **Tests** | Playwright, 170 tests (parcours, sécurité, dépôt, administration) |
-| **CI** | GitHub Actions — base reconstruite de zéro, 170 tests, build, `npm audit` |
+| **Tests** | Playwright, 193 tests (parcours, sécurité, dépôt, administration) |
+| **CI** | GitHub Actions — base reconstruite de zéro, 193 tests, build, `npm audit` |
 
 ---
 
@@ -64,8 +72,8 @@ npm install --prefix frontend
 
 ```bash
 mysql -u root -p -e "CREATE DATABASE spotifree;"
-mysql -u root -p spotifree < backend/scripts/schema.sql       # les 8 tables
-mysql -u root -p spotifree < backend/scripts/seed-musics.sql  # le catalogue (20 morceaux)
+mysql -u root -p spotifree < backend/scripts/schema.sql       # les 9 tables
+mysql -u root -p spotifree < backend/scripts/seed-musics.sql  # le catalogue (100 morceaux)
 ```
 
 > Les scripts `add-*.sql` du même dossier sont des **migrations historiques** : leurs
@@ -73,7 +81,7 @@ mysql -u root -p spotifree < backend/scripts/seed-musics.sql  # le catalogue (20
 
 ### 3. Les fichiers audio
 
-Les vrais fichiers (23 Mo) ne sont pas versionnés. Pour obtenir une application **jouable
+Les vrais fichiers (566 Mo) ne sont pas versionnés. Pour obtenir une application **jouable
 immédiatement**, on génère des médias de test — un mp3 silencieux, libre de tout droit :
 
 ```bash
@@ -126,14 +134,14 @@ npm run dev --prefix frontend   # http://localhost:5173
 cd tests && npm install && npm test
 ```
 
-**170 tests**, joués contre l'application réellement démarrée (base + backend + navigateur) :
+**193 tests**, joués contre l'application réellement démarrée (base + backend + navigateur) :
 
 | Suite | | |
 |---|---|---|
-| `e2e.test.mjs` | 26 | Parcours utilisateur, dans un vrai navigateur |
-| `securite.test.mjs` | 30 | L'API attaquée directement — le point de vue d'un attaquant, qui n'utilise pas l'interface |
-| `depot.test.mjs` | 25 | Dépôt et modération |
-| `admin.test.mjs` | 25 | Espace d'administration |
+| `e2e.test.mjs` | 90 | Parcours utilisateur, dans un vrai navigateur |
+| `securite.test.mjs` | 40 | L'API attaquée directement — le point de vue d'un attaquant, qui n'utilise pas l'interface |
+| `depot.test.mjs` | 34 | Dépôt et modération |
+| `admin.test.mjs` | 29 | Espace d'administration |
 
 Beaucoup sont des **tests de non-régression** : ils verrouillent des bugs réels déjà rencontrés
 (le bug des likes après reconnexion, une faille qui laissait modifier le catalogue sans être
@@ -148,7 +156,7 @@ revenu.
 ## Intégration continue
 
 À chaque `push`, [GitHub Actions](.github/workflows/ci.yml) part d'une machine Ubuntu **vierge** :
-il reconstruit la base à partir des seuls fichiers versionnés, démarre les serveurs, joue les 170
+il reconstruit la base à partir des seuls fichiers versionnés, démarre les serveurs, joue les 193
 tests, compile le build de production et vérifie les vulnérabilités npm.
 
 L'intérêt n'est pas seulement d'exécuter les tests : c'est de prouver que le projet est
@@ -168,6 +176,28 @@ Quelques décisions qui ne se voient pas à l'écran, mais qui tiennent le proje
   `.txt` renommé en `.mp3` est rejeté.
 - Anti-brute-force sur la connexion, limite d'envoi sur le formulaire de contact, jeton de
   réinitialisation stocké **en empreinte**, à usage unique, expirant en 1 h.
+
+### L'audit du 25 juillet 2026
+
+Une fois le site en ligne, j'ai audité l'application entière : relecture du backend, puis une
+batterie de tests d'attaque écrits pour l'occasion — élévation de privilèges, IDOR, falsification
+de jeton JWT, injection SQL, traversée de répertoire, énumération de comptes.
+
+Les 193 tests passaient, ESLint était propre, le build aussi. Il restait **trois failles réelles** :
+
+| Faille | Correctif |
+|---|---|
+| Un JWT restait valable **après un changement de mot de passe** : la victime d'un vol de session ne pouvait pas reprendre la main | `users.password_changed_at`, comparé au `iat` du jeton |
+| Le compteur de visites, **public et sans limite**, acceptait 500 écritures en base en 105 ms | Un limiteur, comme sur toutes les autres routes publiques |
+| Un chemin de fichier venu du client permettait de **supprimer un fichier hors de `public/`** | Validation à l'entrée **et** contrôle de confinement avant suppression |
+
+Chacune a été rejouée après correctif pour vérifier qu'elle était bien fermée. Le raisonnement
+complet — y compris pourquoi un JWT ne se révoque pas, et pourquoi la troisième était documentée
+dans mon propre code sans être appliquée partout — est dans les
+[notes 83 à 85](NOTES-APPRENTISSAGE.md).
+
+> La leçon que j'en retiens : une suite de tests verte dit que **ce à quoi on a pensé** fonctionne,
+> pas que l'application est sûre.
 
 ## Documentation
 
