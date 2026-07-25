@@ -2722,3 +2722,204 @@ if (!absolu.startsWith(DOSSIER_PUBLIC + path.sep)) continue;
 **La règle générale.** Quand on découvre qu'une valeur est dangereuse, la bonne question n'est pas « où est-ce que ça a cassé ? » mais **« par quelles portes cette valeur peut-elle entrer ? »**. Et on met le garde-fou aussi près que possible de l'endroit où le mal est fait — pas seulement à l'entrée qu'on a en tête ce jour-là.
 
 ---
+
+## 2026-07-25 — Le flux de connexion, de bout en bout (visite guidée du code)
+
+*Cas réel, mais d'un genre nouveau : je n'avais pas de bug. J'ai demandé qu'on me commente **chaque ligne** du projet pour tout comprendre — et on m'a répondu que c'était le pire outil pédagogique possible (16 700 lignes sur 76 fichiers, des commentaires qui répètent le « quoi » que le code dit déjà, et zéro entraînement du jugement). À la place : une **visite guidée d'un flux complet**, en suivant une requête à travers les 5 fichiers qu'elle traverse. C'est aussi exactement la forme que prend la question en entretien — « raconte-moi ce qui se passe quand quelqu'un se connecte ».*
+
+### 86. La carte du trajet, et pourquoi le login n'est que la moitié du sujet
+
+Cinq fichiers, dans cet ordre :
+
+```
+1. frontend/src/pages/Login.jsx        le formulaire, la saisie
+2. frontend/src/lib/api.js             le passage obligé vers le serveur
+   ====== le réseau ======
+3. backend/src/routes/userRoute.js     POST /api/users/connexion
+   ====== retour ======
+4. frontend/src/App.jsx                où la session est stockée
+5. backend/src/middlewares/authMiddleware.js   la requête SUIVANTE
+```
+
+**L'idée à retenir avant tout le reste :** émettre un jeton est facile. Ce qui est difficile — et ce sur quoi on m'interrogera — c'est ce qui se passe à la requête **d'après**. Le login produit un objet ; toute la sécurité vit dans la façon dont cet objet est **re-vérifié** ensuite.
+
+Autre chose que la visite m'a fait voir : `Login` ne stocke pas l'utilisateur connecté, il reçoit `setUser`/`setToken` en props depuis `App.jsx`. C'est du *lifting state up* — l'état vit chez l'ancêtre commun de tous ceux qui en ont besoin (la sidebar affiche « Bonjour X », le lecteur a besoin du token pour les likes). S'il gardait ça dans son propre `useState`, l'information disparaîtrait à la navigation. Le compromis à savoir nommer : ça marche bien sur **un** niveau ; sur quatre, ce serait du *prop drilling* et un `Context` (ou un `AuthProvider`) deviendrait plus propre.
+
+### 87. Formulaire contrôlé ou non : pourquoi `Login` et `Register` ne font pas pareil
+
+Mes `<Input>` de `Login.jsx` ont un `name` mais **ni `value` ni `onChange`** : le navigateur garde la valeur dans le DOM, et je ne la lis qu'à la soumission.
+
+```jsx
+const formData = new FormData(event.currentTarget);
+const user = { email: formData.get("email"), password: formData.get("password") };
+```
+
+C'est l'opposé du pattern « contrôlé » des tutos (`value={email} onChange={...}`).
+
+| | Non contrôlé (Login) | Contrôlé (Register) |
+| --- | --- | --- |
+| Re-rendus | 0 pendant la frappe | 1 par caractère tapé |
+| Code | 3 lignes | 2 états + 2 handlers |
+| Validation **en direct** | impossible | facile |
+
+**La règle qui décide :** on prend le non contrôlé **quand on n'a rien à afficher pendant la frappe**. C'est le cas à la connexion — on ne peut rien dire d'utile sur un mot de passe tant qu'il n'est pas envoyé. À l'inscription, si : la checklist de `lib/validation.js` doit se cocher au fur et à mesure, donc contrôlé. Deux formulaires, deux patterns, pour une raison précise — c'est ça, la réponse à « pourquoi ça et pas X ? ».
+
+À retenir aussi : `event.preventDefault()` en première ligne du handler, sinon le navigateur recharge la page en envoyant le formulaire nativement. Et le `type="submit"` explicite sur le `Button` Base UI (voir la note du 2026-07-21) : **une bibliothèque n'a aucune obligation de reproduire les défauts de l'élément HTML qu'elle enveloppe**.
+
+### 88. `apiFetch` : ce qu'un point de passage unique fait à ma place
+
+Quatre choses que je ne veux écrire qu'une fois, dans `frontend/src/lib/api.js` :
+
+1. **L'URL de base** — `import.meta.env.VITE_API_URL ?? "http://localhost:3000"`. Avant, `localhost:3000` était copié dans une quinzaine de composants : déployer voulait dire les éditer un par un.
+2. **Le token**, via un *spread conditionnel* (voir le bloc ci-dessous) : si le token est falsy, on étale un objet vide, donc **la clé n'existe pas du tout** — ce n'est pas la même chose que `Authorization: undefined`. Sur `/connexion` il n'y a pas encore de token, l'en-tête est absent, c'est correct : la route est publique.
+3. **La sérialisation** — `JSON.stringify` + `Content-Type: application/json`. Enlève l'un des deux et `req.body` est vide côté Express : grand classique.
+4. **L'interception du 401** (voir note 93).
+
+```js
+// le spread conditionnel : la clé n'est même pas créée quand il n'y a pas de token
+...(token ? { Authorization: `Bearer ${token}` } : {}),
+```
+
+Il renvoie `{ reponse, donnees }` : la réponse pour le **statut**, les données pour le **corps déjà parsé**. Raison technique : un corps de réponse est un **flux, il ne se lit qu'une fois** — d'où aussi l'option `brut: true` pour les fichiers, qui rend la réponse sans la consommer.
+
+Et sur le fil, ce qui part vraiment :
+
+```http
+POST /api/users/connexion HTTP/1.1
+Content-Type: application/json
+
+{"email":"...","password":"MonMotDePasse1"}
+```
+
+**Le mot de passe circule en clair.** Rien à faire côté code : c'est **HTTPS** qui chiffre le tunnel. Surtout ne pas « hasher côté client » — ça déplace le problème, le hash devient alors le mot de passe.
+
+### 89. Le faux hash bcrypt : quand le TEMPS de réponse trahit ce que le message cache
+
+La ligne que je n'aurais jamais écrite spontanément, dans `/connexion` :
+
+```js
+const motDePasseCorrect = await bcrypt.compare(
+  password,
+  user?.password_hash ?? FAUX_HASH,
+);
+```
+
+L'écriture naïve serait de sortir tout de suite si `user` n'existe pas. Le **message** renvoyé est identique dans les deux cas (« Identifiants incorrect »), donc à la lecture rien ne fuite. **Mais le temps, lui, parle :**
+
+| | naïf | avec le faux hash |
+| --- | --- | --- |
+| email inconnu | ~5 ms (rien à vérifier) | ~100 ms |
+| email connu, mdp faux | ~100 ms (bcrypt) | ~100 ms |
+
+Un script qui mesure les temps de réponse trie mes emails en deux tas : inscrits / pas inscrits. C'est l'**énumération de comptes par canal temporel** (*timing attack*). En comparant systématiquement contre un faux hash calculé au démarrage, les deux chemins coûtent pareil.
+
+**Ce qu'il faut savoir défendre honnêtement :** ce n'est pas une protection parfaite (le temps du SELECT diffère encore un peu). Ce qui compte, c'est de savoir dire **quelle classe d'attaque** elle vise — pas de prétendre l'avoir éliminée.
+
+Deux voisines de la même famille dans ce fichier : le **rate limiter** avec `skipSuccessfulRequests: true` (seuls les **échecs** comptent, sinon la protection viserait l'utilisateur légitime au lieu de l'attaquant — et elle est nécessaire *en plus* de bcrypt, qui **ralentit** chaque essai sans en **limiter** le nombre), et les **requêtes préparées** `WHERE email = ?` : avec une concaténation, `' OR '1'='1` renvoie toute la table et me connecte au premier compte.
+
+### 90. Ce que contient vraiment un JWT (et pourquoi le rôle n'y est pas)
+
+```js
+const token = jwt.sign(
+  { id_user: user.id_user, email: user.email },  // la charge utile
+  process.env.JWT_SECRET,                        // la clé de signature
+  { expiresIn: "24h" },
+);
+```
+
+Trois parties séparées par des points : `entête.charge.signature`. Les deux premières sont du **base64url — pas du chiffrement**. Collé sur jwt.io, mon token affiche mon `id_user` et mon email en clair. **Conséquence : on ne met jamais de secret dans un JWT.** La signature garantit qu'on ne peut pas le **modifier** sans la clé ; elle ne **cache** rien.
+
+**Pourquoi `role` n'y est pas** : s'il voyageait dans le jeton, retirer les droits admin à quelqu'un ne prendrait effet que 24 h plus tard. `adminMiddleware` relit donc le rôle en base à chaque requête. Coût : une requête SQL. Bénéfice : retrait immédiat. **C'est l'arbitrage central du JWT** — sa force (autonome, vérifiable sans base) est exactement sa faiblesse (irrévocable).
+
+Et le `role` que je renvoie quand même dans l'objet `user` **n'est pas une sécurité** : c'est de la cosmétique, afficher ou non le lien « Modération ». Quelqu'un qui trafique son `localStorage` verra le lien et se prendra un 403 sur chaque requête. C'est la bonne architecture : **l'UI cache, le serveur interdit.**
+
+### 91. `localStorage` + state React : deux écritures, deux rôles
+
+```jsx
+localStorage.setItem("token", donnees.token);
+localStorage.setItem("user", JSON.stringify(donnees.user));
+setToken(donnees.token);
+setUser(donnees.user);
+```
+
+Pourquoi écrire deux fois la même chose ? Parce que ce sont deux besoins différents :
+
+- `localStorage` = **la persistance**. Survit au F5. Mais il n'est **pas réactif** : y écrire ne redessine aucun composant.
+- Le state React = **la réactivité**. Redessine, mais disparaît au rechargement.
+
+La boucle se referme dans `App.jsx`, où le state est **initialisé depuis** `localStorage` au démarrage : c'est ce qui me garde connecté après F5. Le `JSON.stringify` est obligatoire — `localStorage` ne stocke que des chaînes, sans lui j'écrirais littéralement `"[object Object]"`.
+
+**Un vrai risque repéré au passage, pas encore corrigé :** `JSON.parse(savedUser)` est appelé dans l'initialiseur d'état. Si l'entrée est corrompue, il lève **pendant le rendu** — écran blanc, et l'utilisateur ne peut même pas se déconnecter pour s'en sortir. Un `try/catch` qui retombe sur `null` coûterait trois lignes.
+
+### 92. `authMiddleware` : la signature ne suffit pas, il faut la fraîcheur
+
+Deux contrôles, et pas un seul.
+
+**① La signature.** `jwt.verify(token, process.env.JWT_SECRET)` recalcule la signature et la compare ; il vérifie **aussi l'expiration** (`exp`) automatiquement — c'est ce qui applique mes 24 h. Le `try/catch` est indispensable : `jwt.verify` **lève une exception**, il ne renvoie pas `false`.
+
+**② La fraîcheur.** La comparaison entre `decoded.iat` (*issued at*, posé automatiquement par `jwt.sign`) et `password_changed_at`. C'est le correctif de la note 83 : sans lui, changer son mot de passe ne fermait aucune session.
+
+Trois détails que j'aurais ratés seul :
+
+- **`UNIX_TIMESTAMP` côté SQL** plutôt qu'une comparaison de dates en JS : `iat` est un epoch UTC, la colonne un `DATETIME` dans le fuseau du serveur. Une heure d'écart ici déconnecterait tout le monde — ou personne.
+- **Comparaison `<` stricte** : un jeton émis dans la même seconde que le changement reste valable, sinon se reconnecter juste après une réinitialisation échouerait une fois sur deux, au gré de l'arrondi.
+- **`utilisateur?.changement &&`** : `NULL` tant que le mot de passe n'a jamais changé, donc aucun jeton à périmer.
+
+Enfin `req.user = decoded` puis `next()`. **Point capital : l'ID de l'utilisateur vient du jeton, jamais du client.** Si je lisais `req.body.id_user`, n'importe qui pourrait liker à la place d'un autre ou lire ses playlists. Et sans `next()`, la requête reste suspendue jusqu'au timeout — sans erreur ni réponse.
+
+### 93. 401 contre 403, et la boucle qui purge la session
+
+```js
+if (reponse.status === 401) surSessionExpiree?.();
+```
+
+`surSessionExpiree` est un **callback** enregistré par `App.jsx` via `definirSurSessionExpiree`. Pourquoi ce détour plutôt qu'un import direct ? Pour que `api.js` **ne connaisse ni React ni la structure de l'app** — il sait juste que quelqu'un veut être prévenu. C'est de l'**inversion de dépendance** : le module bas niveau ne dépend pas du module haut niveau. Et parce que c'est branché **dans `apiFetch`**, ça marche pour n'importe quel appel — un like isolé, pas seulement le chargement initial.
+
+La distinction qui structure tout le code d'erreur du projet :
+
+- **401** = « je ne sais pas qui tu es » → la session ne vaut plus rien → on **purge**.
+- **403** = « je sais qui tu es, mais tu n'as pas le droit » → la session reste valide → on **ne déconnecte pas**.
+
+C'est pour ça que le mot de passe erroné à la suppression de compte renvoie **403** : un 401 déconnecterait quelqu'un pour une simple faute de frappe.
+
+**Une tension assumée, à savoir défendre :** le code canonique pour un échec d'authentification est **401**, or `/connexion` renvoie **400**. Raison : mon intercepteur global traite tout 401 comme « session morte », et un mot de passe mal tapé déclencherait la logique de purge. L'alternative aurait été 401 + une exclusion de la route de login dans l'intercepteur. Les deux se défendent — ce qui compte est de montrer que j'ai vu les deux branches.
+
+### 94. Le trajet complet, et les six questions à savoir défendre
+
+```
+[Login.jsx]  FormData -> { email, password }
+     |
+[apiFetch]   + Content-Type, + URL de base, JSON.stringify
+     |  POST /api/users/connexion   (HTTPS en prod)
+[limiteConnexion]  10 échecs / 15 min / IP
+     |
+[SELECT ?]   requête préparée
+     |
+[bcrypt.compare]  vrai hash OU faux hash -> temps constant
+     |
+[jwt.sign]   { id_user, email } signé, 24h, PAS le rôle
+     |  200 { token, user }
+[Login.jsx]  localStorage (persistance) + setState (réactivité)
+     |
+     ... requête suivante ...
+[apiFetch]   + Authorization: Bearer <token>
+     |
+[authMiddleware]  1. signature   2. fraîcheur (iat vs password_changed_at)
+     |            -> req.user
+[la route]   idUser vient du TOKEN, jamais du client
+
+     si 401 -> apiFetch -> surSessionExpiree -> purge + toast
+```
+
+Les six questions d'entretien sur ce flux, à répondre à voix haute sans relire :
+
+1. **Pourquoi bcrypt et pas SHA-256 pour un mot de passe ?** (SHA-256 est *conçu* pour être rapide — c'est exactement le défaut ici ; plus la question du **sel**.)
+2. **Où stockes-tu le token, et quel risque as-tu accepté ?** (voir note 67 : le troc XSS ↔ CSRF.)
+3. **Pourquoi le rôle admin n'est-il pas dans le JWT ?**
+4. **Comment révoques-tu un JWT ?** (piège : on ne révoque pas un JWT — voir `password_changed_at`, note 83.)
+5. **Pourquoi `bcrypt.compare` tourne-t-il même quand l'email n'existe pas ?**
+6. **401 ou 403 ?**
+
+**La leçon de méthode, au-delà du contenu.** Un commentaire par ligne explique le *quoi*, que le code dit déjà. Ce qui me manque est toujours le *pourquoi* — et le pourquoi ne tient pas sous une ligne, il se raconte sur un **flux** qui traverse plusieurs fichiers. Suivre une requête de bout en bout, c'est la seule lecture qui montre les **arbitrages** (temps constant, rôle hors jeton, 401 vs 403) plutôt que la syntaxe. C'est aussi la forme exacte de la question en entretien.
+
+---
