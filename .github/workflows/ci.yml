@@ -15,7 +15,7 @@ on:
 
 jobs:
   tests:
-    name: Tests (189) + build
+    name: Tests (193) + build
     runs-on: ubuntu-latest
 
     # Une vraie base MySQL, jetable, montee pour la duree du job. Le `health-cmd` est important :
@@ -114,7 +114,7 @@ jobs:
           echo "Backend et frontend en ligne."
 
       # --- Verification -------------------------------------------------------------------
-      - name: Lancer les 189 tests
+      - name: Lancer les 193 tests
         run: npm test --prefix tests
 
       # Le build de production est un test a lui seul : le serveur de developpement pardonne des
@@ -122,7 +122,13 @@ jobs:
       - name: Build de production du frontend
         run: npm run build --prefix frontend
 
+      # `audit-ci` plutot que `npm audit` : il accepte une LISTE D'EXCEPTIONS documentee
+      # (audit-ci.jsonc a la racine), la ou npm audit echoue sur tout, y compris sur un avis
+      # dont on a verifie qu'il ne concerne pas ce projet et qui n'a aucune version corrective.
+      # Le seuil reste bas (`moderate`) : on n'assouplit pas le controle, on le rend capable de
+      # distinguer « une faille existe » de « mon application est affectee ». Le raisonnement
+      # complet, et la date de reexamen, sont dans le fichier de configuration.
       - name: Verifier les vulnerabilites npm
         run: |
-          npm audit --omit=dev --prefix backend
-          npm audit --omit=dev --prefix frontend
+          npx --yes audit-ci@^7 --config audit-ci.jsonc --directory backend
+          npx --yes audit-ci@^7 --config audit-ci.jsonc --directory frontend

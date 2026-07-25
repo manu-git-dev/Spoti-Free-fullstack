@@ -1,0 +1,44 @@
+// Contrôle des vulnérabilités npm en intégration continue.
+//
+// POURQUOI CE FICHIER EXISTE PLUTÔT QU'UN SIMPLE `npm audit`
+//
+// `npm audit` sort en code 1 dès qu'une vulnérabilité est trouvée, sans distinguer « il existe
+// une faille dans cette dépendance » de « mon application est affectée par cette faille ». Ce
+// sont deux choses différentes, et confondre les deux a un coût réel :
+//
+//   - la CI dépend d'une base d'avis EXTÉRIEURE qui change en permanence. Un build vert le soir
+//     devient rouge le lendemain matin sans qu'une ligne de code ait bougé. C'est exactement ce
+//     qui est arrivé le 2026-07-25 : deux avis react-router publiés dans la nuit ;
+//   - quand aucune version corrective n'existe, la CI reste rouge indéfiniment. Une alerte
+//     toujours allumée finit par être ignorée — et c'est là qu'on rate la vraie.
+//
+// On garde donc le contrôle BLOQUANT sur tout, et on autorise nommément les avis qu'on a
+// examinés, avec la raison écrite et une date de réexamen. Une exception qui n'expire pas
+// n'est pas une exception, c'est un oubli.
+{
+  // Seuil : on bloque à partir de « moderate ». Volontairement bas — le but n'est pas de rendre
+  // la CI facile à satisfaire, mais de forcer un examen à chaque nouvel avis.
+  "moderate": true,
+
+  // Les dépendances de développement ne partent pas en production : elles ne sont pas exposées
+  // aux utilisateurs. (Équivalent du `--omit=dev` de npm audit, qu'on remplace ici.)
+  "skip-dev": true,
+
+  "allowlist": [
+    // GHSA-qwww-vcr4-c8h2 — react-router / react-router-dom, « RSC Mode CSRF Bypass », high.
+    //
+    // NON APPLICABLE À CE PROJET. La faille est dans le mode RSC (React Server Components) de
+    // react-router. Spoti-Free est une SPA pure : le routeur est monté sur `<BrowserRouter>`
+    // (frontend/src/main.jsx), sans RSC ni rendu serveur. Le code vulnérable n'est jamais chargé.
+    //
+    // Et surtout, AUCUNE VERSION CORRECTIVE N'EXISTE : le seul « correctif » proposé par
+    // `npm audit fix --force` est un retour à react-router 7.11.0, c'est-à-dire une version
+    // ANTÉRIEURE aux correctifs de l'open redirect (GHSA-wrjc-x8rr-h8h6) et du déni de service
+    // (GHSA-chx6-hx7r-mcp5) — deux failles qui, elles, s'appliquent bel et bien à une SPA.
+    // Suivre l'avis à la lettre dégraderait donc la sécurité réelle du projet.
+    //
+    // À RÉEXAMINER LE 2026-09-01 : si react-router a publié une version >= 7.18.1 corrigeant
+    // l'avis, retirer cette ligne et mettre à jour. Sinon, reconduire en redatant.
+    "GHSA-qwww-vcr4-c8h2"
+  ]
+}
