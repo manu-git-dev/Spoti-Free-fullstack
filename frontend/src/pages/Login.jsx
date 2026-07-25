@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, messageErreur } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login({ ouvrirSession }) {
+  // Un seul etat de message, et il ne sert qu'aux ECHECS : le succes ne s'annonce plus, il se
+  // constate. Rediriger tout de suite vers l'accueil, connecte, dit mieux "c'est bon" qu'une
+  // phrase verte que personne ne lit — et n'impose pas d'attendre pour l'apprendre.
   const [message, setMessage] = useState("");
-  const [typeMessage, setTypeMessage] = useState("");
   const navigate = useNavigate();
 
   async function handleSubmit(event) {
@@ -28,19 +30,22 @@ export default function Login({ ouvrirSession }) {
       });
 
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(donnees.message);
+        // `messageErreur` plutot que `donnees.message` : `donnees` vaut `null` quand la reponse
+        // n'a pas de corps JSON (une 502 du proxy, par exemple), et on lirait `.message` sur
+        // `null` — une exception a l'endroit meme ou on essayait d'afficher une erreur.
+        setMessage(messageErreur(reponse, donnees));
         return;
       }
+
       // Un seul geste : stockage + etat React, les deux moities de la session ensemble.
       ouvrirSession({ token: donnees.token, user: donnees.user });
-      setTypeMessage("success");
-      setMessage(donnees.message);
-      setTimeout(() => {
-        navigate("/");
-      }, 1000);
+
+      // `replace` et non un empilement : une fois connecte, le bouton "Retour" du navigateur
+      // ne doit pas ramener sur le formulaire de connexion. On remplace donc cette etape dans
+      // l'historique au lieu de l'y laisser — la page de login est un passage, pas une
+      // destination.
+      navigate("/", { replace: true });
     } catch (erreur) {
-      setTypeMessage("error");
       setMessage("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
@@ -49,7 +54,7 @@ export default function Login({ ouvrirSession }) {
     <>
       {" "}
       {message ? (
-        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+        <Alert variant="destructive">
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       ) : null}
