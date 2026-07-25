@@ -28,6 +28,34 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { apiFetch, definirSurSessionExpiree } from "@/lib/api";
 
+// Relit l'utilisateur stocke a l'ouverture de l'app.
+//
+// `JSON.parse` LEVE sur une entree illisible (localStorage edite a la main, extension du
+// navigateur, ancien format laisse par une version precedente du site). Comme cet appel vit dans
+// l'initialiseur d'un `useState`, il s'executait PENDANT LE RENDU : l'exception ne remontait
+// nulle part, React abandonnait l'arbre, et l'ecran restait blanc. Le pire de ce symptome, c'est
+// qu'il ne se repare pas tout seul — sans interface, la personne ne peut meme pas se deconnecter
+// pour sortir de l'etat casse. Elle doit vider son stockage a la main, ce que personne ne sait
+// faire.
+//
+// On purge donc les DEUX cles, pas seulement celle qui est illisible : garder le token alors que
+// l'utilisateur est `null` laisserait une session a moitie ouverte (l'affichage croit personne
+// connectee, mais `apiFetch` continue d'envoyer le jeton et les favoris se chargeraient quand
+// meme). Une session qu'on ne sait plus lire n'est pas une session : on repart de zero, quitte a
+// redemander une connexion.
+function lireUtilisateurStocke() {
+  const brut = localStorage.getItem("user");
+  if (!brut) return null;
+
+  try {
+    return JSON.parse(brut);
+  } catch {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    return null;
+  }
+}
+
 function App() {
   const emplacement = useLocation();
   const [musiques, setMusiques] = useState([]);
@@ -48,14 +76,12 @@ function App() {
   const [top5, setTop5] = useState([]);
   const [historique, setHistorique] = useState([]);
 
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
-
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem("token");
-  });
+  const [user, setUser] = useState(lireUtilisateurStocke);
+  // Declare APRES `user` a dessein : React execute les initialiseurs dans l'ordre des appels a
+  // `useState`, donc si la relecture ci-dessus a purge une session illisible, le token a deja
+  // disparu quand on le lit ici. Intervertir les deux lignes ressusciterait le jeton d'une
+  // session qu'on vient de jeter.
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
 
   useEffect(() => {
     apiFetch("/api/musics")

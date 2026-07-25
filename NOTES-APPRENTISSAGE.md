@@ -2849,7 +2849,14 @@ Pourquoi écrire deux fois la même chose ? Parce que ce sont deux besoins diff�
 
 La boucle se referme dans `App.jsx`, où le state est **initialisé depuis** `localStorage` au démarrage : c'est ce qui me garde connecté après F5. Le `JSON.stringify` est obligatoire — `localStorage` ne stocke que des chaînes, sans lui j'écrirais littéralement `"[object Object]"`.
 
-**Un vrai risque repéré au passage, pas encore corrigé :** `JSON.parse(savedUser)` est appelé dans l'initialiseur d'état. Si l'entrée est corrompue, il lève **pendant le rendu** — écran blanc, et l'utilisateur ne peut même pas se déconnecter pour s'en sortir. Un `try/catch` qui retombe sur `null` coûterait trois lignes.
+**Un vrai risque repéré au passage — et corrigé dans la foulée :** `JSON.parse(savedUser)` était appelé dans l'initialiseur d'état. Si l'entrée est corrompue (localStorage édité à la main, extension du navigateur, ancien format laissé par une version précédente), il lève **pendant le rendu** : l'exception ne remonte nulle part, React abandonne l'arbre, écran blanc. Le pire du symptôme, c'est qu'il **ne se répare pas tout seul** — sans interface, la personne ne peut même pas cliquer sur « Déconnexion » pour s'en sortir ; il faut vider son stockage à la main, ce que personne ne sait faire.
+
+Le correctif est un `try/catch`, mais avec deux décisions dedans :
+
+- **On purge les DEUX clés**, pas seulement celle qui est illisible. Garder le token avec `user` à `null` laisserait une **session à moitié ouverte** : l'affichage croit personne connectée, mais `apiFetch` continue d'envoyer le jeton et les favoris se chargent quand même. Une session qu'on ne sait plus lire n'est pas une session — on repart de zéro, quitte à redemander une connexion.
+- **L'ordre des deux `useState` devient porteur de sens.** React exécute les initialiseurs dans l'ordre des appels : `user` d'abord (qui purge), `token` ensuite (qui lit après la purge). Intervertir les deux lignes ressusciterait le jeton d'une session qu'on vient de jeter. C'est fragile par nature, donc **commenté sur place** — une dépendance implicite qu'on ne peut pas supprimer se documente à l'endroit exact où elle peut être cassée.
+
+La leçon générale : **tout ce qui vient du stockage du navigateur est une entrée non fiable**, au même titre qu'un `req.body`. Ce n'est pas moi qui l'ai écrit, c'est *un* moi d'une version précédente du site — ou n'importe quoi d'autre. Et une exception levée **pendant le rendu** n'a pas le même coût qu'ailleurs : elle ne casse pas une action, elle casse **l'application entière**, y compris les commandes qui permettraient de s'en remettre.
 
 ### 92. `authMiddleware` : la signature ne suffit pas, il faut la fraîcheur
 
