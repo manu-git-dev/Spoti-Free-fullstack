@@ -204,8 +204,6 @@ dans mon propre code sans être appliquée partout — est dans les
 | Fichier | |
 |---|---|
 | [`NOTES-APPRENTISSAGE.md`](NOTES-APPRENTISSAGE.md) | Le journal : chaque difficulté, sa cause, son raisonnement |
-| [`SUIVI-PROJET.md`](SUIVI-PROJET.md) | L'état d'avancement et les décisions prises |
-| [`DEPLOIEMENT.md`](DEPLOIEMENT.md) | La checklist de mise en production |
 | [`docs/FEATURE-depot-musique.md`](docs/FEATURE-depot-musique.md) | La spécification du dépôt avec modération |
 
 ---
