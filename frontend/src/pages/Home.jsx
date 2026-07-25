@@ -31,20 +31,18 @@ function EnTeteRangee({ titre, lien }) {
   );
 }
 
-// Degrade unique par pastille de genre. Plutot qu'une palette fixe (qui se repete des qu'il y a
-// plus de genres que de couleurs), on repartit les genres sur TOUT le cercle chromatique : la
-// teinte est `rang / total * 360`, donc chaque carte tombe sur une teinte differente, regulierement
-// espacee. Comme elle vient du rang et non de `index % colonnes`, aucun banding vertical. Une
-// palette de marque (primary/accent/secondary) ne pourrait pas garantir l'unicite ; c'est le choix
-// assume "arc-en-ciel", comme les tuiles de genre de Spotify.
-function styleDegradeGenre(rang, total) {
-  const teinte = Math.round((rang * 360) / Math.max(total, 1));
-  return {
-    backgroundImage: `linear-gradient(135deg, hsl(${teinte} 62% 42%), hsl(${
-      (teinte + 40) % 360
-    } 70% 55%))`,
-  };
-}
+// Les pastilles de genre portaient un degrade arc-en-ciel calcule sur le rang (teinte =
+// rang / total * 360). Retire le 2026-07-25 : ces couleurs etaient choisies HORS du theme, en HSL
+// en dur, donc elles ne suivaient ni le clair ni le sombre et juraient avec le reste de la page.
+//
+// Un genre n'est pas une donnee quantitative ni une categorie qu'on doit distinguer d'un coup
+// d'oeil : son libelle est ecrit dessus. La couleur ne portait donc aucune information — elle
+// n'etait que du bruit, et douze bruits differents sur une meme rangee.
+//
+// Elles utilisent maintenant la meme surface que les cartes du Top 5 (`CarteClassement`) :
+// `bg-background/50` + `border-border`. C'est ce que la regle des surfaces impose pour ce qui vit
+// DANS un panneau — et le `main` est `bg-card` (voir App.jsx). Toute la page se lit ainsi comme un
+// seul systeme, au lieu d'une rangee qui crie au milieu des autres.
 
 export default function Home({
   musiques,
@@ -211,18 +209,20 @@ export default function Home({
           <section>
             <EnTeteRangee titre="Parcourir par genre" />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {genresDisponibles.map(({ genre, nombre }, index) => (
+              {genresDisponibles.map(({ genre, nombre }) => (
                 <Link
                   key={genre}
                   to="/bibliotheque"
                   onClick={() => setGenreFiltre(genre)}
-                  style={styleDegradeGenre(index, genresDisponibles.length)}
-                  className="relative flex h-24 flex-col justify-between overflow-hidden rounded-xl p-4 transition hover:scale-[1.02]"
+                  className="relative flex h-24 flex-col justify-between overflow-hidden rounded-xl border border-border bg-background/50 p-4 transition-all hover:border-accent hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10"
                 >
-                  <span className="font-semibold capitalize text-white">
+                  {/* `text-foreground` / `text-muted-foreground` et non `text-white` : le blanc
+                      n'etait lisible que parce que le degrade etait toujours sombre. Sur une
+                      surface du theme, il disparaitrait en theme clair. */}
+                  <span className="font-semibold capitalize text-foreground">
                     {genre}
                   </span>
-                  <span className="text-xs text-white/80">
+                  <span className="text-xs text-muted-foreground">
                     {nombre} {nombre > 1 ? "titres" : "titre"}
                   </span>
                 </Link>
