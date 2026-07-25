@@ -24,7 +24,7 @@ import { apiFetch, messageErreur } from "@/lib/api";
 //     bien la bonne personne devant l'ecran).
 //
 // L'action est irreversible et emporte playlists, favoris et depots : elle merite les deux.
-export default function SupprimerCompte({ setUser, setToken }) {
+export default function SupprimerCompte({ fermerSession }) {
   const [ouverte, setOuverte] = useState(false);
   const [motDePasse, setMotDePasse] = useState("");
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
@@ -47,10 +47,7 @@ export default function SupprimerCompte({ setUser, setToken }) {
       // Le compte n'existe plus : la session locale ne vaut plus rien. On la purge nous-memes
       // plutot que d'attendre le prochain 401 — sinon l'app afficherait encore "Bonjour X"
       // pour un utilisateur qui vient de disparaitre.
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      setToken(null);
-      setUser(null);
+      fermerSession();
       toast.success(donnees?.message ?? "Ton compte a été supprimé.");
       navigate("/");
     } catch (erreur) {

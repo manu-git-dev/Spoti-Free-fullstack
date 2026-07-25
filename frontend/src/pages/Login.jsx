@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function Login({ setUser, setToken }) {
+export default function Login({ ouvrirSession }) {
   const [message, setMessage] = useState("");
   const [typeMessage, setTypeMessage] = useState("");
   const navigate = useNavigate();
@@ -32,10 +32,8 @@ export default function Login({ setUser, setToken }) {
         setMessage(donnees.message);
         return;
       }
-      localStorage.setItem("token", donnees.token);
-      localStorage.setItem("user", JSON.stringify(donnees.user));
-      setToken(donnees.token);
-      setUser(donnees.user);
+      // Un seul geste : stockage + etat React, les deux moities de la session ensemble.
+      ouvrirSession({ token: donnees.token, user: donnees.user });
       setTypeMessage("success");
       setMessage(donnees.message);
       setTimeout(() => {

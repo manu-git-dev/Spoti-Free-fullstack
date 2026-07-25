@@ -35,9 +35,8 @@ function Stat({ valeur, libelle, classe, icone: Icone }) {
 export default function Profil({
   user,
   musiquesLikee,
-  setUser,
   token,
-  setToken,
+  fermerSession,
   playlists,
 }) {
   const [infoUser, setInfoUser] = useState({});
@@ -152,10 +151,10 @@ export default function Profil({
               elle ne doit pas se trouver sous le doigt de quelqu'un qui cherchait juste a se
               deconnecter. */}
           <div className="flex justify-center">
-            <Deconnexion setUser={setUser} setToken={setToken} />
+            <Deconnexion fermerSession={fermerSession} />
           </div>
           <div className="flex justify-center border-t border-border pt-4">
-            <SupprimerCompte setUser={setUser} setToken={setToken} />
+            <SupprimerCompte fermerSession={fermerSession} />
           </div>
         </div>
       </Page>

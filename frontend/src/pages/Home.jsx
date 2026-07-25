@@ -52,8 +52,7 @@ export default function Home({
   user,
   musiquesLikee,
   setMusiquesLikee,
-  setUser,
-  setToken,
+  fermerSession,
   currentMusic,
   genresDisponibles,
   setGenreFiltre,
@@ -124,7 +123,7 @@ export default function Home({
                 l'element masque est lui-meme l'enfant du flex, et `display:none` le retire
                 entierement du calcul — donc aucun `gap-3` fantome. */}
             <div className="hidden md:block">
-              <Deconnexion setUser={setUser} setToken={setToken} />
+              <Deconnexion fermerSession={fermerSession} />
             </div>
             <Link
               to={"/profil"}

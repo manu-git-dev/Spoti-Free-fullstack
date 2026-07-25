@@ -13,6 +13,8 @@
 //    dans une session morte ("Bonjour X" alors que toutes les actions echouaient). Desormais
 //    *tout* 401 declenche `surSessionExpiree`, quel que soit l'appel qui l'a provoque.
 
+import { lireToken } from "./session";
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 // App enregistre ici sa fonction de deconnexion au montage. On passe par un callback plutot
@@ -59,7 +61,7 @@ export async function apiFetch(chemin, options = {}) {
   // fichier (audio, image) et non des donnees — l'appelant recupere alors `reponse` et fait ce
   // qu'il veut du corps (`.blob()`, `.text()`...).
   const { body, headers, brut = false, ...reste } = options;
-  const token = localStorage.getItem("token");
+  const token = lireToken();
 
   // Un envoi de fichiers passe par FormData, pas par du JSON. Dans ce cas il ne faut SURTOUT
   // pas poser `Content-Type` soi-meme : le navigateur doit le generer lui-meme, car il doit y

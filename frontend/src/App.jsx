@@ -27,34 +27,13 @@ import AdminDepots from "./pages/AdminDepots";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { apiFetch, definirSurSessionExpiree } from "@/lib/api";
-
-// Relit l'utilisateur stocke a l'ouverture de l'app.
-//
-// `JSON.parse` LEVE sur une entree illisible (localStorage edite a la main, extension du
-// navigateur, ancien format laisse par une version precedente du site). Comme cet appel vit dans
-// l'initialiseur d'un `useState`, il s'executait PENDANT LE RENDU : l'exception ne remontait
-// nulle part, React abandonnait l'arbre, et l'ecran restait blanc. Le pire de ce symptome, c'est
-// qu'il ne se repare pas tout seul — sans interface, la personne ne peut meme pas se deconnecter
-// pour sortir de l'etat casse. Elle doit vider son stockage a la main, ce que personne ne sait
-// faire.
-//
-// On purge donc les DEUX cles, pas seulement celle qui est illisible : garder le token alors que
-// l'utilisateur est `null` laisserait une session a moitie ouverte (l'affichage croit personne
-// connectee, mais `apiFetch` continue d'envoyer le jeton et les favoris se chargeraient quand
-// meme). Une session qu'on ne sait plus lire n'est pas une session : on repart de zero, quitte a
-// redemander une connexion.
-function lireUtilisateurStocke() {
-  const brut = localStorage.getItem("user");
-  if (!brut) return null;
-
-  try {
-    return JSON.parse(brut);
-  } catch {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    return null;
-  }
-}
+import {
+  SESSION_VIDE,
+  ecrireSession,
+  effacerSession,
+  lireSession,
+  lireToken,
+} from "@/lib/session";
 
 function App() {
   const emplacement = useLocation();
@@ -76,12 +55,30 @@ function App() {
   const [top5, setTop5] = useState([]);
   const [historique, setHistorique] = useState([]);
 
-  const [user, setUser] = useState(lireUtilisateurStocke);
-  // Declare APRES `user` a dessein : React execute les initialiseurs dans l'ordre des appels a
-  // `useState`, donc si la relecture ci-dessus a purge une session illisible, le token a deja
-  // disparu quand on le lit ici. Intervertir les deux lignes ressusciterait le jeton d'une
-  // session qu'on vient de jeter.
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  // UN SEUL etat pour la session, et non deux (`user` et `token` separes).
+  //
+  // Deux etats, c'etait deux moities qu'on pouvait desynchroniser : n'importe quel code pouvait
+  // poser l'un sans l'autre, et l'ordre des deux `useState` devenait porteur de sens (celui qui
+  // purgeait devait tourner en premier). Un objet unique rend cet etat impossible a exprimer :
+  // on ouvre ou on ferme la session, jamais la moitie.
+  //
+  // On continue de passer `user` et `token` separement aux composants : c'est ce dont ils ont
+  // besoin, ils n'ont pas a connaitre la forme de la session.
+  const [session, setSession] = useState(lireSession);
+  const { user, token } = session;
+
+  // Les deux seules transitions possibles, nommees par ce qu'elles FONT et non par ce qu'elles
+  // ecrivent. Chacune touche le stockage ET l'etat React dans le meme geste — c'est justement
+  // leur desynchronisation qui produisait des sessions fantomes.
+  const ouvrirSession = useCallback((nouvelle) => {
+    ecrireSession(nouvelle);
+    setSession(nouvelle);
+  }, []);
+
+  const fermerSession = useCallback(() => {
+    effacerSession();
+    setSession(SESSION_VIDE);
+  }, []);
 
   useEffect(() => {
     apiFetch("/api/musics")
@@ -125,15 +122,15 @@ function App() {
   // chaque action echouait avec "Token invalide". On purge la session des qu'une route
   // protegee repond 401.
   const sessionExpiree = useCallback(() => {
-    // deja deconnecte : on ne re-affiche pas le message a chaque appel
-    if (!localStorage.getItem("token")) return;
+    // Deja deconnecte : on ne re-affiche pas le message a chaque appel. On interroge le
+    // STOCKAGE et non le state : plusieurs 401 peuvent arriver dans le meme tour de boucle
+    // (deux requetes parties ensemble), avant que React n'ait re-rendu quoi que ce soit. Le
+    // stockage, lui, est deja a jour des la premiere purge.
+    if (!lireToken()) return;
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
+    fermerSession();
     toast.info("Ta session a expiré, reconnecte-toi.");
-  }, []);
+  }, [fermerSession]);
 
   // Branche l'interception des 401 : desormais N'IMPORTE quel appel via apiFetch qui recoit
   // un 401 (une action isolee comme un like, pas seulement le chargement initial) purge la
@@ -307,9 +304,8 @@ function App() {
                   setCurrentQueue={setCurrentQueue}
                   musiquesLikee={musiquesLikee}
                   setMusiquesLikee={setMusiquesLikee}
-                  setUser={setUser}
                   token={token}
-                  setToken={setToken}
+                  fermerSession={fermerSession}
                   currentMusic={currentMusic}
                   genresDisponibles={genresDisponibles}
                   setGenreFiltre={setGenreFiltre}
@@ -338,9 +334,7 @@ function App() {
             />
             <Route
               path="/connexion"
-              element={
-                <Login setUser={setUser} setToken={setToken} />
-              }
+              element={<Login ouvrirSession={ouvrirSession} />}
             />
             <Route path="/inscription" element={<Register />} />
             <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
@@ -403,9 +397,8 @@ function App() {
                 <Profil
                   user={user}
                   musiquesLikee={musiquesLikee}
-                  setUser={setUser}
                   token={token}
-                  setToken={setToken}
+                  fermerSession={fermerSession}
                   playlists={playlists}
                 />
               }

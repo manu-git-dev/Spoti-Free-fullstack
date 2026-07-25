@@ -2854,9 +2854,41 @@ La boucle se referme dans `App.jsx`, où le state est **initialisé depuis** `lo
 Le correctif est un `try/catch`, mais avec deux décisions dedans :
 
 - **On purge les DEUX clés**, pas seulement celle qui est illisible. Garder le token avec `user` à `null` laisserait une **session à moitié ouverte** : l'affichage croit personne connectée, mais `apiFetch` continue d'envoyer le jeton et les favoris se chargent quand même. Une session qu'on ne sait plus lire n'est pas une session — on repart de zéro, quitte à redemander une connexion.
-- **L'ordre des deux `useState` devient porteur de sens.** React exécute les initialiseurs dans l'ordre des appels : `user` d'abord (qui purge), `token` ensuite (qui lit après la purge). Intervertir les deux lignes ressusciterait le jeton d'une session qu'on vient de jeter. C'est fragile par nature, donc **commenté sur place** — une dépendance implicite qu'on ne peut pas supprimer se documente à l'endroit exact où elle peut être cassée.
+- **L'ordre des deux `useState` devenait porteur de sens.** React exécute les initialiseurs dans l'ordre des appels : `user` d'abord (qui purge), `token` ensuite (qui lit après la purge). Intervertir les deux lignes ressuscitait le jeton d'une session qu'on venait de jeter. Un commentaire sur place limitait les dégâts — mais c'était le symptôme d'un problème plus profond, réglé juste après (note 95).
 
 La leçon générale : **tout ce qui vient du stockage du navigateur est une entrée non fiable**, au même titre qu'un `req.body`. Ce n'est pas moi qui l'ai écrit, c'est *un* moi d'une version précédente du site — ou n'importe quoi d'autre. Et une exception levée **pendant le rendu** n'a pas le même coût qu'ailleurs : elle ne casse pas une action, elle casse **l'application entière**, y compris les commandes qui permettraient de s'en remettre.
+
+### 95. Deux états qui doivent bouger ensemble n'en font qu'un
+
+*Suite directe de la note 91. Le `try/catch` fermait le trou, mais laissait derrière lui une gêne : l'ordre de deux lignes devenait significatif. Quand un correctif oblige à écrire « ne déplace surtout pas ça », c'est en général qu'on soigne un symptôme.*
+
+**Le vrai problème.** `user` et `token` étaient **deux `useState` séparés** pour décrire **une seule chose** : la session. Rien dans le code n'empêchait de poser l'un sans l'autre. J'avais donc quatre états représentables, dont deux n'ont aucun sens :
+
+| `user` | `token` | ce que ça veut dire |
+| --- | --- | --- |
+| rempli | rempli | connecté ✔ |
+| `null` | `null` | déconnecté ✔ |
+| `null` | rempli | l'interface affiche « connecte-toi », `apiFetch` envoie quand même le jeton ✗ |
+| rempli | `null` | « Bonjour Manu » alors que toutes les actions échouent ✗ |
+
+Ces deux dernières lignes ne sont pas théoriques : **c'est exactement le bug que le `try/catch` venait de colmater**, et celui d'avant (la session expirée qui affichait toujours « Bonjour X »).
+
+**Le correctif : rendre l'état invalide impossible à écrire.**
+
+```jsx
+const [session, setSession] = useState(lireSession);
+const { user, token } = session;
+```
+
+Un objet unique, et **deux transitions nommées** — `ouvrirSession()` et `fermerSession()` — qui touchent le stockage **et** l'état React dans le même geste. On ne peut plus poser une moitié : la moitié n'existe plus comme valeur exprimable. Et l'ordre des lignes redevient sans importance, parce qu'il n'y a plus qu'une ligne.
+
+**Ce que ça a fait apparaître.** En cherchant qui appelait `setUser`/`setToken`, j'ai trouvé **quatre copies** du même `removeItem("token")` + `removeItem("user")` (App, Login, Deconnexion, SupprimerCompte). Quatre endroits qui devaient connaître le nom des clés et penser à les traiter **par paire**. Tout est parti dans `frontend/src/lib/session.js`, seul module qui sait qu'une session est faite de deux clés — même rôle que `api.js` pour les appels réseau.
+
+**Le compromis, parce qu'il y en a un.** Ce refactor a touché **7 fichiers** pour zéro fonctionnalité nouvelle. Sur une base plus grosse, ou la veille d'une démo, l'arbitrage pourrait pencher pour « on garde le `try/catch` et on note la dette ». Ce qui l'a fait pencher ici : la session est ce qui casse le plus **silencieusement** (personne ne signale « l'app croit que je suis déconnecté mais charge mes favoris »), les 193 tests e2e donnent un filet pour refactorer sans peur, et le changement est purement mécanique — aucune règle métier ne bouge.
+
+**La leçon transférable, et c'est la plus réutilisable de tout le projet :** quand deux morceaux d'état doivent **toujours** changer ensemble, ce sont deux moitiés d'un seul état. Les garder séparés, c'est se donner des combinaisons invalides à surveiller pour le restant de la vie du code — et la surveillance, tôt ou tard, échoue. Le bon réflexe n'est pas de mieux surveiller, c'est de **rendre l'état invalide inexprimable**. Le même raisonnement s'applique côté serveur : c'est exactement pourquoi `password_hash` et `password_changed_at` sont écrits dans **une seule requête** (note 83).
+
+**Vérifié :** 193 tests e2e au vert, et le cas non couvert par les tests rejoué à la main dans le navigateur — `user` corrompu + jeton présent, rechargement : l'app monte normalement et les deux clés ont disparu.
 
 ### 92. `authMiddleware` : la signature ne suffit pas, il faut la fraîcheur
 

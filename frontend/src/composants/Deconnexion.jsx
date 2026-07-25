@@ -3,14 +3,13 @@ import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export default function Deconnexion({ setUser, setToken }) {
+export default function Deconnexion({ fermerSession }) {
   const navigate = useNavigate();
 
   function handleDeconnexion() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
+    // Le stockage ET l'etat React partent ensemble, dans `fermerSession` (voir lib/session.js).
+    // Ce composant n'a plus a savoir quelles cles composent une session.
+    fermerSession();
     toast.success("Déconnexion réussie");
     navigate("/");
   }
