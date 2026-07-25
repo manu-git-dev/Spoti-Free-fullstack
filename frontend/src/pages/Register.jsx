@@ -12,7 +12,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, messageErreur } from "@/lib/api";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,6 @@ function IconeEtat({ valide, enErreur }) {
 
 export default function Register() {
   const [message, setMessage] = useState("");
-  const [typeMessage, setTypeMessage] = useState("");
   const navigate = useNavigate();
 
   // Ces trois champs sont CONTROLES (leur valeur vit dans un state) : c'est ce qui permet de les
@@ -89,7 +89,6 @@ export default function Register() {
     // Le bouton reste toujours cliquable (un bouton grise sans explication laisse l'utilisateur
     // sans savoir ce qu'on lui reproche). C'est donc ici qu'on bloque l'envoi.
     if (!emailOk || !motDePasseOk || !confirmationOk) {
-      setTypeMessage("error");
       setMessage(
         !confirmationOk && emailOk && motDePasseOk
           ? "Les mots de passe ne correspondent pas."
@@ -114,17 +113,25 @@ export default function Register() {
         body: user,
       });
       if (!reponse.ok) {
-        setTypeMessage("error");
-        setMessage(donnees.message);
+          setMessage(messageErreur(reponse, donnees));
         return;
       }
-      setTypeMessage("success");
-      setMessage(donnees.message);
-      setTimeout(() => {
-        navigate("/connexion");
-      }, 3000);
+
+      // PAS d'auto-connexion, et c'est un choix : le flux standard insere ici une verification
+      // d'email. On ne l'implemente pas (pas d'infra mail dediee pour ca), mais le parcours ne
+      // doit pas contredire l'endroit ou elle irait. On renvoie donc vers la connexion.
+      //
+      // Le succes s'annonce en toast et non en alerte sur CETTE page : la page qu'on quitte n'est
+      // pas le bon endroit pour un message, et le toast, lui, survit a la navigation (le
+      // `<Toaster>` vit dans App). Personne n'attend : l'ancienne version imposait 3 secondes.
+      toast.success(`Compte créé, bienvenue ${user.pseudo} ! Connecte-toi.`);
+
+      // L'email voyage dans le `state` de la navigation — surtout PAS dans l'URL, ou il finirait
+      // dans l'historique du navigateur et les journaux du serveur. `replace` parce que revenir
+      // sur le formulaire d'inscription apres coup est une impasse : le renvoyer repondrait
+      // "email deja utilisee".
+      navigate("/connexion", { replace: true, state: { email } });
     } catch (erreur) {
-      setTypeMessage("error");
       setMessage("Impossible de contacter le serveur.");
       console.error(erreur.message);
     }
@@ -134,7 +141,7 @@ export default function Register() {
     <>
       {" "}
       {message ? (
-        <Alert variant={typeMessage === "success" ? "success" : "destructive"}>
+        <Alert variant="destructive">
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       ) : null}

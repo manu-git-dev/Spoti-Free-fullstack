@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch, messageErreur } from "@/lib/api";
@@ -12,6 +12,14 @@ export default function Login({ ouvrirSession }) {
   // phrase verte que personne ne lit — et n'impose pas d'attendre pour l'apprendre.
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  // L'email transmis par l'inscription qu'on vient de terminer (voir Register.jsx). Il arrive par
+  // le `state` de la navigation et non par l'URL : une adresse email est une donnee personnelle,
+  // elle n'a rien a faire dans une barre d'adresse, un historique ou un journal de serveur.
+  //
+  // `?.` parce que le `state` est `null` dans le cas normal — on arrive sur /connexion par le
+  // menu, pas seulement en sortant de l'inscription.
+  const emailPreRempli = useLocation().state?.email ?? "";
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -75,11 +83,15 @@ export default function Login({ ouvrirSession }) {
             <legend className="text-sm mb-1">Adresse mail</legend>
             <div className="relative">
               <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              {/* `defaultValue` et non `value` : le champ reste NON CONTROLE (sa valeur vit
+                  dans le DOM, lue par FormData a l'envoi). `value` sans `onChange` figerait la
+                  saisie — le champ deviendrait impossible a corriger. */}
               <Input
                 type="email"
                 name="email"
                 className="pl-8"
                 placeholder="ton@email.fr"
+                defaultValue={emailPreRempli}
                 required
               />
             </div>
@@ -88,11 +100,16 @@ export default function Login({ ouvrirSession }) {
             <legend className="text-sm mb-1">Mot de passe</legend>
             <div className="relative">
               <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              {/* Le curseur va droit au seul champ qui reste a remplir quand on arrive de
+                  l'inscription. Focus CONDITIONNEL : voler le focus a l'ouverture normale de la
+                  page ferait sauter l'ecran des lecteurs vocaux vers le milieu du formulaire,
+                  en sautant le titre. */}
               <Input
                 type="password"
                 className="pl-8"
                 placeholder="Ton mot de passe"
                 name="password"
+                autoFocus={Boolean(emailPreRempli)}
                 required
               />
             </div>
