@@ -6,6 +6,13 @@
          inline : la CSP de production interdit les scripts inline. Voir public/theme-init.js. -->
     <script src="/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iOS ne sait pas lire un favicon SVG : sans cette ligne, « Ajouter a l'ecran d'accueil »
+         pose une CAPTURE de la page en guise d'icone. Le PNG est genere a partir du meme SVG
+         (voir le commentaire dans favicon.svg), il n'y a donc qu'une seule source graphique. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Colore la barre du navigateur sur Android (Chrome) et la barre d'onglets de Safari macOS.
+         Meme violet que `--primary` du theme : la couleur du site commence avant le site. -->
+    <meta name="theme-color" content="#6D5DE7" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
