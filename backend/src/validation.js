@@ -132,6 +132,52 @@ export function genreValide(genre) {
 }
 
 // ---------------------------------------------------------------------------
+// Chemins des fichiers du catalogue
+//
+// `musics.src_audio` et `musics.src_image` sont des chemins RELATIFS a `public/`
+// (`musiques/xxx.mp3`, `images/xxx.jpg`). Deux routes s'en servent pour construire un chemin sur
+// le DISQUE — et c'est la que ca devient dangereux si la valeur vient du client.
+//
+// LE BUG REEL (audit du 2026-07-25). `PUT /musics/update/:id` refusait deja ces champs, avec ce
+// commentaire : « un chemin de fichier venant du client est une valeur qu'on ne controle pas ».
+// Mais `POST /musics/ajouter`, dix lignes plus haut, les acceptait bruts. La chaine complete,
+// testee en vrai :
+//   1. ajouter un morceau avec `srcAudio: "../.env"`  -> 201, stocke tel quel ;
+//   2. supprimer ce morceau -> la route fait `fs.unlink(public/ + "../.env")` ;
+//   3. le fichier HORS de `public/` disparait.
+// Reserve aux admins, donc pas exploitable par un visiteur — mais ca transforme « compte admin
+// compromis » en « suppression de fichiers arbitraires sur le serveur », ce qui deborde largement
+// le perimetre voulu du role. Un admin a les droits que son role EXIGE, pas tous ceux qui sont
+// techniquement possibles.
+//
+// On valide donc a l'ENTREE (ici), et on verifie en plus le confinement avant chaque `unlink`
+// (musicRoute.js). Ceinture ET bretelles : la validation empeche la valeur d'entrer en base, le
+// confinement protege les lignes qui y sont deja.
+//
+// La regex interdit le `/` — donc aucun sous-chemin, donc aucun `..` possible — et exige un
+// premier caractere alphanumerique, ce qui ecarte aussi les noms caches (`.env`) et `..` seul.
+// ---------------------------------------------------------------------------
+export const DOSSIERS_MEDIAS = Object.freeze({
+  audio: "musiques",
+  image: "images",
+});
+
+export const MESSAGE_CHEMIN_MEDIA =
+  "Les chemins de fichiers doivent être de la forme « musiques/nom.mp3 » et « images/nom.jpg ».";
+
+const NOM_DE_FICHIER = /^[A-Za-z0-9][A-Za-z0-9._-]*\.[A-Za-z0-9]+$/;
+
+/** Verifie qu'un chemin est bien `<dossier>/<nom de fichier>`, sans echappatoire. */
+export function cheminMediaValide(chemin, dossier) {
+  if (typeof chemin !== "string") return false;
+
+  const prefixe = `${dossier}/`;
+  if (!chemin.startsWith(prefixe)) return false;
+
+  return NOM_DE_FICHIER.test(chemin.slice(prefixe.length));
+}
+
+// ---------------------------------------------------------------------------
 // URL de source
 //
 // Cette valeur finit dans un `href` affiche a tous les visiteurs. Se contenter de verifier

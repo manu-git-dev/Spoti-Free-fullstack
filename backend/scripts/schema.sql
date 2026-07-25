@@ -129,6 +129,7 @@ CREATE TABLE `users` (
   `password_hash` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `role` enum('user','admin') NOT NULL DEFAULT 'user',
+  `password_changed_at` datetime DEFAULT NULL COMMENT 'Date du dernier changement de mot de passe ; invalide les JWT emis avant',
   PRIMARY KEY (`id_user`),
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

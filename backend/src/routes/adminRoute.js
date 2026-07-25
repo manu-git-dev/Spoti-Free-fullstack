@@ -1,12 +1,39 @@
 import express from "express";
 import crypto from "node:crypto";
+import rateLimit from "express-rate-limit";
 
 import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
+import { limitesDesactivees } from "../config.js";
 import { nettoyerDepotsEnAttente } from "../depots.js";
 
 const router = express.Router();
+
+// `/visite` est la seule route PUBLIQUE de l'app qui ECRIT en base : chaque appel insere une
+// ligne, sans authentification. Elle etait la seule a ne pas avoir de limiteur — un oubli, pas
+// une decision (toutes les autres routes publiques en ecriture en ont un : /contact, /ecoute,
+// /inscription, /connexion, /mot-de-passe-oublie, /submissions).
+//
+// Mesure faite le 2026-07-25 avant correction : 500 requetes anonymes acceptees en 105 ms, soit
+// 500 lignes ecrites. Laisse tourner une nuit, ca remplit le disque du serveur — et ca fausse
+// au passage toutes les statistiques du tableau de bord, qui n'ont d'interet que si elles sont
+// vraies.
+//
+// La limite est VOLONTAIREMENT haute : le front appelle cette route a CHAQUE changement de page
+// (voir App.jsx), donc une navigation normale en declenche beaucoup. 300 par quart d'heure laisse
+// largement respirer un visiteur reel tout en rendant l'inondation inoperante.
+//
+// Le 429 n'a aucune consequence visible : le front n'attend meme pas la reponse — un echec de
+// comptage ne doit jamais gener la navigation.
+const limiteVisite = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  skip: () => limitesDesactivees,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Trop de pages vues enregistrées d'affilée." },
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/visite — enregistrer une page vue
@@ -15,7 +42,7 @@ const router = express.Router();
 // C'est le FRONT qui appelle cette route a chaque changement de route (voir App.jsx) : cote
 // serveur on ne verrait que des appels API, et une seule page en declenche plusieurs.
 // ---------------------------------------------------------------------------
-router.post("/visite", async (req, res) => {
+router.post("/visite", limiteVisite, async (req, res) => {
   try {
     const chemin = String(req.body.chemin ?? "/").slice(0, 255);
 

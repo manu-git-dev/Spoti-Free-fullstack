@@ -10,9 +10,16 @@ import {
   licenceValide,
   urlDeLicence,
   sourceUrlValide,
+  cheminMediaValide,
+  DOSSIERS_MEDIAS,
   MESSAGE_LICENCE,
   MESSAGE_SOURCE_URL,
+  MESSAGE_CHEMIN_MEDIA,
 } from "../validation.js";
+
+// Racine des fichiers servis publiquement. Sert de reference au controle de confinement de la
+// suppression : tout chemin qui, une fois resolu, sort de ce dossier n'est pas a nous.
+const DOSSIER_PUBLIC = path.join(process.cwd(), "public");
 
 const router = express.Router();
 
@@ -120,6 +127,17 @@ router.post("/ajouter", authMiddleware, adminMiddleware, async (req, res) => {
 
   if (!sourceUrlValide(sourceUrl)) {
     return res.status(400).json({ message: MESSAGE_SOURCE_URL });
+  }
+
+  // Les chemins de fichiers sont les seules valeurs de cette route qui finissent en argument d'un
+  // `fs.unlink` (a la suppression du morceau). Sans ce controle, `../.env` entrait en base et
+  // supprimer le morceau effacait le fichier — voir le detail dans validation.js. C'est la meme
+  // regle que celle qui a fait retirer ces champs de `PUT /update/:id` : elle manquait juste ici.
+  if (
+    !cheminMediaValide(srcAudio, DOSSIERS_MEDIAS.audio) ||
+    !cheminMediaValide(srcImage, DOSSIERS_MEDIAS.image)
+  ) {
+    return res.status(400).json({ message: MESSAGE_CHEMIN_MEDIA });
   }
 
   try {
@@ -283,8 +301,28 @@ router.delete(
 
         if (nb > 0) continue; // encore utilise par un autre morceau : on n'y touche pas
 
+        // CONFINEMENT — la deuxieme moitie du correctif du 2026-07-25 (la premiere etant la
+        // validation a l'entree, dans /ajouter).
+        //
+        // `path.resolve` applique reellement les `..` : on compare donc le chemin FINAL, pas la
+        // chaine qu'on croit avoir. Tout ce qui atterrit hors de `public/` n'est pas un fichier
+        // du catalogue, quoi qu'en dise la base — on refuse d'y toucher.
+        //
+        // Pourquoi garder ce test alors que /ajouter valide deja ? Parce que la validation
+        // protege les lignes A VENIR, pas celles qui sont deja en base. Et parce qu'une regle de
+        // saisie s'oublie a la prochaine route qui ecrira dans `musics` : ce test-ci, lui, est
+        // au contact du `unlink`, la ou le degat se produit.
+        const absolu = path.resolve(DOSSIER_PUBLIC, relatif);
+
+        if (!absolu.startsWith(DOSSIER_PUBLIC + path.sep)) {
+          console.error(
+            `Chemin hors de public/ refusé à la suppression : ${relatif}`,
+          );
+          continue;
+        }
+
         try {
-          await fs.unlink(path.join(process.cwd(), "public", relatif));
+          await fs.unlink(absolu);
         } catch (error) {
           // Fichier deja absent : ce n'est pas une raison de faire echouer la suppression.
           if (error.code !== "ENOENT") console.error(error);

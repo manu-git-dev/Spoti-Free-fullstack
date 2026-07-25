@@ -2609,3 +2609,116 @@ Une seule règle `width` est émise par cas : il n'y a plus d'arbitrage, donc pl
 **Ce qui l'a révélé :** la capture d'écran. Aucune erreur, aucun avertissement, aucun test rouge — un titre sur deux lignes ne casse rien. Sans un coup d'œil au rendu réel, ça partait en production. Même leçon que la note 81 : afficher/regarder le résultat, pas seulement le verdict.
 
 ---
+
+## 2026-07-25 — Trois failles trouvées en auditant l'app entière
+
+*Cas réel : audit de sécurité complet du projet (lecture des 3 451 lignes du backend + 37 tests d'attaque écrits pour l'occasion). Les 193 tests e2e passaient, ESLint était propre, le build aussi — et il y avait quand même trois trous. Une suite verte dit que ce qu'on a pensé à tester marche, pas que l'app est sûre.*
+
+### 83. Un JWT ne se révoque pas — donc changer de mot de passe ne fermait aucune session
+
+**Le problème.** Je testais le scénario le plus banal du monde : quelqu'un se fait voler sa session, il fait ce qu'on lui conseille partout — « change ton mot de passe ». J'ai émis un jeton, réinitialisé le mot de passe, puis rappelé `/api/users/profil` avec **l'ancien** jeton.
+
+```
+Jeton émis, profil accessible ......... 200
+Mot de passe réinitialisé ............. 200
+Ancien jeton APRÈS le changement ...... 200   ← il marche encore
+```
+
+**Pourquoi.** C'est la nature même du JWT, pas un bug d'étourderie. Un jeton est **autonome** : il contient ses infos et sa signature, et `jwt.verify` n'a besoin de rien d'autre pour dire « il est bon ». C'est tout son intérêt — vérifier une session sans toucher la base. Mais le revers est exactement le même fait : **rien ne peut l'annuler avant son expiration**. Pendant 24 h, l'attaquant restait connecté. La seule action de reprise de contrôle offerte par l'app ne reprenait rien.
+
+**Ce qu'il faut comprendre :** « sans état » (*stateless*) et « révocable » sont contradictoires. On ne peut pas avoir les deux gratuitement. Pour révoquer, il faut réintroduire de l'état quelque part — la question est seulement *combien*.
+
+**Le correctif : le minimum d'état possible.** Pas une table de sessions, pas une liste noire de jetons — **une date**.
+
+```sql
+ALTER TABLE `users` ADD COLUMN `password_changed_at` DATETIME DEFAULT NULL;
+```
+
+```js
+// authMiddleware : on compare la date au `iat` ("issued at") que jwt.sign pose dans chaque jeton
+const [[utilisateur]] = await db.query(
+  "SELECT UNIX_TIMESTAMP(`password_changed_at`) AS changement FROM `users` WHERE id_user = ?",
+  [decoded.id_user],
+);
+if (utilisateur?.changement && decoded.iat < utilisateur.changement) {
+  return res.status(401).json({ message: "Session expirée : le mot de passe a été modifié." });
+}
+```
+
+Une date périme d'un coup **tous** les jetons émis avant elle, sans avoir à les connaître un par un.
+
+**Deux détails qui m'auraient coûté cher :**
+
+1. **La conversion de fuseau, confiée à MySQL.** `iat` est un *epoch UTC* (secondes depuis 1970), la colonne un `DATETIME` dans le fuseau du serveur. Comparer en JavaScript, c'est raisonner sur les fuseaux — et une erreur d'une heure ici déconnecte tout le monde, ou personne. `UNIX_TIMESTAMP()` laisse la base faire la conversion : plus rien à deviner.
+
+2. **La comparaison stricte (`<`, pas `<=`).** Mon premier test de vérification a affiché « toujours 200 » alors que le correctif était bon : le script tournait si vite que le jeton et le changement tombaient **dans la même seconde**, donc `iat === changement`. En strict, ce cas passe — et c'est ce qu'on veut, sinon se reconnecter juste après une réinitialisation échouerait une fois sur deux, au hasard de l'arrondi. J'ai dû ajouter une attente de 2 s pour que le test prouve quelque chose.
+
+**Le compromis assumé.** Ce contrôle coûte **une requête SQL par appel authentifié** — précisément ce que le JWT cherchait à éviter. On le paie quand même, pour la raison qui avait déjà fait relire le rôle en base dans `adminMiddleware` : un jeton encore valable alors que les droits ont changé n'est pas une optimisation, c'est un trou. Une lecture sur clé primaire est la requête la moins chère qui existe.
+
+---
+
+### 84. La route publique qu'on avait oublié de limiter
+
+**Le problème.** `POST /api/admin/visite` (le compteur de pages vues) est **publique** et **écrit en base** à chaque appel. C'était la seule route dans ce cas sans limiteur.
+
+```
+500 requêtes anonymes en 105 ms → 500 acceptées, 0 bloquée
+→ 500 lignes écrites par un visiteur non authentifié
+```
+
+Laisse tourner une nuit : le disque du serveur se remplit. Et au passage, toutes les statistiques du tableau de bord deviennent fausses — or des stats n'ont d'intérêt que si elles sont vraies.
+
+**Comment je l'ai trouvée, et c'est ça le vrai enseignement.** Pas en lisant la route (elle est courte et a l'air inoffensive), mais en **listant les routes selon deux critères croisés** : *publique* et *écrit en base*. Il y en avait quatre. Trois avaient un limiteur, une non.
+
+```
+/contact ................ limiteContact       ✅
+/musics/ecoute/:id ...... limiteEcoute        ✅
+/users/inscription ...... limiteInscription   ✅
+/admin/visite ........... (rien)              ❌
+```
+
+L'anomalie ne se voit pas dans le fichier, elle se voit dans **le tableau**. Chercher l'exception dans une liste d'éléments comparables trouve des choses qu'aucune relecture ligne à ligne ne trouve — parce que le cerveau compare, alors qu'en lecture séquentielle il valide.
+
+**Le correctif** est le même limiteur que les autres, mais **volontairement haut** (300 / 15 min) : le front appelle cette route à *chaque* changement de page, donc une navigation normale en déclenche beaucoup. Une limite de sécurité trop serrée casse l'usage normal et finit par être retirée — ce qui la rend moins protectrice que si elle avait été large dès le départ.
+
+---
+
+### 85. Une règle de sécurité écrite noir sur blanc… et appliquée à une seule des deux routes
+
+**Le cas le plus instructif des trois, parce que la connaissance était déjà là.**
+
+Dans `musicRoute.js`, `PUT /update/:id` porte ce commentaire, écrit par moi :
+
+> *Sécurité — un chemin de fichier venant du client est une valeur qu'on ne contrôle pas. Rien n'empêcherait d'y écrire `../../.env` et de le faire servir par express.static.*
+
+Dix lignes plus haut, `POST /ajouter` les acceptait **bruts**. La chaîne, testée en vrai sur un fichier leurre :
+
+1. ajouter un morceau avec `srcAudio: "../CIBLE.txt"` → **201**, stocké tel quel en base ;
+2. supprimer ce morceau → la route fait `fs.unlink(path.join(cwd, "public", "../CIBLE.txt"))` ;
+3. **le fichier hors de `public/` disparaît.**
+
+Avec `../.env`, ça tue le backend au redémarrage suivant.
+
+**Ce que ça m'apprend.** J'avais compris le danger, je l'avais *documenté*, et la protection ne couvrait qu'une route sur deux. Un commentaire n'est pas un garde-fou : il n'est vérifié par rien. La règle avait été appliquée là où le bug avait fait mal, pas partout où le danger existait — c'est la **correction ponctuelle** au lieu de la **règle**. Exactement le motif que le CLAUDE.md interdit sous le nom de « rafistolage ».
+
+**Le correctif, en deux couches délibérées :**
+
+```js
+// 1. À l'ENTRÉE — dans validation.js, la source de vérité partagée
+const NOM_DE_FICHIER = /^[A-Za-z0-9][A-Za-z0-9._-]*\.[A-Za-z0-9]+$/;
+export function cheminMediaValide(chemin, dossier) { … }
+```
+La regex interdit le `/` — donc aucun sous-chemin, donc aucun `..` — et exige un premier caractère alphanumérique, ce qui écarte aussi `.env` et `..` tout seul.
+
+```js
+// 2. AU CONTACT DU DÉGÂT — juste avant le unlink
+const absolu = path.resolve(DOSSIER_PUBLIC, relatif);
+if (!absolu.startsWith(DOSSIER_PUBLIC + path.sep)) continue;
+```
+`path.resolve` applique **réellement** les `..` : on teste le chemin final, pas la chaîne qu'on croit avoir.
+
+**Pourquoi les deux, alors qu'une seule suffirait à fermer le trou ?** Parce qu'elles ne protègent pas la même chose. La validation protège les lignes **à venir** ; le confinement protège celles qui sont **déjà en base** (une valeur piégée insérée avant le correctif, ou par un script). Et surtout : une règle de saisie s'oublie à la prochaine route qui écrira dans `musics` — le test au contact du `unlink`, lui, est là où le dégât se produit, quel que soit le chemin parcouru pour y arriver.
+
+**La règle générale.** Quand on découvre qu'une valeur est dangereuse, la bonne question n'est pas « où est-ce que ça a cassé ? » mais **« par quelles portes cette valeur peut-elle entrer ? »**. Et on met le garde-fou aussi près que possible de l'endroit où le mal est fait — pas seulement à l'entrée qu'on a en tête ce jour-là.
+
+---

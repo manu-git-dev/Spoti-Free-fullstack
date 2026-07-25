@@ -490,10 +490,17 @@ router.post("/reinitialiser-mot-de-passe", async (req, res) => {
 
     const hash = await bcrypt.hash(motDePasse, 10);
 
-    await db.query("UPDATE users SET password_hash = ? WHERE id_user = ?", [
-      hash,
-      demande.id_user,
-    ]);
+    // `password_changed_at` est pose EN MEME TEMPS que le hash, dans la meme requete : ce sont
+    // les deux moities de la meme decision. C'est cette date qui perime les jetons emis avant
+    // (voir authMiddleware) — donc qui FERME les sessions ouvertes. Sans elle, reinitialiser son
+    // mot de passe apres un vol de session laissait l'attaquant connecte jusqu'a 24h.
+    //
+    // Les separer en deux requetes ouvrirait une fenetre ou le mot de passe est change mais les
+    // anciennes sessions encore valides.
+    await db.query(
+      "UPDATE users SET password_hash = ?, password_changed_at = NOW() WHERE id_user = ?",
+      [hash, demande.id_user],
+    );
 
     // Usage unique : le lien reste dans la boite mail, il ne doit plus rien pouvoir faire.
     await db.query(
