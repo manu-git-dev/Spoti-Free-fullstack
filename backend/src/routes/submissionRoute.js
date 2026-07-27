@@ -39,6 +39,31 @@ const DOSSIER_PUBLIC_IMAGES = path.join(process.cwd(), "public", "images");
 const EXTENSIONS_AUDIO = [".mp3", ".wav", ".ogg", ".m4a"];
 const EXTENSIONS_IMAGE = [".jpg", ".jpeg", ".png", ".webp"];
 
+/**
+ * Envoie un fichier de `uploads/` en repondant 404 s'il a disparu du disque.
+ *
+ * Pourquoi une fonction plutot qu'un `res.sendFile()` nu : `sendFile` signale son echec par
+ * CALLBACK, pas par exception. Le `try/catch` qui entoure l'appel ne le voit donc jamais, l'erreur
+ * remonte au gestionnaire global d'Express et le client recoit un **500 "Une erreur inattendue"**
+ * pour un simple fichier manquant. Or la base et le disque peuvent diverger (`uploads/` n'est pas
+ * versionne, un fichier peut avoir ete efface a la main) : c'est un cas NORMAL, pas une panne.
+ *
+ * `headersSent` : si l'envoi a deja commence, les en-tetes sont partis — on ne peut plus changer
+ * le statut, il ne reste qu'a couper la connexion.
+ */
+function envoyerFichierDepot(res, nomFichier) {
+  // On utilise le nom stocke EN BASE, jamais un nom venu de l'URL. Sinon une requete du type
+  // `/api/submissions/../../.env/audio` permettrait de lire n'importe quel fichier du serveur.
+  // `path.basename` est une ceinture de securite supplementaire : il retire tout chemin.
+  const chemin = path.join(DOSSIER_UPLOADS, path.basename(nomFichier));
+
+  return res.sendFile(chemin, (erreur) => {
+    if (!erreur) return;
+    if (res.headersSent) return res.end();
+    return res.status(404).json({ message: "Fichier introuvable." });
+  });
+}
+
 const TAILLE_MAX_AUDIO = 10 * 1024 * 1024; // 10 Mo
 const TAILLE_MAX_IMAGE = 2 * 1024 * 1024; //  2 Mo
 
@@ -380,15 +405,7 @@ router.get("/:id/audio", authMiddleware, adminMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Fichier introuvable." });
     }
 
-    // On utilise le nom stocke EN BASE, jamais un nom venu de l'URL. Sinon une requete du type
-    // `/api/submissions/../../.env/audio` permettrait de lire n'importe quel fichier du serveur.
-    // `path.basename` est une ceinture de securite supplementaire : il retire tout chemin.
-    const chemin = path.join(
-      DOSSIER_UPLOADS,
-      path.basename(depot.fichier_audio),
-    );
-
-    return res.sendFile(chemin);
+    return envoyerFichierDepot(res, depot.fichier_audio);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Erreur lors de la lecture." });
@@ -413,12 +430,7 @@ router.get("/:id/image", authMiddleware, adminMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Aucune pochette pour ce dépôt." });
     }
 
-    const chemin = path.join(
-      DOSSIER_UPLOADS,
-      path.basename(depot.fichier_image),
-    );
-
-    return res.sendFile(chemin);
+    return envoyerFichierDepot(res, depot.fichier_image);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Erreur lors de la lecture." });

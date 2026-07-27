@@ -82,6 +82,15 @@ export function ApercuPochette({ idSubmission, aPochette, titre }) {
     Boolean(aPochette),
   );
 
+  // Le hook ne detecte que l'echec du TELECHARGEMENT. Si la requete reussit mais que le contenu
+  // n'est pas une image decodable (fichier tronque, reponse d'erreur renvoyee en 200 par un
+  // intermediaire), l'`<img>` casse et le navigateur peint son icone de lien mort suivie du
+  // texte `alt` — « Pochette proposée pour test » s'affichait en clair dans la moderation.
+  // `onError` referme ce trou : on retombe sur le meme cadre que les autres echecs.
+  const [imageCassee, setImageCassee] = useState(false);
+
+  useEffect(() => setImageCassee(false), [url]);
+
   if (!aPochette) {
     return (
       <div className="w-20 h-20 shrink-0 rounded-xl border border-dashed border-border bg-background/40 flex items-center justify-center text-center">
@@ -94,11 +103,19 @@ export function ApercuPochette({ idSubmission, aPochette, titre }) {
     );
   }
 
-  if (erreur || !url) {
+  if (erreur || imageCassee || !url) {
     return (
-      <div className="w-20 h-20 shrink-0 rounded-xl border border-border bg-background/40 flex items-center justify-center">
-        <span className="text-[10px] text-muted-foreground">
-          {erreur ? "Erreur" : "…"}
+      <div className="w-20 h-20 shrink-0 rounded-xl border border-dashed border-border bg-background/40 flex items-center justify-center text-center">
+        <span className="text-[10px] leading-tight text-muted-foreground px-1">
+          {erreur || imageCassee ? (
+            <>
+              Pochette
+              <br />
+              illisible
+            </>
+          ) : (
+            "…"
+          )}
         </span>
       </div>
     );
@@ -115,6 +132,7 @@ export function ApercuPochette({ idSubmission, aPochette, titre }) {
       <img
         src={url}
         alt={`Pochette proposée pour ${titre}`}
+        onError={() => setImageCassee(true)}
         className="w-20 h-20 rounded-xl object-cover border border-border transition-transform hover:scale-105"
       />
     </a>
