@@ -63,6 +63,12 @@ body {
 }
 
 :root {
+  /* Dit au navigateur quelle palette donner aux widgets qu'il dessine LUI-MEME (popup des
+     `<select>`, champs date/file, autofill, barres de defilement). Sans elle, il suppose `light`
+     meme quand `.dark` est actif : il peint le popup en blanc pendant que les `<option>` heritent
+     de `--foreground` (quasi blanc en sombre) — texte blanc sur fond blanc. Invisible sur macOS,
+     qui delegue ce popup a AppKit ; bien visible sur Windows. Bug reel du 2026-07-27. */
+  color-scheme: light;
   --background: oklch(0.98 0 0);
   --foreground: oklch(0.32 0 0);
   --card: oklch(1 0 0);
@@ -105,6 +111,7 @@ body {
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.23 0.01 264.29);
   --foreground: oklch(0.92 0 0);
   --card: oklch(0.32 0.01 223.67);
