@@ -2993,3 +2993,61 @@ Texte blanc sur fond blanc. Mon CSS et le navigateur travaillaient chacun avec u
 **La leçon transposable.** Un bug qui n'apparaît que sur la machine d'un autre est un bug de **présupposé implicite** : quelque chose que mon environnement fournit gratuitement et que je n'avais jamais eu à déclarer. Même famille que la barre de navigation avalée par l'encoche (note 80) ou que le test qui lisait un fichier gitignoré et échouait en CI. Le réflexe : ne pas chercher ce qui est cassé chez l'autre, chercher **ce que ma machine me donnait sans que je le demande**.
 
 ---
+
+## 2026-07-27 — L'erreur que le `try/catch` ne voit pas
+
+### 97. `res.sendFile` échoue par callback, pas par exception
+
+*Cas réel : dans la modération des dépôts, une pochette s'affichait en icône de lien mort suivie du texte « Pochette proposée pour test ». Ce texte était l'attribut `alt` de l'`<img>`, que le navigateur peint quand l'image ne se décode pas.*
+
+**Ce que j'avais écrit.** La route qui sert un fichier de `uploads/` :
+```js
+router.get("/:id/image", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    // … lecture en base …
+    const chemin = path.join(DOSSIER_UPLOADS, path.basename(depot.fichier_image));
+    return res.sendFile(chemin);
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur lors de la lecture." });
+  }
+});
+```
+Ça **a l'air** protégé : il y a un `try/catch`.
+
+**Pourquoi le `catch` ne sert à rien ici.** `res.sendFile` ne lève pas. Il signale son échec en appelant un **callback** — et un callback s'exécute plus tard, hors de la pile d'appels du `try`. Quand le fichier manque, l'erreur part donc vers le gestionnaire global d'Express, qui répond **500 « Une erreur inattendue est survenue »**. Vérifié au `curl` : `statut=500`.
+
+C'est la règle générale à retenir : **un `try/catch` n'attrape que ce qui est levé de façon synchrone dans son bloc** (ou `await`é dedans). Une erreur qui arrive par callback lui est invisible. Le `try` donne alors une fausse impression de sécurité — pire que pas de `try` du tout, parce qu'on arrête de se poser la question.
+
+**Et 500 est le mauvais code.** La base et le disque peuvent diverger : `uploads/` n'est pas versionné, un fichier peut avoir été effacé. Une ligne qui pointe vers un fichier absent est un cas **normal**, pas une panne du serveur. 500 dit « je suis cassé » et déclenche les alertes ; **404** dit « cette ressource n'existe pas », ce qui est exactement la vérité.
+
+**Le correctif — une fonction, deux routes.**
+```js
+function envoyerFichierDepot(res, nomFichier) {
+  const chemin = path.join(DOSSIER_UPLOADS, path.basename(nomFichier));
+  return res.sendFile(chemin, (erreur) => {
+    if (!erreur) return;
+    if (res.headersSent) return res.end();   // l'envoi a commencé : trop tard pour un statut
+    return res.status(404).json({ message: "Fichier introuvable." });
+  });
+}
+```
+Les routes `audio` et `image` avaient **le même défaut** — factoriser corrige les deux et empêche la troisième copie de naître divergente.
+
+`headersSent` n'est pas décoratif : si l'erreur survient en cours d'envoi, les en-têtes sont déjà partis sur le réseau. On ne peut plus changer le statut ; tenter un `res.status()` lèverait *ERR_HTTP_HEADERS_SENT*. Il ne reste qu'à couper.
+
+### 98. Le composant gérait l'échec du téléchargement, pas celui de l'affichage
+
+Deuxième moitié du même bug, côté React. `ApercuPochette` savait afficher un cadre « Erreur » quand `fetch` échouait — mais rien ne couvrait le cas où le fichier **arrive** et n'est pas décodable. L'`<img>` cassait alors en silence et le navigateur peignait son icône + le texte `alt`.
+
+```jsx
+const [imageCassee, setImageCassee] = useState(false);
+useEffect(() => setImageCassee(false), [url]);   // repartir de zéro quand la source change
+…
+<img src={url} onError={() => setImageCassee(true)} … />
+```
+
+**La leçon.** J'avais raisonné « la requête réussit ou elle échoue », donc **deux** états. Il y en avait **trois** : elle échoue, elle réussit avec du contenu valide, elle réussit avec du contenu invalide. Le troisième n'était nulle part dans le code — et un état qu'on n'a pas prévu ne disparaît pas, il s'affiche comme il peut. Ici : sous la forme d'un texte technique en clair dans l'interface d'administration.
+
+À chaque fois que je charge une ressource externe, il y a **deux** points de défaillance, pas un : **l'obtenir** et **s'en servir**. `fetch` couvre le premier, `onError` le second.
+
+---
