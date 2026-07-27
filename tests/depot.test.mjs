@@ -302,6 +302,41 @@ await etape("validation de la pochette", async () => {
       imageServie.headers.get("content-type")?.includes("image/png"),
     `recu ${imageServie.status} — ${imageServie.headers.get("content-type")}`,
   );
+
+  // Les fichiers deposes ne doivent JAMAIS etre executables. Node ecrit avec `0666 & ~umask` :
+  // sans `chmod` explicite, le mode depend de la configuration de la machine, pas du code. Ce
+  // test verrouille la garantie — sinon elle ne tiendrait qu'a l'umask du serveur.
+  //
+  // On teste les bits d'execution des TROIS classes (proprietaire, groupe, autres) : `& 0o111`.
+  //
+  // Les noms de fichiers se lisent EN BASE : `mes-depots` ne les expose pas au client, et c'est
+  // volontaire — un nom de fichier interne n'a rien a faire dans une reponse d'API.
+  const { default: mysql } = await import("mysql2/promise");
+  const bdd = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  });
+  const [[fichiers]] = await bdd.query(
+    "SELECT fichier_audio, fichier_image FROM submissions WHERE id_submission = ?",
+    [depots[0].id_submission],
+  );
+  await bdd.end();
+
+  const dossierUploads = path.join(ICI, "..", "backend", "uploads");
+  const modes = [fichiers.fichier_audio, fichiers.fichier_image]
+    .filter(Boolean)
+    .map((nom) => {
+      const mode = fs.statSync(path.join(dossierUploads, nom)).mode;
+      return { nom, octal: (mode & 0o777).toString(8), executable: (mode & 0o111) !== 0 };
+    });
+  verifier(
+    "depot : aucun fichier depose n'est executable",
+    modes.length > 0 && modes.every((m) => !m.executable),
+    modes.map((m) => `${m.octal}`).join(", "),
+  );
 });
 
 // ---------------------------------------------------------------------------

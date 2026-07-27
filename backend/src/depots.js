@@ -103,6 +103,38 @@ export async function validerImageDeposee(nomFichier) {
   return nomCorrige;
 }
 
+/**
+ * Retire le droit d'EXECUTION des fichiers fraichement deposes (mode 644).
+ *
+ * Ce que ca change fonctionnellement : rien. 644 = lisible par tous, modifiable par son
+ * proprietaire, executable par personne. Node lit ces fichiers, nginx les lit — aucun des deux
+ * n'a jamais eu besoin de les lancer. On retire un droit qui ne servait pas.
+ *
+ * Pourquoi le faire quand meme : Node ecrit avec `0666 & ~umask`. Sur un serveur ou l'umask est
+ * celui qu'on croit, ca donne deja 644 — mais l'umask est une propriete de l'ENVIRONNEMENT, pas
+ * du code. Elle depend de la configuration du service, elle peut changer sans que personne y
+ * pense, et rien dans le depot ne la documente. Poser le mode explicitement transforme une
+ * supposition sur la machine en garantie du programme.
+ *
+ * Ce n'est PAS ce qui protege des fichiers malveillants — rien n'execute `uploads/` de toute
+ * facon, et le vrai vecteur d'un fichier depose reste le PARSEUR qui le lit (`music-metadata`).
+ * C'est une ceinture par-dessus la bretelle : le genre de defense qui ne sert que le jour ou une
+ * AUTRE protection a lache.
+ *
+ * Best effort, comme la suppression : un depot ne doit pas echouer parce qu'un `chmod` a rate.
+ */
+export async function retirerDroitsDExecution(...noms) {
+  await Promise.all(
+    noms.filter(Boolean).map(async (nom) => {
+      try {
+        await fs.chmod(path.join(DOSSIER_UPLOADS, path.basename(nom)), 0o644);
+      } catch (error) {
+        if (error.code !== "ENOENT") console.error(error);
+      }
+    }),
+  );
+}
+
 /** Supprime des fichiers de `uploads/` sans jamais faire echouer l'appelant (best effort). */
 export async function supprimerFichiersDepot(...noms) {
   await Promise.all(

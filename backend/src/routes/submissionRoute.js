@@ -13,6 +13,7 @@ import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
 import {
   DOSSIER_UPLOADS,
+  retirerDroitsDExecution,
   supprimerFichiersDepot,
   validerImageDeposee,
 } from "../depots.js";
@@ -189,6 +190,12 @@ router.post(
     // la pochette : le `catch` doit nettoyer le nom REEL du fichier sur le disque, pas celui que
     // multer avait choisi au depart.
     let nomImage = image?.filename;
+
+    // Des que multer a fini d'ecrire, avant toute autre chose : les fichiers ne seront jamais
+    // executables, quel que soit l'umask de la machine. Ici plutot qu'apres les validations,
+    // pour que ce soit vrai meme des fichiers qu'on va refuser (ils existent sur le disque
+    // pendant tout le temps de l'examen).
+    await retirerDroitsDExecution(audio?.filename, image?.filename);
 
     try {
       const title = req.body.title?.trim();
