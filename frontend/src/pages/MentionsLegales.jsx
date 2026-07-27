@@ -21,7 +21,7 @@ function Bloc({ titre, children }) {
   return (
     <section className="flex flex-col gap-2">
       <TitreSection>{titre}</TitreSection>
-      <div className="leading-relaxed text-muted-foreground flex flex-col gap-2">
+      <div className="leading-relaxed flex flex-col gap-2">
         {children}
       </div>
     </section>
@@ -35,10 +35,8 @@ export default function MentionsLegales() {
       titre="Mentions légales"
       sousTitre="Qui édite ce site, ce qu'on y diffuse, et comment signaler un contenu."
     >
-      {/* Meme agencement qu'A propos — panneau pleine largeur, prose calee a gauche dedans.
-          Le raisonnement est detaille dans `Apropos.jsx`. */}
-      <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
-      {/* Meme mesure elargie que `Apropos.jsx` — voir le commentaire la-bas. */}
+      {/* Meme agencement qu'A propos, enveloppe grise comprise (retiree le 2026-07-27 : elle
+          etait invisible, meme fond sur meme fond). Le raisonnement est detaille la-bas. */}
       <div className="flex w-full max-w-5xl flex-col gap-8">
         <Bloc titre="Éditeur">
           <p>
@@ -50,7 +48,7 @@ export default function MentionsLegales() {
             nous contacter, écrivez-nous via la{" "}
             <Link
               to="/contact"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               page de contact
             </Link>
@@ -71,7 +69,7 @@ export default function MentionsLegales() {
               href="https://www.hostinger.com/fr/contact"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               hostinger.com
             </a>
@@ -101,7 +99,7 @@ export default function MentionsLegales() {
             présence vous semble abusive, écrivez-nous via la{" "}
             <Link
               to="/contact"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               page de contact
             </Link>{" "}
@@ -122,7 +120,7 @@ export default function MentionsLegales() {
             depuis votre{" "}
             <Link
               to="/profil"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               profil
             </Link>
@@ -137,14 +135,13 @@ export default function MentionsLegales() {
             rectification), écrivez-nous via la{" "}
             <Link
               to="/contact"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               page de contact
             </Link>
             .
           </p>
         </Bloc>
-      </div>
       </div>
     </Page>
   );

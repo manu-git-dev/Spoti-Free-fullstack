@@ -7,9 +7,11 @@ import TitreSection from "../composants/TitreSection";
 
 const DEPOT = "https://github.com/manu-git-dev/Spoti-Free-fullstack";
 
-// Met en valeur sans crier : gras + encre normale, sur un fond attenue.
+// Met en valeur sans crier : la GRAISSE seule. Le `text-foreground` d'avant n'avait de sens que
+// tant que le corps du texte etait en `text-muted-foreground` — il ressortait alors par l'encre.
+// Depuis que la prose est a pleine encre (2026-07-27), la couleur ne distinguait plus rien.
 function Fort({ children }) {
-  return <span className="font-semibold text-foreground">{children}</span>;
+  return <span className="font-semibold">{children}</span>;
 }
 
 export default function Apropos() {
@@ -19,26 +21,23 @@ export default function Apropos() {
       titre="À propos"
       sousTitre="Un clone de Spotify full-stack — et l'histoire, sincère, de comment je l'ai construit."
     >
-      {/* Le PANNEAU prend toute la largeur, la PROSE est calee A GAUCHE dedans.
+      {/* PAS d'enveloppe grise autour de la prose (retiree le 2026-07-27).
+          Elle etait en `bg-background/50` POSEE SUR `bg-background` : la meme couleur a 50 %
+          d'opacite sur elle-meme reste la meme couleur. Il n'en restait qu'une bordure, qui
+          courait a droite du texte et se lisait comme un cadre vide — « une card qui prend toute
+          la largeur mais pas le texte ». Un panneau qu'on ne voit pas n'est pas un panneau.
 
-          Trois contraintes a concilier, et c'est le seul agencement qui les tient toutes :
-          - l'en-tete reste cale a gauche, aligne sur toutes les autres pages de l'app ;
-          - la prose demarre au MEME axe que lui — la centrer dans le panneau recreait le
-            desequilibre qu'on cherchait justement a supprimer ;
-          - la ligne de texte garde une longueur lisible (~65-75 caracteres : au-dela, l'oeil
-            perd sa ligne en revenant a gauche ; en pleine largeur elle atteignait ~130).
+          C'est le cas prevu par la regle des surfaces : une page dont le contenu contient DEJA un
+          panneau (ici « Comment ce projet a ete construit ») ne peut pas en recevoir un autre
+          par-dessus — il n'y a pas de troisieme niveau. En retirant l'enveloppe, ce panneau
+          interne se detache enfin du fond, ce qui etait tout son but.
 
-          Le panneau, lui, REMPLIT l'espace horizontal : le vide vit dedans, et l'oeil le lit
-          comme de la place dans un panneau plutot que comme un trou dans la page. */}
-      <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
-      {/* `max-w-5xl` (1024 px) et non `max-w-3xl` (768 px) : sur grand ecran, la mesure d'origine
-          n'occupait qu'un tiers de la largeur. On desserre jusqu'a la limite haute de lisibilite —
-          au-dela, l'oeil ne retrouve plus le debut de la ligne suivante (une ligne confortable
-          fait 45 a 75 caracteres). Ce n'est pas un plafond decoratif : c'est de la typographie. */}
+          `max-w-5xl` : la ligne de texte garde une longueur lisible (45-75 caracteres). L'en-tete
+          et la prose restent cales a gauche, sur le meme axe que les autres pages. */}
       <div className="flex w-full max-w-5xl flex-col gap-6">
-        <p className="text-lg leading-relaxed text-muted-foreground">
+        <p className="leading-relaxed">
           Salut, moi c'est{" "}
-          <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix
+          <span className="text-link font-bold">Manuel</span> 👋 Pendant dix
           ans, j'ai été <Fort>mécanicien aéronautique dans l'armée</Fort> : un
           métier où on ne bricole pas, où l'on suit des procédures, où l'on
           diagnostique — et où une erreur ne pardonne pas. J'y ai appris la
@@ -49,7 +48,7 @@ export default function Apropos() {
 
         <div className="flex flex-col gap-3">
           <TitreSection>D'où vient Spoti-Free</TitreSection>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             En tout début de formation, notre formateur nous a mis au défi de
             reproduire un lecteur audio dans l'esprit de Spotify. Le projet ne
             m'a plus quitté. Je sais qu'il existe des dizaines de clones de
@@ -65,7 +64,7 @@ export default function Apropos() {
             recruteur ne lit qu'une seule chose, c'est celle-ci qu'il doit lire. */}
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-6">
           <TitreSection>Comment ce projet a été construit</TitreSection>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             Ce projet a eu deux vies. La première, je l'ai codée moi-même. En
             formation, j'avais envie de sortir des exercices et de construire un
             vrai full-stack de bout en bout : j'ai dessiné la base de données,
@@ -77,7 +76,7 @@ export default function Apropos() {
             comment les morceaux tenaient ensemble. C'est la partie dont je suis
             le plus fier.
           </p>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             Puis j'ai décroché mon stage, et le projet aurait pu s'arrêter là.
             J'ai eu envie de continuer, autrement : m'en servir pour apprendre ce
             qui fait aujourd'hui partie du métier — travailler avec l'IA. J'ai
@@ -88,7 +87,7 @@ export default function Apropos() {
             est devenue ce que vous voyez : plus finie, responsive, plus sûre,
             avec une centaine de tests.
           </p>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             Je préfère être franc plutôt que de faire semblant : je suis un{" "}
             <Fort>développeur junior, encore en apprentissage</Fort>, et une
             bonne partie de cette version a été écrite avec l'IA. Je ne cherche
@@ -97,7 +96,7 @@ export default function Apropos() {
             continuer : <Fort>comprendre ce que je code</Fort>, avec ou sans
             assistant.
           </p>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             J'ai aussi gardé une trace écrite au fil du projet : à chaque
             difficulté, une note — le problème, la cause, et comment je l'ai
             comprise. Elles sont versionnées avec le code.
@@ -106,7 +105,7 @@ export default function Apropos() {
             href={`${DEPOT}/blob/main/NOTES-APPRENTISSAGE.md`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 self-start text-primary hover:underline underline-offset-4"
+            className="inline-flex items-center gap-2 self-start text-link hover:underline underline-offset-4"
           >
             <NotebookPen className="w-4 h-4 shrink-0" />
             Lire mon journal d'apprentissage
@@ -115,7 +114,7 @@ export default function Apropos() {
 
         <div className="flex flex-col gap-3">
           <TitreSection>Ce que contient l'application</TitreSection>
-          <ul className="flex flex-col gap-2 text-muted-foreground">
+          <ul className="flex flex-col gap-2">
             <li>
               <Fort>Frontend :</Fort> React, React Router, Tailwind CSS,
               shadcn/ui
@@ -142,7 +141,7 @@ export default function Apropos() {
 
         <div className="flex flex-col gap-3">
           <TitreSection>Et maintenant</TitreSection>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             Je suis en formation{" "}
             <Fort>Développeur Web et Web Mobile</Fort> jusqu'au{" "}
             <Fort>21 novembre 2026</Fort>, et je cherche déjà la suite : une
@@ -150,7 +149,7 @@ export default function Apropos() {
             premier poste — l'étiquette compte moins que de progresser au contact
             de gens qui savent.
           </p>
-          <p className="leading-relaxed text-muted-foreground">
+          <p className="leading-relaxed">
             L'application est fonctionnelle : essayez-la. Le code est ouvert à
             qui veut le lire. Et si vous avez une remarque, une critique ou une
             idée, écrivez-moi — c'est comme ça qu'on avance.
@@ -188,7 +187,6 @@ export default function Apropos() {
             Me contacter
           </Link>
         </div>
-      </div>
       </div>
     </Page>
   );

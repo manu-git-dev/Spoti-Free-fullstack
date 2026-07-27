@@ -8,8 +8,13 @@
 //
 // A ne pas confondre avec `EnTetePage`, qui porte le titre DE LA PAGE (le <h1>, avec son icone).
 // Celui-ci est un <h2> : une subdivision a l'interieur de la page.
+// Couleur : `text-foreground`, pas `text-primary` (change le 2026-07-27). Le violet de la marque
+// sur le fond sombre ne donne qu'un contraste de 3,51 — au-dessus du minimum absolu pour du grand
+// texte (3,0), mais tres en dessous du confort, et sur une page entiere de prose il se lisait
+// comme delave. La hierarchie d'un titre se porte d'abord par la TAILLE et la GRAISSE ; la
+// couleur d'accent est plus utile la ou elle designe une action (les liens, l'en-tete de page).
 export default function TitreSection({ children }) {
   return (
-    <h2 className="text-2xl font-serif font-bold text-primary">{children}</h2>
+    <h2 className="text-2xl font-serif font-bold text-foreground">{children}</h2>
   );
 }
