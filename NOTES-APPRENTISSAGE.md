@@ -3051,3 +3051,62 @@ useEffect(() => setImageCassee(false), [url]);   // repartir de zéro quand la s
 À chaque fois que je charge une ressource externe, il y a **deux** points de défaillance, pas un : **l'obtenir** et **s'en servir**. `fetch` couvre le premier, `onError` le second.
 
 ---
+
+## 2026-07-27 — Trois défauts de design que je voyais sans savoir les nommer
+
+*Cas réel : « la page À propos ça va pas du tout, il y a une card derrière qui prend toute la largeur mais pas le texte, et c'est à peine lisible ». Trois problèmes distincts derrière une même impression.*
+
+### 99. Une surface posée sur elle-même est invisible
+
+Les deux pages de prose étaient enveloppées dans un panneau :
+```jsx
+<div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
+```
+`bg-background/50`, c'est **la couleur du fond, à 50 % d'opacité, posée sur ce même fond**. Le résultat est exactement la couleur du fond. Le panneau ne se voyait donc pas — il ne restait que sa **bordure**, qui courait à droite du texte et se lisait comme un cadre vide. D'où mon impression d'une « card qui prend toute la largeur mais pas le texte ».
+
+Pire : le passage important (« Comment ce projet a été construit ») était **lui aussi** en `bg-background/50`, imbriqué dans le premier. Deux surfaces identiques superposées : le bloc que je voulais mettre en avant disparaissait dans son parent.
+
+**La règle que j'avais écrite et pas appliquée** : `bg-background` = le fond, `bg-card` = un panneau, `bg-background/50` = ce qui vit **dans** un panneau. Il n'y a **pas de troisième niveau**. Une page dont le contenu contient déjà un panneau ne peut pas en recevoir un autre par-dessus.
+
+**Le correctif** : retirer l'enveloppe. Le panneau interne se détache enfin, parce qu'il est enfin sur autre chose que lui-même.
+
+**Ce que ça m'apprend** : une couleur translucide n'a de sens que **relativement à ce qu'il y a dessous**. Avant d'ajouter une surface, la question n'est pas « quelle couleur ? » mais « posée sur quoi ? ».
+
+### 100. Le corps de texte n'est pas une légende
+
+Tous les paragraphes des deux pages étaient en `text-muted-foreground`. C'est l'encre des **notes de bas de page** : sous-titres, métadonnées, mentions d'appoint. Elle est atténuée exprès, pour **s'effacer devant** le contenu principal.
+
+Sauf qu'ici elle *était* le contenu principal. Mesuré au ratio de contraste WCAG :
+
+| | contraste sur le fond sombre |
+|---|---|
+| `muted-foreground` (ce que j'avais) | **6,76** |
+| `foreground` (ce qu'il fallait) | **13,26** |
+| seuil AA pour du corps de texte | 4,5 |
+
+6,76 **passe** la norme. C'est le piège : rien n'était « non conforme », donc aucun outil ne m'aurait alerté. Mais une page entière écrite en encre secondaire se lit délavée — la norme dit ce qui est *lisible*, pas ce qui est *confortable*.
+
+**La leçon, plus large que la couleur** : si tout est atténué, plus rien ne l'est. Une hiérarchie visuelle n'existe que par **contraste entre les niveaux**. En mettant tout au même gris, j'avais supprimé la hiérarchie tout en croyant en créer une.
+
+### 101. Un même violet ne peut pas servir de fond ET de texte
+
+Les liens étaient en `text-primary` : **3,51** de contraste, sous le seuil de 4,5. Réflexe naturel : éclaircir `--primary`. **Mauvaise idée**, et c'est le point intéressant.
+
+`--primary` est le **fond** des boutons, avec `--primary-foreground` (blanc) écrit dessus. Ce couple est à **4,81** — il passe de justesse. Éclaircir le fond ferait *baisser* le contraste du texte blanc, donc casserait les boutons pour réparer les liens.
+
+Les deux usages tirent dans des directions **opposées** :
+- le violet **de texte** doit être **clair** pour ressortir sur un fond sombre ;
+- le violet **de fond** doit rester **sombre** pour porter du texte blanc.
+
+Une seule variable ne peut pas satisfaire les deux. J'en ai donc créé une seconde :
+```css
+:root { --link: var(--primary); }              /* en clair, les deux coïncident (4,52) */
+.dark { --link: oklch(0.72 0.2 283.08); }      /* 3,51 -> 6,13 */
+```
+Même teinte (283.08), même saturation (0.2) : seule la **clarté** monte de 0.57 à 0.72. C'est toujours le violet de la marque, il est juste lisible.
+
+**La leçon transposable** : quand une valeur unique doit satisfaire deux contraintes contradictoires, le problème n'est pas de trouver le bon compromis — c'est qu'on a **confondu deux concepts** sous un seul nom. La solution est de les séparer. Même raisonnement que la note 82 (deux règles `width` qui se disputent : le problème n'est pas laquelle gagne, c'est qu'il y en ait deux).
+
+**Comment j'ai su tout ça** : en **mesurant**, pas en regardant. Trois lignes de JS dans la console qui peignent la couleur sur un canvas, relisent le pixel et calculent le ratio WCAG. « Ça me paraît un peu terne » n'est pas actionnable ; « 3,51 alors qu'il faut 4,5 » l'est.
+
+---
