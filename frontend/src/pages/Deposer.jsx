@@ -155,7 +155,12 @@ export default function Deposer({ user }) {
           `items-start` : sans lui, les deux colonnes s'etirent a la meme hauteur (defaut `stretch`)
           et le panneau de droite se retrouve aussi haut que le formulaire, avec du vide dessous.
           `lg:` seulement : sous 1024 px, les deux colonnes s'empilent, le panneau passe dessous. */}
-      <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
+      {/* `max-w-[1600px]` et non `max-w-6xl` (1152 px) : sur un ecran de 2560 px, le plafond
+          d'origine laissait ~1400 px de vide a droite. Meme elargissement que `Profil` le
+          2026-07-18 — le bloc reste BORNE (il ne suit pas l'ecran) et cale a gauche, on desserre
+          seulement le plafond. Centrer aurait recree le decalage en-tete-a-gauche/contenu-au-milieu
+          rejete le 2026-07-17. */}
+      <div className="grid max-w-[1600px] items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-5 rounded-2xl border border-border bg-background/50 p-6"

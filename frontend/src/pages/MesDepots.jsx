@@ -155,8 +155,12 @@ export default function MesDepots({ user }) {
            propre) ; la legende dit ce que ca VEUT DIRE.
 
            Elle n'apparait qu'avec au moins un depot : l'etat vide est un appel a l'action, une
-           legende de statuts n'y aurait aucun sens. */
-        <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
+           legende de statuts n'y aurait aucun sens.
+
+           `max-w-[1600px]` : meme plafond que `Deposer`, dont cette page est le pendant — les
+           laisser a deux largeurs differentes se verrait en passant de l'une a l'autre. Voir le
+           commentaire de `Deposer.jsx` pour le pourquoi de la valeur. */
+        <div className="grid max-w-[1600px] items-start gap-6 lg:grid-cols-[minmax(0,42rem)_minmax(0,22rem)]">
         <ul className="flex flex-col gap-3">
           {depots.map((depot) => {
             const statut = STATUTS[cleDeStatut(depot)] ?? STATUTS.en_attente;

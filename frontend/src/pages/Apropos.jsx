@@ -31,7 +31,11 @@ export default function Apropos() {
           Le panneau, lui, REMPLIT l'espace horizontal : le vide vit dedans, et l'oeil le lit
           comme de la place dans un panneau plutot que comme un trou dans la page. */}
       <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
-      <div className="flex w-full max-w-3xl flex-col gap-6">
+      {/* `max-w-5xl` (1024 px) et non `max-w-3xl` (768 px) : sur grand ecran, la mesure d'origine
+          n'occupait qu'un tiers de la largeur. On desserre jusqu'a la limite haute de lisibilite —
+          au-dela, l'oeil ne retrouve plus le debut de la ligne suivante (une ligne confortable
+          fait 45 a 75 caracteres). Ce n'est pas un plafond decoratif : c'est de la typographie. */}
+      <div className="flex w-full max-w-5xl flex-col gap-6">
         <p className="text-lg leading-relaxed text-muted-foreground">
           Salut, moi c'est{" "}
           <span className="text-primary font-bold">Manuel</span> 👋 Pendant dix

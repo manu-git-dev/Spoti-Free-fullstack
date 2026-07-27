@@ -38,7 +38,8 @@ export default function MentionsLegales() {
       {/* Meme agencement qu'A propos — panneau pleine largeur, prose calee a gauche dedans.
           Le raisonnement est detaille dans `Apropos.jsx`. */}
       <div className="rounded-2xl border border-border bg-background/50 p-6 md:p-8">
-      <div className="flex w-full max-w-3xl flex-col gap-8">
+      {/* Meme mesure elargie que `Apropos.jsx` — voir le commentaire la-bas. */}
+      <div className="flex w-full max-w-5xl flex-col gap-8">
         <Bloc titre="Éditeur">
           <p>
             Spotifree est un projet personnel et non commercial, réalisé dans le
