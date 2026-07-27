@@ -3110,3 +3110,44 @@ Même teinte (283.08), même saturation (0.2) : seule la **clarté** monte de 0.
 **Comment j'ai su tout ça** : en **mesurant**, pas en regardant. Trois lignes de JS dans la console qui peignent la couleur sur un canvas, relisent le pixel et calculent le ratio WCAG. « Ça me paraît un peu terne » n'est pas actionnable ; « 3,51 alors qu'il faut 4,5 » l'est.
 
 ---
+
+## 2026-07-27 — Le bug qui n'existait qu'en production
+
+### 102. `blob:` n'est ni `'self'` ni `data:` — la CSP le bloque
+
+*Cas réel : en modération, une pochette valide s'affichait en icône de lien mort suivie de son texte `alt`. Uniquement en ligne. Impossible à reproduire en local, quoi que je fasse.*
+
+**Le contexte.** Un dépôt en attente n'est pas dans `public/` : son fichier n'est accessible que par une route réservée à l'admin. On ne peut donc pas écrire `<img src="/api/submissions/12/image">` — quand le navigateur va chercher un `src` lui-même, il **n'envoie pas** l'en-tête `Authorization`, et la route répondrait 401. Le front télécharge donc le fichier avec `apiFetch` (qui joint le jeton), le garde en mémoire et expose une URL `blob:`.
+
+**Le blocage.** La CSP de nginx contenait :
+```
+img-src 'self' data:; media-src 'self'
+```
+`blob:` est un **schéma d'URL à part entière**. Il n'est couvert ni par `'self'` (qui désigne l'origine du document) ni par `data:` (qui désigne les données inline). Le navigateur refusait donc de peindre l'image — et une `<img>` refusée affiche son icône cassée suivie de l'`alt`.
+
+**Pourquoi je ne pouvais pas le reproduire.** En développement, la page est servie par **Vite**, qui ne pose aucune CSP. Celle-ci ne vient que de nginx, donc uniquement en production. J'ai cherché longtemps du côté du fichier (corrompu ? absent ? mauvais type MIME ?) alors que le fichier n'a jamais été en cause.
+
+**Comment je l'ai prouvé au lieu de le supposer.** Un serveur de 30 lignes qui sert une page avec exactement la CSP de prod, et une page qui crée un blob image et regarde s'il s'affiche :
+
+| CSP servie | résultat |
+|---|---|
+| `img-src 'self' data:` | **BLOQUÉE**, `onerror` se déclenche |
+| `img-src 'self' data: blob:` | **AFFICHÉE** |
+
+Deux essais, deux résultats opposés, une seule variable qui change. C'est ça, isoler une cause — et ça valait mieux que de faire déployer une hypothèse.
+
+**Le correctif** (dans `/etc/nginx/sites-available/spotifree`) :
+```
+img-src 'self' data: blob:; media-src 'self' blob:;
+```
+`media-src` aussi : le **lecteur audio** de la modération utilise le même mécanisme. Il était cassé en production sans que je l'aie encore remarqué — donc impossible d'écouter un morceau avant de l'approuver, ce qui est pourtant tout l'intérêt de la page. Un bug trouvé en cherchant l'autre.
+
+**Est-ce que ça affaiblit la CSP ?** Non. Une URL `blob:` ne désigne que de la mémoire créée **par la page elle-même** via `URL.createObjectURL`. Aucun contenu tiers ne peut entrer par là. Autoriser `blob:` n'ouvre pas la porte à un domaine externe — contrairement à, par exemple, `img-src *`.
+
+**Les deux leçons.**
+
+1. **Un bug qui n'existe qu'en production est presque toujours un défaut de PARITÉ entre les environnements** — quelque chose que la prod applique et que le dev n'applique pas. Ici, une CSP posée par nginx et absente de Vite. Même famille que le `color-scheme` du matin même : ma machine masquait le problème. La question à se poser n'est pas « qu'est-ce qui est cassé là-bas ? » mais **« qu'est-ce qui est différent là-bas ? »**.
+
+2. **Une image cassée dit toujours la même chose : « le navigateur a refusé ce `src` ».** Elle ne dit pas *pourquoi*. Fichier absent, type MIME faux, URL révoquée, CSP — quatre causes, un seul symptôme. C'est pourquoi il faut la console, pas l'écran : c'est elle qui nomme la cause.
+
+---
