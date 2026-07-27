@@ -1024,7 +1024,7 @@ await etape("mise en page : l'en-tete de page ne defile pas", async () => {
   const PAGES = [
     ["/", "Bonjour"],
     ["/bibliotheque", "Bibliothèque"],
-    ["/favoris", "Vos musiques likées"],
+    ["/favoris", "Favoris"],
     ["/playlists", "Vos playlists"],
     ["/deposer", "Déposer une musique"],
     ["/profil", "Mon profil"],
@@ -1116,7 +1116,14 @@ await etape("mise en page : la prose et les formulaires restent bornes", async (
       "/mentions-legales",
       "main .overflow-y-auto p",
     ],
-    ["Deposer : les deux colonnes", "/deposer", "main .overflow-y-auto > div"],
+    // Elargi a 1600 px le 2026-07-27 (le vide a droite se voyait sur un 2560) : comme Profil,
+    // limite propre plutot que de desserrer LIMITE, qui protege encore la prose.
+    [
+      "Deposer : les deux colonnes",
+      "/deposer",
+      "main .overflow-y-auto > div",
+      1700,
+    ],
     ["Profil : empile pleine largeur", "/profil", "main .overflow-y-auto > div", 1700],
   ];
 

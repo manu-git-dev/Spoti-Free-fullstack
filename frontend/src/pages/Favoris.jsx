@@ -48,7 +48,7 @@ export default function Favoris({
     <Page
       icone={Heart}
       classeIcone="fill-current"
-      titre="Vos musiques likées"
+      titre="Favoris"
       sousTitre={`${musiquesLikee.length} ${
         musiquesLikee.length > 1 ? "titres" : "titre"
       }`}
