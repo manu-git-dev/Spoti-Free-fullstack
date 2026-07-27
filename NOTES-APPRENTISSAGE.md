@@ -3151,3 +3151,46 @@ img-src 'self' data: blob:; media-src 'self' blob:;
 2. **Une image cassée dit toujours la même chose : « le navigateur a refusé ce `src` ».** Elle ne dit pas *pourquoi*. Fichier absent, type MIME faux, URL révoquée, CSP — quatre causes, un seul symptôme. C'est pourquoi il faut la console, pas l'écran : c'est elle qui nomme la cause.
 
 ---
+
+## 2026-07-27 — Valider un fichier par ce qu'il EST, pas par son nom
+
+### 103. Les « magic bytes », et l'asymétrie que je n'avais pas vue
+
+*Cas réel : en me demandant si laisser des inconnus déposer des fichiers m'exposait à des virus, j'ai découvert que je validais sérieusement l'audio… et pas du tout la pochette.*
+
+**Le constat.** Pour le son, le serveur **décode réellement** le fichier avec `music-metadata` : s'il n'y trouve pas de durée, c'est que ce n'est pas de l'audio, quel que soit son nom. Pour l'image, il ne regardait que **l'extension** — une chaîne de caractères choisie par celui qui envoie. `virus.exe` renommé `pochette.jpg` passait.
+
+Le plus gênant : le commentaire du filtre disait déjà, noir sur blanc, que « l'extension ne prouve rien ». J'avais écrit la règle, compris la règle… et ne l'avais appliquée qu'à un des deux fichiers. **Une règle à moitié appliquée est une règle qu'on croit avoir.**
+
+**Le correctif : lire les premiers octets.** Tout format de fichier commence par une signature fixe, qu'on appelle les *magic bytes* :
+
+| format | premiers octets |
+|---|---|
+| JPEG | `FF D8 FF` |
+| PNG | `89 50 4E 47 0D 0A 1A 0A` |
+| WebP | `RIFF` + 4 octets de taille + `WEBP` |
+
+On lit **12 octets**, pas le fichier entier — la signature est en tête, charger 2 Mo pour en regarder douze serait absurde.
+
+**Le détail qui m'a fait réfléchir : que faire d'un vrai PNG nommé `.jpg` ?** Refuser aurait été facile à coder et pénible pour l'utilisateur — renommer une image est un geste banal et innocent. Mais l'accepter tel quel pose un vrai problème : `public/` est servi statiquement, et **nginx déduit le `Content-Type` de l'extension**. Un PNG servi en `image/jpeg` avec `X-Content-Type-Options: nosniff` s'affiche **cassé** chez le visiteur — parce que `nosniff` interdit justement au navigateur de deviner le vrai type.
+
+Donc : ni refuser, ni ignorer. **Corriger l'extension.** Le fichier est déjà renommé en UUID par multer, changer son extension ne coûte rien, et ça garantit qu'il sera diffusé sous son vrai type.
+
+```js
+const nomCorrige = path.basename(nom, path.extname(nom)) + format;
+await fs.rename(/* … */);
+```
+
+**Le piège de portée que j'ai failli laisser passer.** Le nom du fichier peut donc changer *en cours de route*. Or le `catch` global nettoie les fichiers en cas d'erreur — s'il utilise l'ancien nom, il ne supprime **rien** et laisse un orphelin sur le disque. J'ai d'abord voulu bricoler en passant plusieurs noms possibles à la fonction de nettoyage ; la bonne réponse était de **sortir la variable du `try`** pour qu'elle soit visible du `catch` :
+
+```js
+let nomImage = image?.filename;   // déclaré AVANT le try
+try   { nomImage = await validerImageDeposee(image.filename); /* … */ }
+catch { await supprimerFichiersDepot(audio?.filename, nomImage); }
+```
+
+Leçon générale : **quand une valeur peut changer, tout le code qui s'en sert doit voir la même**. Deux copies d'un nom de fichier, c'est le même défaut que deux règles `width` (note 82) ou deux états qui doivent bouger ensemble (note 95).
+
+**Ce que ça ne protège PAS, et il faut le savoir.** Une signature valide ne prouve pas qu'un fichier est inoffensif : on peut fabriquer un JPEG parfaitement formé qui contient autre chose à la suite. Ce contrôle empêche le fichier *arbitraire*, pas le fichier *malveillant et bien déguisé*. Ce qui protège vraiment ici, c'est l'empilement : rien n'exécute ces fichiers côté serveur, le SVG est exclu (il peut contenir du JavaScript), `nosniff` empêche qu'un `.jpg` soit relu comme du HTML, et surtout **rien n'atteint `public/` sans passer par la modération**. Aucune de ces couches ne suffit seule.
+
+---
