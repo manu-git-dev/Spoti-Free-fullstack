@@ -50,6 +50,9 @@ function formulaireDepot(
     audio,
     nomAudio,
     image = VRAIE_IMAGE,
+    // Le NOM de la pochette est un parametre : les tests de validation par le contenu ont besoin
+    // d'envoyer un fichier dont l'extension ment (un texte en `.jpg`, un PNG en `.jpg`).
+    nomImage = "cover.jpg",
     // La declaration de droits est obligatoire : par defaut on envoie un depot conforme, et
     // les tests qui verifient le REFUS surchargent ces deux valeurs.
     licence = "CC BY 4.0",
@@ -66,7 +69,7 @@ function formulaireDepot(
   if (genre !== null) donnees.append("genre", genre);
   donnees.append("audio", new Blob([audio]), nomAudio);
   // `image: null` = depot SANS pochette (elle est facultative).
-  if (image) donnees.append("image", new Blob([image]), "cover.jpg");
+  if (image) donnees.append("image", new Blob([image]), nomImage);
   if (licence !== null) donnees.append("licence", licence);
   donnees.append("droitsConfirmes", droitsConfirmes);
   return donnees;
@@ -231,6 +234,73 @@ await etape("validation du fichier", async () => {
     "depot : seul le depot valide a ete enregistre",
     mesDepots.length === 1,
     `${mesDepots.length} depot(s) en base`,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 1 bis. Le meme raisonnement, applique a la POCHETTE
+//
+// L'audio etait decode depuis toujours ; l'image, elle, n'etait filtree que sur son extension —
+// une chaine que l'utilisateur choisit. C'etait une asymetrie de rigueur, corrigee le 2026-07-27
+// en lisant les premiers octets du fichier (sa « signature »).
+//
+// Le deuxieme test est le plus interessant : une image VALIDE dont l'extension est fausse n'est
+// pas refusee, elle est RENOMMEE. Parce que `public/` est servi statiquement et que nginx deduit
+// le `Content-Type` de l'extension : un PNG servi en `image/jpeg` avec `nosniff` s'affiche casse
+// chez le visiteur. Corriger l'extension, c'est garantir le bon type a la diffusion.
+// ---------------------------------------------------------------------------
+await etape("validation de la pochette", async () => {
+  const { token } = await creerCompte("DepotPochette");
+
+  // Un PNG 1x1 valide, ecrit ici plutot qu'en fixture : c'est 70 octets, et le garder sous les
+  // yeux montre ce que le test manipule (les 8 premiers octets sont la signature PNG).
+  const VRAI_PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "base64",
+  );
+
+  const texteEnJpg = await deposer(token, "Fausse pochette", {
+    audio: VRAI_MP3,
+    nomAudio: "morceau.mp3",
+    image: Buffer.from("Je suis du texte, pas une image."),
+    nomImage: "pochette.jpg",
+  });
+  verifier(
+    "pochette : un fichier texte renomme en .jpg est REJETE",
+    texteEnJpg.reponse.status === 400,
+    `recu ${texteEnJpg.reponse.status} — ${texteEnJpg.donnees.message}`,
+  );
+
+  const pngEnJpg = await deposer(token, `PNG mal nomme ${MARQUEUR}`, {
+    audio: VRAI_MP3,
+    nomAudio: "morceau.mp3",
+    image: VRAI_PNG,
+    nomImage: "pochette.jpg",
+  });
+  verifier(
+    "pochette : un vrai PNG nomme .jpg est ACCEPTE (pas refuse)",
+    pngEnJpg.reponse.status === 201,
+    `recu ${pngEnJpg.reponse.status} — ${pngEnJpg.donnees.message ?? ""}`,
+  );
+
+  // Et son extension a ete corrigee : c'est ce qui garantit le bon Content-Type a la diffusion.
+  const api = apiAuth(token);
+  const { donnees: depots } = await api("/api/submissions/mes-depots");
+  verifier(
+    "pochette : seul le depot a l'image valide est enregistre",
+    depots.length === 1,
+    `${depots.length} depot(s) en base`,
+  );
+
+  const { reponse: imageServie } = await fetch(
+    `${API}/api/submissions/${depots[0].id_submission}/image`,
+    { headers: { Authorization: `Bearer ${tokenAdmin()}` } },
+  ).then((r) => ({ reponse: r }));
+  verifier(
+    "pochette : le PNG renomme est bien servi, et en image/png",
+    imageServie.status === 200 &&
+      imageServie.headers.get("content-type")?.includes("image/png"),
+    `recu ${imageServie.status} — ${imageServie.headers.get("content-type")}`,
   );
 });
 

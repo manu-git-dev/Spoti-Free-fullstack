@@ -11,7 +11,11 @@ import db from "../../db.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
 import { limitesDesactivees } from "../config.js";
-import { DOSSIER_UPLOADS, supprimerFichiersDepot } from "../depots.js";
+import {
+  DOSSIER_UPLOADS,
+  supprimerFichiersDepot,
+  validerImageDeposee,
+} from "../depots.js";
 import {
   licenceValide,
   urlDeLicence,
@@ -181,6 +185,10 @@ router.post(
   async (req, res) => {
     const audio = req.files?.audio?.[0];
     const image = req.files?.image?.[0];
+    // Declare ICI, hors du `try`, parce que `validerImageDeposee` peut corriger l'extension de
+    // la pochette : le `catch` doit nettoyer le nom REEL du fichier sur le disque, pas celui que
+    // multer avait choisi au depart.
+    let nomImage = image?.filename;
 
     try {
       const title = req.body.title?.trim();
@@ -249,6 +257,26 @@ router.post(
       }
 
       // ---------------------------------------------------------------------
+      // Meme validation par le CONTENU, pour la POCHETTE.
+      //
+      // Jusqu'ici l'image n'etait filtree que sur son extension, alors que l'audio, lui, etait
+      // reellement decode. C'etait une asymetrie de rigueur : le commentaire du `fileFilter` dit
+      // deja que l'extension ne prouve rien, mais la regle n'etait appliquee qu'a un des deux
+      // fichiers. On lit donc les premiers octets et on refuse ce qui n'est pas une vraie image.
+      //
+      // `nomImage` peut differer de `image.filename` : si le contenu est valide mais l'extension
+      // fausse (un PNG nomme `.jpg`), elle est corrigee — voir `validerImageDeposee`.
+      // ---------------------------------------------------------------------
+      nomImage = await validerImageDeposee(image.filename);
+      if (!nomImage) {
+        await supprimerFichiersDepot(audio.filename, image.filename);
+        return res.status(400).json({
+          message:
+            "La pochette n'est pas une image valide (formats acceptés : JPEG, PNG, WebP).",
+        });
+      }
+
+      // ---------------------------------------------------------------------
       // LA validation : on lit le CONTENU du fichier.
       //
       // Jusqu'ici, on n'a verifie que l'extension — c'est-a-dire une chaine de caracteres
@@ -278,8 +306,10 @@ router.post(
       // les fichiers trainer.
       if (!duration) {
         // Audio ET pochette sont garantis presents ici (verifies plus haut) : on nettoie les deux
-        // avant de refuser, pour ne pas les laisser orphelins sur le disque.
-        await supprimerFichiersDepot(audio.filename, image.filename);
+        // avant de refuser, pour ne pas les laisser orphelins sur le disque. `nomImage` et pas
+        // `image.filename` : l'extension a pu etre corrigee juste avant, et supprimer l'ancien
+        // nom ne supprimerait rien.
+        await supprimerFichiersDepot(audio.filename, nomImage);
         return res.status(400).json({
           message:
             "Ce fichier n'est pas un fichier audio valide (ou il est corrompu).",
@@ -297,7 +327,7 @@ router.post(
           artist,
           genre,
           audio.filename,
-          image.filename,
+          nomImage,
           duration,
           licence,
           sourceUrl,
@@ -315,8 +345,9 @@ router.post(
       });
     } catch (error) {
       console.error(error);
-      // En cas de pepin, on ne laisse pas de fichiers orphelins derriere nous.
-      await supprimerFichiersDepot(audio?.filename, image?.filename);
+      // En cas de pepin, on ne laisse pas de fichiers orphelins derriere nous. `nomImage` suit
+      // l'eventuel renommage de la pochette : nettoyer `image.filename` ne suffirait pas.
+      await supprimerFichiersDepot(audio?.filename, nomImage);
 
       return res.status(500).json({
         message: "Erreur lors de l'enregistrement du dépôt.",
