@@ -2962,3 +2962,34 @@ Les six questions d'entretien sur ce flux, à répondre à voix haute sans relir
 **La leçon de méthode, au-delà du contenu.** Un commentaire par ligne explique le *quoi*, que le code dit déjà. Ce qui me manque est toujours le *pourquoi* — et le pourquoi ne tient pas sous une ligne, il se raconte sur un **flux** qui traverse plusieurs fichiers. Suivre une requête de bout en bout, c'est la seule lecture qui montre les **arbitrages** (temps constant, rôle hors jeton, 401 vs 403) plutôt que la syntaxe. C'est aussi la forme exacte de la question en entretien.
 
 ---
+
+## 2026-07-27 — Le champ illisible sur la machine de quelqu'un d'autre
+
+### 96. `color-scheme` : la seule propriété qui parle aux widgets du navigateur
+
+*Cas réel : sur le grand écran de la formation, les listes déroulantes « Genre » et « Licence » de la page Dépôt affichaient un texte gris presque transparent. Sur mon portable, rien à signaler.*
+
+**Le faux coupable : le cache.** C'était mon premier réflexe, et c'était le mauvais. Une différence entre deux machines n'est presque jamais un cache — c'est une **différence d'environnement**. Ici : macOS d'un côté, Windows de l'autre.
+
+**Le vrai mécanisme.** `Deposer.jsx` utilise des `<select>` **natifs**. Un select natif n'est pas peint par mon CSS : le **navigateur** le dessine, et il choisit sa palette en lisant la propriété CSS `color-scheme`. Or elle n'était déclarée nulle part dans `index.css` — sa valeur par défaut est donc `light`.
+
+D'où la superposition absurde :
+- le navigateur peint le popup avec sa palette **claire** → fond blanc ;
+- les `<option>` héritent de `color` (le Preflight de Tailwind pose `color: inherit` sur les éléments de formulaire), donc de ma variable `--foreground`, qui vaut `oklch(0.92 0 0)` — **quasi blanc** en thème sombre.
+
+Texte blanc sur fond blanc. Mon CSS et le navigateur travaillaient chacun avec une idée différente du thème de la page.
+
+**Pourquoi mon portable ne montrait rien.** macOS délègue le popup d'un `<select>` à AppKit, qui impose ses propres couleurs et écrase le problème. Windows laisse Chrome le dessiner. Le bug était là depuis le début — ma machine le masquait.
+
+**Le correctif : une ligne par thème, dans `index.css`.**
+```css
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+```
+`color-scheme` **déclare au navigateur** dans quel thème vit la page. Il en déduit la palette de tout ce qu'il dessine lui-même : popups de `<select>`, calendriers des `<input type="date">`, bouton des `<input type="file">`, fond jaune de l'autofill, barres de défilement par défaut. C'est le pont manquant entre mes variables CSS (que le navigateur ne lit pas) et son propre rendu.
+
+**Pourquoi ce n'est pas un rustine locale.** J'aurais pu forcer une couleur sur les `<option>` de la page Dépôt. Ça aurait réparé *ces deux champs* et laissé le vrai défaut en place : `AdminMusiques.jsx` a deux autres `<select>` natifs, et le `<input type="file">` du dépôt tombe dans la même famille. Une ligne à la racine corrige les cinq **et** tous ceux que j'écrirai plus tard. Réparer la cause, pas les symptômes.
+
+**La leçon transposable.** Un bug qui n'apparaît que sur la machine d'un autre est un bug de **présupposé implicite** : quelque chose que mon environnement fournit gratuitement et que je n'avais jamais eu à déclarer. Même famille que la barre de navigation avalée par l'encoche (note 80) ou que le test qui lisait un fichier gitignoré et échouait en CI. Le réflexe : ne pas chercher ce qui est cassé chez l'autre, chercher **ce que ma machine me donnait sans que je le demande**.
+
+---
