@@ -35,16 +35,29 @@ export default function Apropos() {
           `max-w-5xl` : la ligne de texte garde une longueur lisible (45-75 caracteres). L'en-tete
           et la prose restent cales a gauche, sur le meme axe que les autres pages. */}
       <div className="flex w-full max-w-5xl flex-col gap-6">
-        <p className="leading-relaxed">
-          Salut, moi c'est{" "}
-          <span className="text-link font-bold">Manuel</span> 👋 Pendant dix
-          ans, j'ai été <Fort>mécanicien aéronautique dans l'armée</Fort> : un
-          métier où on ne bricole pas, où l'on suit des procédures, où l'on
-          diagnostique — et où une erreur ne pardonne pas. J'y ai appris la
-          rigueur. Mais au bout de dix ans, la routine avait pris toute la
-          place. J'ai décidé de repartir de zéro, et je suis aujourd'hui en
-          formation <Fort>Développeur Web et Web Mobile&nbsp;(DWWM)</Fort>.
-        </p>
+        {/* La salutation tient sa propre ligne. L'espace apres le 👋 EXISTE bien dans le texte :
+            c'est le glyphe emoji qui l'avale visuellement, donc ce n'etait pas un bug de code.
+            Une espace insecable fine ou une marge sur un <span> auraient corrige l'affichage
+            CHEZ Manuel, mais dependent de la police emoji du systeme du visiteur — le retour a
+            la ligne, lui, ne depend de rien. Tranche par Manuel le 2026-07-28.
+            `gap-3` et non `gap-6` : c'est le rythme INTERNE d'une section (celui d'un
+            TitreSection et de son paragraphe), pas une nouvelle section — la salutation
+            introduit le recit, elle ne s'en detache pas. */}
+        <div className="flex flex-col gap-3">
+          <p className="leading-relaxed">
+            Salut, moi c'est{" "}
+            <span className="text-link font-bold">Manuel</span> 👋
+          </p>
+          <p className="leading-relaxed">
+            Pendant dix ans, j'ai été{" "}
+            <Fort>mécanicien aéronautique dans l'armée</Fort> : un métier où on
+            ne bricole pas, où l'on suit des procédures, où l'on diagnostique —
+            et où une erreur ne pardonne pas. J'y ai appris la rigueur. Mais au
+            bout de dix ans, la routine avait pris toute la place. J'ai décidé
+            de repartir de zéro, et je suis aujourd'hui en formation{" "}
+            <Fort>Développeur Web et Web Mobile&nbsp;(DWWM)</Fort>.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-3">
           <TitreSection>D'où vient Spoti-Free</TitreSection>
