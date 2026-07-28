@@ -3194,3 +3194,48 @@ Leçon générale : **quand une valeur peut changer, tout le code qui s'en sert 
 **Ce que ça ne protège PAS, et il faut le savoir.** Une signature valide ne prouve pas qu'un fichier est inoffensif : on peut fabriquer un JPEG parfaitement formé qui contient autre chose à la suite. Ce contrôle empêche le fichier *arbitraire*, pas le fichier *malveillant et bien déguisé*. Ce qui protège vraiment ici, c'est l'empilement : rien n'exécute ces fichiers côté serveur, le SVG est exclu (il peut contenir du JavaScript), `nosniff` empêche qu'un `.jpg` soit relu comme du HTML, et surtout **rien n'atteint `public/` sans passer par la modération**. Aucune de ces couches ne suffit seule.
 
 ---
+
+## 2026-07-28 — Deux seuils de contraste, et pourquoi je ne devais pas tout repeindre
+
+### 104. Un texte et une icône n'ont pas la même exigence
+
+*Cas réel : après avoir corrigé les liens de la prose la veille (note 101), il restait 39 `text-primary` dans l'app. Ma première intuition était « je remplace tout ». C'était faux.*
+
+**Le point de départ.** En thème sombre, `--primary` donne **3,51** de contraste sur le fond. Le seuil AA de WCAG est **4,5**. Donc tout ce qui est peint en `--primary` est en dessous… sauf que « le seuil AA », ce n'est pas *un* seuil, c'en est **deux**, et ils ne s'appliquent pas aux mêmes choses :
+
+| Critère WCAG | Ce qu'il couvre | Seuil AA |
+|---|---|---|
+| **1.4.3** *Contrast (Minimum)* | le **texte** | **4,5:1** (3:1 si ≥ 24 px, ou ≥ 18,66 px en gras) |
+| **1.4.11** *Non-text Contrast* | les **objets graphiques** et composants d'interface (icônes, bordures de champs, états) | **3:1** |
+
+Une icône **n'est pas du texte**. Son seuil est 3:1, et 3,51 le passe. Mes 13 icônes violettes (shuffle et repeat du lecteur, les icônes de Contact, les `Info`/`Inbox`) n'avaient donc **aucun défaut** — les repeindre aurait été un choix esthétique, pas une correction d'accessibilité.
+
+**Pourquoi la distinction existe.** Elle n'est pas administrative. Lire, c'est distinguer la **forme fine** de dizaines de glyphes collés les uns aux autres, à 14 px ; reconnaître une icône, c'est identifier **une silhouette isolée** de 20 px. La deuxième tâche demande objectivement moins de séparation figure/fond. Le seuil suit la difficulté de la tâche, pas la nature de l'élément.
+
+**La leçon que je retiens.** Le bon critère n'est pas « c'est violet, donc c'est à corriger », c'est **« est-ce que ça se lit ? »**. Un audit d'accessibilité, ce n'est pas un rechercher-remplacer : c'est un **classement**. J'ai fini avec trois catégories — texte (26 occurrences → `text-link`), icônes (13 → inchangées), et fonds/bordures/anneaux (`bg-primary`, `ring-primary`, `border-primary` → jamais touchés, ce sont des surfaces, pas de l'encre).
+
+Et le corollaire qui vaut au-delà du CSS : **corriger plus que le défaut n'est pas plus sûr, c'est juste plus de changements à défendre.** Un diff de 26 lignes justifiées se relit ; un diff de 39 dont 13 « parce que tant qu'à faire » ne se relit plus.
+
+### 105. Le piège du rechercher-remplacer : `text-primary` contre `text-primary-foreground`
+
+*Toujours le même chantier, mais c'est une leçon d'outil.*
+
+Faire `s/text-primary/text-link/g` aurait détruit **`text-primary-foreground`** — la classe du texte **blanc posé sur les boutons violets**, qui n'a rien à voir. Le motif que je cherche est un **préfixe** d'un autre motif, et c'est exactement la situation où un remplacement naïf casse quelque chose sans rien signaler.
+
+La parade est une **assertion de largeur nulle** — ici une *négation d'anticipation* (`negative lookahead`) : « `text-primary` **non suivi de** `-` ».
+
+```bash
+perl -pi -e 's/text-primary(?!-)/text-link/g' fichier.jsx
+```
+
+`(?!-)` ne consomme aucun caractère : il **teste** ce qui suit sans l'inclure dans le remplacement. C'est ce qui le distingue de `s/text-primary([^-])/text-link$1/g`, qui marche aussi mais oblige à re-coller le caractère capturé — et échoue silencieusement si le motif est en fin de ligne.
+
+**La vraie leçon n'est pas la syntaxe, c'est le réflexe** : avant tout remplacement en masse, se demander **« mon motif est-il le préfixe d'un autre ? »**. Puis vérifier après coup avec le grep inverse — celui qui doit ne renvoyer que ce qu'on a délibérément laissé :
+
+```bash
+grep -rn "text-primary" frontend/src | grep -v "text-primary-foreground"
+```
+
+Un remplacement en masse sans grep de vérification derrière, c'est une modification qu'on **espère**, pas une qu'on **constate**.
+
+---
