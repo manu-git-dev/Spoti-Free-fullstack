@@ -21,14 +21,14 @@ import Logo from "./Logo";
 const lienNav = ({ isActive }) =>
   `flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
     isActive
-      ? "bg-primary/15 text-primary font-semibold"
+      ? "bg-primary/15 text-link font-semibold"
       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
   }`;
 
 const lienSecondaire = ({ isActive }) =>
   `flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors ${
     isActive
-      ? "bg-primary/15 text-primary"
+      ? "bg-primary/15 text-link"
       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
   }`;
 
@@ -88,7 +88,7 @@ export default function Aside({
           <div
             className={`flex items-center rounded-xl transition-colors ${
               isPlaylistsActive
-                ? "bg-primary/15 text-primary"
+                ? "bg-primary/15 text-link"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             }`}
           >
@@ -120,7 +120,7 @@ export default function Aside({
                   className={({ isActive }) =>
                     `block truncate text-sm px-3 py-1.5 rounded-lg transition-colors ${
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary/10 text-link"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`
                   }

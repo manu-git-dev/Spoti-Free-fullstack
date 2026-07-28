@@ -40,7 +40,7 @@ export default function TrackRow({
     >
       <span
         className={`w-6 text-center font-serif ${
-          isPlaying ? "text-primary" : "text-muted-foreground"
+          isPlaying ? "text-link" : "text-muted-foreground"
         }`}
       >
         {index + 1}
@@ -67,7 +67,7 @@ export default function TrackRow({
         <div className="min-w-0">
           <p
             className={`truncate font-semibold ${
-              isPlaying ? "text-primary" : ""
+              isPlaying ? "text-link" : ""
             }`}
           >
             {musique.title}

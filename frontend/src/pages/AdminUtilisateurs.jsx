@@ -134,7 +134,7 @@ export default function AdminUtilisateurs({ user }) {
                   <p className="flex items-center gap-2 font-semibold">
                     <span className="truncate">{u.pseudo}</span>
                     {u.role === "admin" ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-link">
                         <Shield className="w-3 h-3" />
                         Admin
                       </span>

@@ -107,7 +107,7 @@ export default function AdminDepots() {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Déposé par{" "}
-                  <span className="text-primary">{depot.pseudo}</span>
+                  <span className="text-link">{depot.pseudo}</span>
                   {depot.created_at
                     ? ` le ${new Date(depot.created_at).toLocaleDateString("fr-FR")}`
                     : ""}
@@ -140,7 +140,7 @@ export default function AdminDepots() {
                           href={depot.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary underline-offset-2 hover:underline"
+                          className="text-link underline-offset-2 hover:underline"
                         >
                           voir l'original
                         </a>
@@ -159,7 +159,7 @@ export default function AdminDepots() {
                   <LienTelechargement
                     chemin={`/api/submissions/${depot.id_submission}/audio`}
                     nomFichier={`${depot.artist} - ${depot.title}.mp3`}
-                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-link"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Télécharger l'audio
@@ -169,7 +169,7 @@ export default function AdminDepots() {
                     chemin={`/api/submissions/${depot.id_submission}/image`}
                     nomFichier={`${depot.artist} - ${depot.title}.jpg`}
                     actif={Boolean(depot.a_pochette)}
-                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-link"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Télécharger la pochette

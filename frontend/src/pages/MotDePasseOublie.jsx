@@ -75,7 +75,7 @@ export default function MotDePasseOublie() {
 
             <Link
               to="/connexion"
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline underline-offset-4"
+              className="inline-flex items-center gap-1.5 text-sm text-link hover:underline underline-offset-4"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour à la connexion

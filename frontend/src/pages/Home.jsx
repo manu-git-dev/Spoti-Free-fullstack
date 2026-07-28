@@ -100,7 +100,7 @@ export default function Home({
           <div className="flex items-center justify-end gap-4 shrink-0">
             <Link
               to={"/inscription"}
-              className="text-foreground hover:text-primary underline-offset-4 hover:underline"
+              className="text-foreground hover:text-link underline-offset-4 hover:underline"
             >
               S'inscrire
             </Link>

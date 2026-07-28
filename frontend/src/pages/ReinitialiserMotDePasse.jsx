@@ -85,7 +85,7 @@ export default function ReinitialiserMotDePasse() {
           </Alert>
           <Link
             to="/mot-de-passe-oublie"
-            className="text-sm text-primary hover:underline underline-offset-4"
+            className="text-sm text-link hover:underline underline-offset-4"
           >
             Demander un nouveau lien
           </Link>

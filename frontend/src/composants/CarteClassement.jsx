@@ -70,7 +70,7 @@ export default function CarteClassement({
 
         <h2
           className={`font-semibold truncate mt-2 ${
-            isPlaying ? "text-primary" : ""
+            isPlaying ? "text-link" : ""
           }`}
         >
           {musique.title}

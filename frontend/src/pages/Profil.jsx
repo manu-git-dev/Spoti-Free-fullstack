@@ -68,7 +68,7 @@ export default function Profil({
         <div className="flex items-center gap-4 mt-2">
           <Link
             to={"/inscription"}
-            className="text-foreground hover:text-primary underline-offset-4 hover:underline"
+            className="text-foreground hover:text-link underline-offset-4 hover:underline"
           >
             S'inscrire
           </Link>
@@ -122,7 +122,7 @@ export default function Profil({
             <Stat
               valeur={playlists.length}
               libelle="playlists"
-              classe="text-primary"
+              classe="text-link"
               icone={ListMusic}
             />
             <Stat

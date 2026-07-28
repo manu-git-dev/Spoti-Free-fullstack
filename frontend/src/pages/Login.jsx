@@ -116,7 +116,7 @@ export default function Login({ ouvrirSession }) {
           </fieldset>
           <Link
             to="/mot-de-passe-oublie"
-            className="text-primary underline-offset-4 hover:underline text-sm self-end"
+            className="text-link underline-offset-4 hover:underline text-sm self-end"
           >
             Mot de passe oublié ?
           </Link>
@@ -128,7 +128,7 @@ export default function Login({ ouvrirSession }) {
           Pas encore de compte ?{" "}
           <Link
             to="/inscription"
-            className="text-foreground hover:text-primary underline-offset-4 hover:underline"
+            className="text-foreground hover:text-link underline-offset-4 hover:underline"
           >
             S'inscrire
           </Link>

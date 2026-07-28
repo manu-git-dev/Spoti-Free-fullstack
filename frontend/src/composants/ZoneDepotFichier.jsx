@@ -111,7 +111,7 @@ export default function ZoneDepotFichier({
               className={`w-8 h-8 ${survol ? "text-primary" : "text-muted-foreground"}`}
             />
             <p className="text-sm">
-              Glisse ton fichier ici, ou <span className="text-primary">parcours</span>
+              Glisse ton fichier ici, ou <span className="text-link">parcours</span>
             </p>
             {description ? (
               <p className="text-xs text-muted-foreground">{description}</p>

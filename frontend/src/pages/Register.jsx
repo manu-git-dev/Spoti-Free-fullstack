@@ -357,7 +357,7 @@ export default function Register() {
             Déjà un compte ?{" "}
             <Link
               to="/connexion"
-              className="text-primary underline-offset-4 hover:underline"
+              className="text-link underline-offset-4 hover:underline"
             >
               Connexion
             </Link>
