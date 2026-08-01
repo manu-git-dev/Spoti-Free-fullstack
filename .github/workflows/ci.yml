@@ -15,7 +15,7 @@ on:
 
 jobs:
   tests:
-    name: Tests (193) + build
+    name: Tests + build
     runs-on: ubuntu-latest
 
     # Une vraie base MySQL, jetable, montee pour la duree du job. Le `health-cmd` est important :
@@ -36,9 +36,21 @@ jobs:
           --health-retries=20
 
     steps:
-      - uses: actions/checkout@v4
+      # `@v5` et non `@v4` : une action JS declare le Node qui l'execute (`using: node24` dans son
+      # `action.yml`). Les v4 declarent `node20`, que GitHub retire de ses machines — elles
+      # tournaient deja sur Node 24 par tolerance, avec un avertissement a chaque job. La v5 est
+      # la version qui declare `node24` : le bump aligne la declaration sur ce qui se passe deja.
+      #
+      # ⚠️ A ne pas confondre avec le `node-version` ci-dessous : ce sont DEUX Node differents.
+      # Celui-ci est le runtime interne de l'action ; celui-la est le Node installe sur la machine
+      # pour executer NOTRE projet (npm ci, les tests, le build).
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      # setup-node v5 apporte un vrai changement de comportement : si un `package.json` porte un
+      # champ `packageManager`, le cache des dependances s'active TOUT SEUL. Aucun des trois
+      # (backend, frontend, tests) n'en a — verifie avant le bump. Si l'un en gagne un un jour et
+      # que le cache gene, la sortie est `package-manager-cache: false`.
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
