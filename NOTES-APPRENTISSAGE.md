@@ -3390,3 +3390,53 @@ dans le DOM via l'attribut `alt` de la pochette, le réinjecte entouré d'espace
 le retrouve. Plus une vérification que `"   "` rend le catalogue entier.
 
 ---
+
+## 2026-08-01 — Pourquoi ce bug-là a survécu trois semaines (post-mortem)
+
+J'ai demandé comment un compteur faux avait pu passer inaperçu depuis l'écriture de la
+fonctionnalité. L'historique Git répond mieux que la mémoire :
+
+- **27/06** — j'écris la barre de recherche (`0c5d170`).
+- **16/07** — les pastilles de genre arrivent (`88ac1d6`), **avec leur compteur dès la première
+  ligne**, dans une page qui filtrait déjà depuis trois semaines.
+
+Le bug est né avec la fonctionnalité. Ce n'est pas une régression.
+
+**Ce qui rend le cas instructif : l'interaction AVAIT été vue.** Le message de commit du 16/07 dit
+« Elles se cumulent avec la recherche texte : chercher dans un genre ne doit pas annuler le
+genre », et un test verrouille ce cumul. La composition des deux filtres a donc été pensée **pour
+la liste**, et pas reportée sur le nombre.
+
+La confusion de fond : le compteur a été traité comme une **étiquette**, pas comme de l'**état
+dérivé**. Une étiquette décrit un objet une fois pour toutes (« Rock ») ; un état dérivé doit
+rester cohérent avec tout ce qui bouge à l'écran. Le `19` avait l'air d'appartenir à la même
+catégorie que le mot « Rock » — une propriété du genre — alors que c'est une **assertion sur les
+données affichées**.
+
+Le tableau de dépendances est l'aveu écrit de cette confusion : `[musiques]`, sans `valueInput`.
+**Un tableau de dépendances est un document** : il écrit noir sur blanc ce dont on croyait que la
+valeur dépendait. Le relire, c'est relire son propre raisonnement — c'est le premier endroit où
+regarder quand une valeur calculée « ne se met pas à jour ».
+
+**Deux raisons pour lesquelles ça a survécu.**
+
+1. **Le code est juste ailleurs.** Le 18/07, `genresDisponibles` a été réutilisé sur l'accueil
+   (« Parcourir par genre »), où compter sur le catalogue complet est **correct** — l'accueil n'a
+   pas de recherche. Lu isolément, ce `useMemo` est impeccable. Ce n'est pas du code faux, c'est du
+   code **juste au mauvais endroit** : le pire à repérer en relecture, parce qu'il ne présente
+   aucun symptôme là où on le lit.
+
+2. **Le test n'atteste que ce à quoi on a pensé.** Celui du 16/07 vérifie le cumul des filtres sur
+   le **nombre de lignes**, jamais sur la pastille. Un test ne peut pas rattraper l'angle mort qui
+   l'a écrit — il le fossilise. C'est pour ça que « les tests passent » ne veut pas dire
+   « le comportement est bon », seulement « ce qu'on avait imaginé tient toujours ».
+
+**Le réflexe à garder.** *Tout nombre affiché est une promesse sur un ensemble.* Quand j'en pose un
+à l'écran : **sur quel ensemble est-il calculé, et est-ce le même que celui que la personne a sous
+les yeux ?** S'ils peuvent diverger, le nombre ment — et il ment d'autant mieux qu'il a l'air d'une
+décoration.
+
+Transférable bien au-delà des facettes : « 3 messages non lus », « 12 résultats », un total en pied
+de tableau paginé, un badge de notification. Même famille de piège.
+
+---
