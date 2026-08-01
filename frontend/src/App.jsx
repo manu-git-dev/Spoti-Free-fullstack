@@ -221,21 +221,52 @@ function App() {
       .map(([genre, nombre]) => ({ genre, nombre }));
   }, [musiques]);
 
-  let musiquesFiltre = musiques.filter((musique) => {
-    const correspondTexte =
-      musique.title.toLowerCase().includes(valueInput.toLowerCase()) ||
-      musique.artist.toLowerCase().includes(valueInput.toLowerCase());
-
-    // Les deux filtres se CUMULENT : chercher "love" dans le genre Pop ne doit pas rendre les
-    // "love" du rock. Un filtre qui s'annule au premier caractere tape n'en est pas un.
-    const correspondGenre = genreFiltre === null || musique.genre === genreFiltre;
-
-    return correspondTexte && correspondGenre;
-  });
-
-  musiquesFiltre = musiquesFiltre.sort((a, b) =>
-    a.title.localeCompare(b.title),
+  // Le filtre TEXTE seul, isole du filtre de genre. Ce decoupage n'est pas cosmetique : c'est lui
+  // qui rend juste le compteur des pastilles (voir `genresRecherche` juste en dessous).
+  const musiquesTexte = useMemo(
+    () =>
+      musiques.filter(
+        (musique) =>
+          musique.title.toLowerCase().includes(valueInput.toLowerCase()) ||
+          musique.artist.toLowerCase().includes(valueInput.toLowerCase()),
+      ),
+    [musiques, valueInput],
   );
+
+  // Les pastilles telles que la Bibliotheque les affiche : le nombre suit la recherche.
+  //
+  // REGLE DES FACETTES : le compteur d'un filtre se calcule avec tous les AUTRES filtres actifs,
+  // jamais avec le sien. On compte donc sur `musiquesTexte` (texte applique, genre ignore). Si on
+  // comptait sur `musiquesFiltre`, cliquer « Rock » mettrait tous les autres genres a 0 et on ne
+  // pourrait plus jamais changer de genre sans repasser par « Tous ».
+  //
+  // L'ORDRE vient de `genresDisponibles` (le catalogue complet), pas des nouveaux comptes : un tri
+  // recalcule a chaque frappe ferait DANSER les pastilles sous le curseur — on vise « Rock », une
+  // lettre de plus, on clique « Jazz ». Seul le nombre bouge, jamais la position.
+  //
+  // Distinct de `genresDisponibles`, qui reste sur le catalogue entier parce que Home s'en sert
+  // aussi (« Parcourir par genre ») : Home n'a pas de champ de recherche, mais `valueInput` vit
+  // ici et survit a la navigation — ses tuiles afficheraient des nombres ronges par une recherche
+  // invisible.
+  const genresRecherche = useMemo(() => {
+    const compte = new Map();
+    for (const musique of musiquesTexte) {
+      if (!musique.genre) continue;
+      compte.set(musique.genre, (compte.get(musique.genre) ?? 0) + 1);
+    }
+    return genresDisponibles.map(({ genre }) => ({
+      genre,
+      nombre: compte.get(genre) ?? 0,
+    }));
+  }, [musiquesTexte, genresDisponibles]);
+
+  // Les deux filtres se CUMULENT : chercher "love" dans le genre Pop ne doit pas rendre les
+  // "love" du rock. Un filtre qui s'annule au premier caractere tape n'en est pas un.
+  const musiquesFiltre = musiquesTexte
+    .filter(
+      (musique) => genreFiltre === null || musique.genre === genreFiltre,
+    )
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- index derive de la file ; refonte reportee (chantier file d'attente, cf. SUIVI-PROJET.md)
@@ -322,7 +353,7 @@ function App() {
                   setCurrentQueue={setCurrentQueue}
                   setValueInput={setValueInput}
                   valueInput={valueInput}
-                  genresDisponibles={genresDisponibles}
+                  genres={genresRecherche}
                   genreFiltre={genreFiltre}
                   setGenreFiltre={setGenreFiltre}
                   musiquesLikee={musiquesLikee}

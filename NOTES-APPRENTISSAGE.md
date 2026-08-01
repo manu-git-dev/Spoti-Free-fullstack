@@ -3239,3 +3239,91 @@ grep -rn "text-primary" frontend/src | grep -v "text-primary-foreground"
 Un remplacement en masse sans grep de vérification derrière, c'est une modification qu'on **espère**, pas une qu'on **constate**.
 
 ---
+
+## 2026-08-01 — Un compteur de filtre ne s'applique jamais son propre filtre
+
+**Contexte.** Dans la Bibliothèque, chaque genre a une pastille avec le nombre de morceaux :
+« Pop 29 », « Rock 19 »… J'ai remarqué que quand je tapais une recherche, la liste se réduisait
+bien, mais **les nombres ne bougeaient pas**. Je cherchais « love » : 5 morceaux affichés, et les
+pastilles annonçaient toujours 29, 19, 10… Pire, cliquer sur « Rock 19 » donnait « Aucun morceau
+ne correspond » — la pastille promettait 19 titres et n'en rendait aucun.
+
+**La cause.** Dans `App.jsx`, la liste des genres était calculée sur le catalogue entier, jamais
+sur les résultats :
+
+```js
+const genresDisponibles = useMemo(() => {
+  const compte = new Map();
+  for (const musique of musiques) {   // <- `musiques`, le catalogue COMPLET
+    ...
+  }
+}, [musiques]);                        // <- ne dépend pas de `valueInput`
+```
+
+Le tableau des dépendances raconte tout le bug : le compteur ne dépend pas de la recherche, donc
+il ne peut pas la refléter.
+
+**La correction naïve, et pourquoi elle est fausse.** Le réflexe est de compter sur
+`musiquesFiltre`, la liste finalement affichée. C'est un piège : `musiquesFiltre` a **déjà**
+appliqué le filtre de genre. Dès qu'on clique « Rock », tous les autres genres tombent à 0 et on
+ne peut plus jamais passer à un autre genre sans repasser par « Tous ».
+
+D'où la règle, qui porte un nom en recherche : **une facette ne s'applique pas son propre filtre**.
+Le compteur d'un filtre se calcule avec **tous les autres filtres actifs, sauf le sien**. Ici :
+on compte sur les morceaux qui matchent **le texte**, en ignorant `genreFiltre`.
+
+Concrètement, ça se traduit par un **étage intermédiaire** entre le catalogue et la liste affichée :
+
+```js
+// Le texte seul. Deux consommateurs en dépendent.
+const musiquesTexte = useMemo(() => musiques.filter(correspondAuTexte), [musiques, valueInput]);
+
+// Les compteurs : le texte est appliqué, le genre NON.
+const genresRecherche = useMemo(() => compter(musiquesTexte), [musiquesTexte, ...]);
+
+// La liste affichée : les deux filtres cumulés.
+const musiquesFiltre = musiquesTexte.filter(correspondAuGenre).sort(...);
+```
+
+Le découpage n'est pas cosmétique : c'est lui qui rend le compteur juste. Vérifié dans l'app —
+« Rock » actif, « Pop » affiche toujours 29, donc on peut basculer.
+
+**Deux effets de bord auxquels je n'avais pas pensé.**
+
+1. **L'ordre.** Les pastilles étaient triées par nombre décroissant. Si je recalcule les nombres à
+   chaque frappe *et* que je garde ce tri, les pastilles **se réordonnent sous le curseur** : je
+   vise « Rock », je tape une lettre de plus, je clique sur « Jazz ». J'ai donc figé l'ordre sur le
+   catalogue complet — seul le **nombre** varie, jamais la **position**. Règle générale : un
+   élément interactif ne doit pas se déplacer en réaction à ce que l'utilisateur est en train de
+   taper.
+
+2. **L'autre page.** `genresDisponibles` servait **aussi** à l'accueil (« Parcourir par genre »).
+   Or l'accueil n'a pas de champ de recherche, mais `valueInput` vit dans `App` et **survit à la
+   navigation**. Modifier la valeur en place aurait fait afficher à l'accueil des nombres rongés
+   par une recherche invisible. J'ai gardé **deux** valeurs : le catalogue complet pour l'accueil,
+   les comptes filtrés pour la Bibliothèque. Le réflexe à prendre : avant de changer une valeur
+   dérivée, **chercher qui d'autre la consomme**.
+
+**Et la pastille qui tombe à 0 ?** Trois options : la masquer, l'éteindre, ou la laisser cliquable.
+J'ai choisi de **l'éteindre sur place** (`disabled`). La masquer recomposerait la rangée à chaque
+caractère tapé — même problème que le tri qui danse. La laisser cliquable garderait le cul-de-sac.
+
+Avec une exception qui est tout l'intérêt du cas : **le genre ACTIF reste cliquable même à 0**.
+Sinon une recherche infructueuse m'enfermerait dans un filtre que je ne pourrais plus retirer.
+
+```jsx
+desactivee={nombre === 0 && genreFiltre !== genre}
+```
+
+Détail qui compte : `disabled` **l'attribut**, pas seulement le style gris. Sans l'attribut, le
+bouton reste focalisable au clavier et cliquable — l'apparence dirait « indisponible » pendant que
+le bouton, lui, continuerait de répondre.
+
+**Le test de non-régression** (`e2e.test.mjs`) ne nomme aucun genre — il serait sinon dépendant du
+seed, le piège de « Believer » (note 55). Il tape une recherche sans résultat et vérifie que
+**toutes** les pastilles tombent à 0 et s'éteignent. Au premier jet il échouait alors que le code
+était bon : `innerText` rend `Pop0` **sans espace**, la marge qui sépare le libellé du nombre étant
+du CSS, pas du texte. Mon `/\s0$/` ne pouvait pas matcher. Leçon annexe : `innerText` ne voit pas
+la mise en page, seulement le texte — ne jamais supposer une espace qu'on ne voit qu'à l'écran.
+
+---

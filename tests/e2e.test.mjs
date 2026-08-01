@@ -790,6 +790,45 @@ await etape("filtre par genre", async () => {
     `${await lignes()} sur ${total}`,
   );
 
+  // Le compteur des pastilles suit la RECHERCHE (bug du 2026-08-01 : il restait fige sur le
+  // catalogue complet — une pastille annoncait « 24 » et ne rendait aucun morceau une fois
+  // cliquee). Aucun genre n'est actif a ce stade : une recherche sans resultat doit donc mettre
+  // toutes les pastilles a 0 et les eteindre.
+  // Formulation volontairement independante du seed : on ne nomme aucun genre, on lit le nombre
+  // en fin de libelle.
+  await page
+    .getByPlaceholder("Recherchez un titre ou un artiste")
+    .fill("zzzzzz-introuvable");
+  await page.waitForTimeout(600);
+
+  const pastilles = page
+    .locator("button[aria-pressed]")
+    .filter({ hasNotText: "Tous" });
+  const libelles = await pastilles.allInnerTexts();
+
+  // Le compteur est colle au libelle dans `innerText` (« Pop0 ») : la marge qui les separe a
+  // l'ecran est du CSS, pas du texte. On isole donc les chiffres de FIN, sans quoi « Pop10 »
+  // passerait pour un zero.
+  const compteurs = libelles.map((texte) => texte.trim().match(/(\d+)$/)?.[1]);
+
+  verifier(
+    "genre : le compteur des pastilles suit la recherche",
+    compteurs.length > 0 && compteurs.every((nombre) => nombre === "0"),
+    libelles.join(" | ") || "aucune pastille",
+  );
+  verifier(
+    "genre : une pastille sans resultat n'est plus cliquable",
+    await pastilles.first().isDisabled(),
+  );
+
+  await page.getByPlaceholder("Recherchez un titre ou un artiste").fill("");
+  await page.waitForTimeout(500);
+
+  verifier(
+    "genre : effacer la recherche rend leur compteur aux pastilles",
+    !(await pastilles.first().isDisabled()),
+  );
+
   await page.context().close();
 });
 

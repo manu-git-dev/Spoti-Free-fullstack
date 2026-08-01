@@ -11,18 +11,24 @@ import { Input } from "@/components/ui/input";
 //
 // `aria-pressed` et non un simple `onClick` : pour un lecteur d'ecran, un bouton qui ne dit pas
 // s'il est enfonce est un bouton dont on ne sait pas s'il a agi. La couleur seule ne suffit pas.
-function Pastille({ active, onClick, children }) {
+function Pastille({ active, desactivee, onClick, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      // `disabled` et non un simple style grise : sans l'attribut, la pastille reste focalisable
+      // au clavier et cliquable — l'apparence dirait « indisponible » pendant que le bouton, lui,
+      // continuerait de repondre.
+      disabled={desactivee}
       aria-pressed={active}
       // `shrink-0` : sur mobile la rangee ne passe plus a la ligne, elle DEFILE. Sans ca, flexbox
       // comprimerait les pastilles pour les faire tenir de force et casserait les libelles.
-      className={`shrink-0 rounded-full border px-3 py-1 text-sm transition-colors cursor-pointer ${
+      className={`shrink-0 rounded-full border px-3 py-1 text-sm transition-colors ${
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-background/60 text-muted-foreground hover:border-accent hover:text-foreground"
+          ? "border-primary bg-primary text-primary-foreground cursor-pointer"
+          : desactivee
+            ? "border-border/50 bg-background/30 text-muted-foreground/50 cursor-not-allowed"
+            : "border-border bg-background/60 text-muted-foreground hover:border-accent hover:text-foreground cursor-pointer"
       }`}
     >
       {children}
@@ -36,7 +42,9 @@ export default function Bibliotheque({
   setCurrentQueue,
   setValueInput,
   valueInput,
-  genresDisponibles,
+  // Les pastilles avec leur nombre DEJA recalcule sur la recherche en cours (cf. `genresRecherche`
+  // dans App.jsx). La page ne compte rien elle-meme : elle affiche.
+  genres,
   genreFiltre,
   setGenreFiltre,
   musiquesLikee,
@@ -106,18 +114,28 @@ export default function Bibliotheque({
           La barre de defilement est masquee (`scrollbar-width` + le pseudo-element WebKit) : sur
           mobile elle est deja en surimpression et disparait au repos, mais elle apparaitrait sur
           un ecran tactile de bureau entre `xs` et `sm` et couperait la rangee en deux. */}
-      {genresDisponibles?.length > 0 ? (
+      {genres?.length > 0 ? (
         <div className="flex items-center gap-2 mb-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+          {/* « Tous » n'est jamais desactive : c'est la sortie de secours du filtre, y compris
+              quand la recherche ne rend rien du tout. */}
           <Pastille
             active={genreFiltre === null}
             onClick={() => setGenreFiltre(null)}
           >
             Tous
           </Pastille>
-          {genresDisponibles.map(({ genre, nombre }) => (
+          {genres.map(({ genre, nombre }) => (
             <Pastille
               key={genre}
               active={genreFiltre === genre}
+              // Un genre sans aucun resultat dans la recherche en cours ne mene nulle part : on
+              // l'eteint sur place plutot que de le masquer. Le masquer recomposerait la rangee a
+              // chaque caractere tape, et la pastille visee se deroberait sous le doigt.
+              //
+              // SAUF si c'est le genre ACTIF : il doit rester cliquable pour qu'on puisse le
+              // relacher. Une recherche infructueuse le met a 0 — le desactiver enfermerait
+              // l'utilisateur dans un filtre qu'il ne pourrait plus retirer.
+              desactivee={nombre === 0 && genreFiltre !== genre}
               // Recliquer sur le genre actif le desactive : sans ca, il n'y aurait aucun moyen
               // de revenir en arriere sans viser « Tous ».
               onClick={() =>
