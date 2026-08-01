@@ -833,6 +833,53 @@ await etape("filtre par genre", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 5 ter. Les espaces parasites dans la recherche
+//
+// Une espace collee depuis un copier-coller, ou une frappe en trop, vidait la liste : le filtre
+// comparait la saisie BRUTE. Personne ne relie « aucun resultat » a un caractere invisible en fin
+// de champ, donc le bug se lit comme « la recherche est cassee ».
+//
+// Le test lit un titre REEL dans le DOM plutot que d'en nommer un : c'est le piege de « Believer »
+// (un test qui connait le seed meurt au prochain import).
+await etape("recherche : espaces parasites", async () => {
+  const compte = await creerCompte("EspacesTest");
+  const page = await pageConnectee(navigateur, compte, BUREAU);
+
+  await page.goto(`${APP}/bibliotheque`);
+  await page.waitForTimeout(1500);
+
+  const pochettes = page.locator("img[alt^='Pochette album']");
+  const total = await pochettes.count();
+  const champ = page.getByPlaceholder("Recherchez un titre ou un artiste");
+
+  // Un champ qui ne contient QUE des espaces ne filtre rien : il equivaut a un champ vide.
+  await champ.fill("   ");
+  await page.waitForTimeout(600);
+  verifier(
+    "recherche : une saisie faite d'espaces rend tout le catalogue",
+    (await pochettes.count()) === total,
+    `${await pochettes.count()} sur ${total}`,
+  );
+
+  // Un vrai titre, entoure d'espaces parasites, doit se retrouver.
+  await champ.fill("");
+  await page.waitForTimeout(400);
+  const titre = (await pochettes.first().getAttribute("alt"))
+    .replace("Pochette album ", "")
+    .trim();
+
+  await champ.fill(`  ${titre}  `);
+  await page.waitForTimeout(600);
+  verifier(
+    "recherche : les espaces autour de la saisie sont ignores",
+    (await pochettes.count()) > 0,
+    `« ${titre} » entoure d'espaces -> ${await pochettes.count()} resultat(s)`,
+  );
+
+  await page.context().close();
+});
+
+// ---------------------------------------------------------------------------
 // 5 ter. L'admin peut REELLEMENT modifier un morceau, depuis l'interface
 //
 // Ce test existe a cause d'un bug precis, et il ne doit pas etre supprime.

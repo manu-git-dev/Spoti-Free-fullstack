@@ -3327,3 +3327,66 @@ du CSS, pas du texte. Mon `/\s0$/` ne pouvait pas matcher. Leçon annexe : `inne
 la mise en page, seulement le texte — ne jamais supposer une espace qu'on ne voit qu'à l'écran.
 
 ---
+
+## 2026-08-01 — Nettoyer la saisie pour chercher, sans toucher à ce que l'utilisateur tape
+
+**Contexte.** Repéré en corrigeant le compteur des pastilles (note précédente) : dans la
+Bibliothèque, taper `"love "` avec une espace finale ne rendait **aucun** résultat. Le filtre
+comparait la saisie brute :
+
+```js
+musique.title.toLowerCase().includes(valueInput.toLowerCase())
+```
+
+`"Love Will Come Back Again".includes("love ")` est faux — le titre contient bien `love`, mais pas
+`love` suivi d'une espace **à cet endroit-là**.
+
+**Pourquoi c'est plus grave qu'il n'y paraît.** Le caractère fautif est **invisible**. Personne ne
+relie « aucun résultat » à une espace en fin de champ : le bug se lit comme « la recherche est
+cassée ». Et il arrive tout seul — un copier-coller depuis une autre appli traîne presque toujours
+une espace, et le clavier mobile en ajoute une après un mot.
+
+**La correction — et le piège dedans.** Le réflexe serait de nettoyer à la source :
+
+```jsx
+onChange={(e) => setValueInput(e.target.value.trim())}   // ❌ NE JAMAIS FAIRE
+```
+
+Ça casse la saisie de tout terme en deux mots. Je tape `my`, puis une espace : `trim()` la mange
+avant qu'elle n'atteigne l'état, le champ n'avance plus, je ne peux **pas** écrire `my love`. Le
+champ devient inutilisable pour toute recherche à plusieurs mots.
+
+La règle : **ce que l'utilisateur tape lui appartient ; ce qu'on en fait pour chercher nous
+regarde.** On normalise donc **à la comparaison**, pas dans l'état :
+
+```js
+const musiquesTexte = useMemo(() => {
+  const recherche = valueInput.trim().toLowerCase();
+  if (!recherche) return musiques;
+  return musiques.filter(
+    (musique) =>
+      musique.title.toLowerCase().includes(recherche) ||
+      musique.artist.toLowerCase().includes(recherche),
+  );
+}, [musiques, valueInput]);
+```
+
+C'est le même principe qu'un email : on l'**affiche** tel qu'il a été tapé, on le **compare** en
+minuscules. La valeur affichée et la valeur de travail sont deux choses différentes.
+
+**Deux détails gratuits que la correction apporte au passage.**
+
+1. **La normalisation sort de la boucle.** Avant, `valueInput.toLowerCase()` était appelé **deux
+   fois par morceau** (une par côté du `||`), soit 200 fois pour 100 titres, pour recalculer
+   toujours la même chaîne. Une valeur qui ne dépend pas de l'itération n'a rien à faire dedans.
+
+2. **La sortie anticipée.** `if (!recherche) return musiques;` renvoie le tableau d'origine quand
+   le champ est vide, au lieu de le reparcourir pour tout garder. Et une saisie faite **uniquement**
+   d'espaces retombe sur `""` : un champ vide et un champ d'espaces se valent, ce qui est bien le
+   comportement attendu — pas « zéro résultat ».
+
+**Le test.** Il ne nomme aucun titre (piège de « Believer », note 55) : il **lit** un vrai titre
+dans le DOM via l'attribut `alt` de la pochette, le réinjecte entouré d'espaces, et vérifie qu'on
+le retrouve. Plus une vérification que `"   "` rend le catalogue entier.
+
+---

@@ -223,15 +223,28 @@ function App() {
 
   // Le filtre TEXTE seul, isole du filtre de genre. Ce decoupage n'est pas cosmetique : c'est lui
   // qui rend juste le compteur des pastilles (voir `genresRecherche` juste en dessous).
-  const musiquesTexte = useMemo(
-    () =>
-      musiques.filter(
-        (musique) =>
-          musique.title.toLowerCase().includes(valueInput.toLowerCase()) ||
-          musique.artist.toLowerCase().includes(valueInput.toLowerCase()),
-      ),
-    [musiques, valueInput],
-  );
+  //
+  // Le `trim()` est ici, A LA COMPARAISON, et surtout PAS dans `setValueInput` : rogner l'etat a
+  // la frappe rendrait impossible de taper une espace entre deux mots — « my » puis espace,
+  // l'espace disparait, on ne peut plus ecrire « my love ». Ce que l'utilisateur tape lui
+  // appartient ; ce qu'on en fait pour chercher nous regarde.
+  //
+  // Sans lui, une espace parasite (collee depuis ailleurs, ou une frappe en trop) vidait la
+  // liste : personne ne relie « aucun resultat » a un caractere invisible en fin de champ.
+  // Une recherche qui ne contient QUE des espaces retombe sur "" : `includes("")` est vrai
+  // partout, donc tout le catalogue — un champ vide et un champ d'espaces se valent.
+  //
+  // La recherche est normalisee UNE fois hors de la boucle : la mettre dans le predicat la
+  // recalculait deux fois par morceau.
+  const musiquesTexte = useMemo(() => {
+    const recherche = valueInput.trim().toLowerCase();
+    if (!recherche) return musiques;
+    return musiques.filter(
+      (musique) =>
+        musique.title.toLowerCase().includes(recherche) ||
+        musique.artist.toLowerCase().includes(recherche),
+    );
+  }, [musiques, valueInput]);
 
   // Les pastilles telles que la Bibliotheque les affiche : le nombre suit la recherche.
   //
