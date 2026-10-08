@@ -1,0 +1,26 @@
+.bouton-card-accueil {  
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background-color: var(--color-secondary);
+  color: var(--color-surface);
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-button);
+}
+
+.bouton-card-accueil:hover {
+  background-color: var(--color-secondary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bouton-card-accueil:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+

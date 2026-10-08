@@ -1,0 +1,23 @@
+.bouton-secondaire {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-button);
+}
+
+.bouton-secondaire:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bouton-secondaire:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
