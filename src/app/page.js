@@ -6,15 +6,15 @@ import CardArticle from "@/composants/Cards/CardArticle";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
+    <>
+      <header></header>
       <main className={styles.main}>
-        <BoutonPrincipal texte="Ajouter au panier"/>
-        <BoutonPrincipal texte="Indisponible" etat="indisponible"/>
+        <BoutonPrincipal texte="Ajouter au panier" />
+        <BoutonPrincipal texte="Indisponible" etat="indisponible" />
         <BoutonSecondaire texte="Poursuivre mes achats" />
-        <BoutonCardAccueil texte="Voir nos leurres souples"/>
-        <CardArticle/>
-        
+        <BoutonCardAccueil texte="Voir nos leurres souples" />
+        <CardArticle />
       </main>
-    </div>
+    </>
   );
 }

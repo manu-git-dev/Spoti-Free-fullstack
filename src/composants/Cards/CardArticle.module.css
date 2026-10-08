@@ -1,0 +1,63 @@
+.card-article {
+    display: grid;
+    gap: 5px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    grid-template-rows: repeat(9, 1auto);
+    height: auto;
+    width: 300px;
+    padding: 10px;
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+}
+
+.reduction-article {
+    background-color: var(--color-accent);
+    width: 50px;
+    padding: 5px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.rupture-de-stock {
+    background-color: var(--color-disabled-bg);
+    padding: 5px;
+    width: 140px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.image-article {
+
+}
+
+.categorie-article {
+    margin: 6px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.nom-article {
+    margin: 6px;
+    text-align: center;
+    color: var(--color-text);
+    font-size: var(--font-size-h3);
+}
+
+.avis-article {
+    margin: 6px;
+    text-align: center;
+}
+
+.prix-article {
+    margin: 6px;
+    text-align: center;
+    font-size: var(--font-size-h2);
+}
+
+.stock-article {
+    background-color: var(--color-secondary);
+    padding: 5px;
+    border-radius: 8px;
+    text-align: center;
+}

@@ -1,6 +1,7 @@
 .bouton-principal {
   display: flex;
-  width: auto;
+  align-items: center;
+  justify-content: center;
   padding: 12px 24px;
   border: none;
   border-radius: 8px;
