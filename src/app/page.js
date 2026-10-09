@@ -3,18 +3,25 @@ import BoutonSecondaire from "@/composants/Boutons/BoutonSecondaire";
 import styles from "./page.module.css";
 import BoutonCardAccueil from "@/composants/Boutons/BoutonCardAccueil";
 import CardArticle from "@/composants/Cards/CardArticle";
+import CardAccueil from "@/composants/Cards/CardAccueil";
+import BoutonPanier from "@/composants/Boutons/BoutonPanier";
+import Logo from "@/composants/Logo/Logo";
 
 export default function Home() {
   return (
     <>
       <header></header>
-      <main className={styles.main}>
+      <main>
         <BoutonPrincipal texte="Ajouter au panier" />
         <BoutonPrincipal texte="Indisponible" etat="indisponible" />
         <BoutonSecondaire texte="Poursuivre mes achats" />
         <BoutonCardAccueil texte="Voir nos leurres souples" />
-        <CardArticle />
+        <CardArticle/>
+        <CardAccueil/>
+        <BoutonPanier/>
+        <Logo/>
       </main>
+      <footer></footer>
     </>
   );
 }

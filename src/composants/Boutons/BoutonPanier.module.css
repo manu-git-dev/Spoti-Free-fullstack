@@ -1,0 +1,27 @@
+.bouton-panier {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 18px;
+  border-radius: 80px;
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-accent-secondary);
+  color: var(--color-surface);
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-button);
+}
+
+.bouton-panier:hover {
+  background-color: var(--color-accent-secondary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--color-surface);
+}
+
+.bouton-panier:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}

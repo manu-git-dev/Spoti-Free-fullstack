@@ -1,0 +1,14 @@
+.bloc-logo {
+    display: flex;
+    position: relative;
+}
+
+.texte-logo {
+    display: flex;
+    position: absolute;
+    align-self: end;
+    margin-left: 40px;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-h2);
+    color: var(--color-primary)
+}

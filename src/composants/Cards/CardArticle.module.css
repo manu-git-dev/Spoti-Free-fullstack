@@ -27,8 +27,9 @@
     text-align: center;
 }
 
-.image-article {
-
+.image-article:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 .categorie-article {
@@ -49,8 +50,20 @@
     text-align: center;
 }
 
-.prix-article {
-    margin: 6px;
+.bloc-prix {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+}
+
+.prix-article-avant-reduction {
+    text-align: center;
+    font-size: var(--font-size-h3);
+    text-decoration: line-through;
+}
+
+.prix-article-apres-reduction {
     text-align: center;
     font-size: var(--font-size-h2);
 }
@@ -61,3 +74,4 @@
     border-radius: 8px;
     text-align: center;
 }
+

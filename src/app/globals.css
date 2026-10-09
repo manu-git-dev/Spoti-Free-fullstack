@@ -7,6 +7,8 @@
   --color-secondary-hover: #2B8382;
   --color-surface: #ffffff;
   --color-accent: #f28c28;
+  --color-accent-secondary:#DA812A;
+  --color-accent-secondary-hover:#C56C15;
   --color-disabled-bg: #e5e7eb;
   --color-disabled-text: #4b5563;
   --color-text: #111827;
@@ -43,6 +45,17 @@
   --line-height-price: 28px;
 }
 
+h1 {
+  font-size: var(--font-size-h1);
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+}
 * {
   box-sizing: border-box;
   padding: 0;
