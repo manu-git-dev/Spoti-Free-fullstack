@@ -6,12 +6,13 @@ import CardArticle from "@/composants/Cards/CardArticle";
 import CardAccueil from "@/composants/Cards/CardAccueil";
 import BoutonPanier from "@/composants/Boutons/BoutonPanier";
 import Logo from "@/composants/Logo/Logo";
+import Header from "@/composants/Layout/Header";
+import Footer from "@/composants/Layout/Footer";
 
 export default function Home() {
   return (
     <>
-      <header></header>
-      <main>
+
         <BoutonPrincipal texte="Ajouter au panier" />
         <BoutonPrincipal texte="Indisponible" etat="indisponible" />
         <BoutonSecondaire texte="Poursuivre mes achats" />
@@ -20,8 +21,7 @@ export default function Home() {
         <CardAccueil/>
         <BoutonPanier/>
         <Logo/>
-      </main>
-      <footer></footer>
+
     </>
   );
 }

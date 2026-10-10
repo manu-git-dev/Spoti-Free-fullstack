@@ -4,7 +4,7 @@ export default function BoutonPanier ({}) {
     return (
         <button type="button" className={styles["bouton-panier"]}>
             <img src="/icons/icon-panier.png"/>
-            <p>Panier</p>
+            <span>Panier</span>
         </button>
     );
 }

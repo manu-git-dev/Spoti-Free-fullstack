@@ -1,0 +1,16 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100px;
+}
+
+.nav-header {
+    display: flex;
+    gap: 10px;
+}
+
+.bloc-espace-client-panier {
+    display: flex;
+    gap: 10px;
+}

@@ -1,14 +1,19 @@
 .card-article {
+    color: var(--color-text);
     display: grid;
-    gap: 5px;
+    gap: 8px;
     border-radius: 12px;
-    justify-content: center;
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    grid-template-rows: repeat(9, 1auto);
     height: auto;
     width: 300px;
-    padding: 10px;
+    max-width: 100%;
+    padding: 16px;
     box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+}
+
+.card-article p {
+    margin: 0;
 }
 
 .reduction-article {
@@ -20,11 +25,19 @@
 }
 
 .rupture-de-stock {
+    color: var(--color-disabled-text);
     background-color: var(--color-disabled-bg);
     padding: 5px;
     width: 140px;
     border-radius: 8px;
     text-align: center;
+}
+
+.image-article {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    display: block;
 }
 
 .image-article:focus-visible {
@@ -33,20 +46,17 @@
 }
 
 .categorie-article {
-    margin: 6px;
     text-align: center;
     color: var(--color-text-secondary);
 }
 
 .nom-article {
-    margin: 6px;
     text-align: center;
-    color: var(--color-text);
-    font-size: var(--font-size-h3);
+    color: var(--color-primary);
 }
 
 .avis-article {
-    margin: 6px;
+    color: var(--color-text-secondary);
     text-align: center;
 }
 
@@ -58,17 +68,22 @@
 }
 
 .prix-article-avant-reduction {
+    color: var(--color-text-secondary);
     text-align: center;
     font-size: var(--font-size-h3);
     text-decoration: line-through;
 }
 
 .prix-article-apres-reduction {
+    color: var(--color-text);
     text-align: center;
-    font-size: var(--font-size-h2);
+    font-size: var(--font-size-price);
+    line-height: var(--line-height-price);
+    font-weight: var(--font-weight-bold);
 }
 
 .stock-article {
+    color: var(--color-text);
     background-color: var(--color-secondary);
     padding: 5px;
     border-radius: 8px;

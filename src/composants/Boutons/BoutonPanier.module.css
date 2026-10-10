@@ -1,5 +1,6 @@
 .bouton-panier {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -7,6 +8,7 @@
   border-radius: 80px;
   border: none;
   cursor: pointer;
+  height: 50px;
   background-color: var(--color-accent-secondary);
   color: var(--color-surface);
   font-size: var(--font-size-button);

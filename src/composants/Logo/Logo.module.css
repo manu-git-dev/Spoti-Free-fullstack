@@ -1,13 +1,25 @@
 .bloc-logo {
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
     position: relative;
+    width: 280px;
 }
 
+.image-logo {
+    display: block;
+    height: 100px;
+    width: 100px;
+}
 .texte-logo {
     display: flex;
     position: absolute;
-    align-self: end;
-    margin-left: 40px;
+    margin: 0px;
+    left: 30%;
+    right: 0;
+    bottom: 0;
+
     font-weight: var(--font-weight-bold);
     font-size: var(--font-size-h2);
     color: var(--color-primary)
