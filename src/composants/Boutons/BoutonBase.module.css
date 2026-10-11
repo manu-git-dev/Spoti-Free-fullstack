@@ -1,0 +1,12 @@
+/* Typographie et focus communs aux boutons personnalises. */
+.base {
+  font-family: inherit;
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-button);
+}
+
+.base:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}

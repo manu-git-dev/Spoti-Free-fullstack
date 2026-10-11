@@ -1,8 +1,8 @@
 "use client"
 import { Dropdown } from "react-bootstrap"
 import styles from "./MenuEspaceClient.module.css"
-import BoutonPrincipal from "../Boutons/BoutonPrincipal";
-import BoutonSecondaire from "../Boutons/BoutonSecondaire";
+import BoutonPrincipal from "@/composants/Boutons/BoutonPrincipal/BoutonPrincipal";
+import BoutonSecondaire from "@/composants/Boutons/BoutonSecondaire/BoutonSecondaire";
 
 export default function MenuEspaceClient() {
   return (

@@ -1,0 +1,29 @@
+.bouton-principal,
+.bouton-principal-desactive {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+}
+
+.bouton-principal {
+  composes: base from "../BoutonBase.module.css";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  background-color: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.bouton-principal-desactive {
+  composes: base from "../BoutonBase.module.css";
+  cursor: default;
+
+  background-color: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+}
+
+.bouton-principal:hover {
+  background-color: var(--color-primary-hover);
+}

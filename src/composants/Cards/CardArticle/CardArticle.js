@@ -1,4 +1,4 @@
-import BoutonPrincipal from "../Boutons/BoutonPrincipal";
+import BoutonPrincipal from "@/composants/Boutons/BoutonPrincipal/BoutonPrincipal";
 import styles from "./CardArticle.module.css";
 import Image from "next/image";
 

@@ -1,4 +1,5 @@
-.bouton-card-accueil {  
+.bouton-card-accueil {
+  composes: base from "../BoutonBase.module.css";
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -9,9 +10,6 @@
   cursor: pointer;
   background-color: var(--color-secondary);
   color: var(--color-surface);
-  font-size: var(--font-size-button);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-button);
 }
 
 .bouton-card-accueil:hover {
@@ -19,9 +17,3 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-
-.bouton-card-accueil:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 3px;
-}
-
