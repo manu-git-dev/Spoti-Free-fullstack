@@ -3,6 +3,7 @@ import BoutonPanier from "@/composants/Boutons/BoutonPanier/BoutonPanier";
 import Logo from "@/composants/Logo/Logo";
 import MenuEspaceClient from "@/composants/Menus/MenuEspaceClient/MenuEspaceClient";
 import styles from "./Header.module.css";
+import Link from "next/link";
 
 export default function Header() {
   return (
@@ -11,8 +12,12 @@ export default function Header() {
         <Container className={styles["container-header"]}>
           <Logo />
           <nav className={styles["nav-header"]}>
-            <a>Accueil</a>
-            <a>Catalogue</a>
+            <Link href="/">
+            Accueil
+            </Link>
+            <Link href="/catalogue">
+              Catalogue
+            </Link>
             <a>A propos</a>
           </nav>
           <div className={styles["bloc-espace-client-panier"]}>
