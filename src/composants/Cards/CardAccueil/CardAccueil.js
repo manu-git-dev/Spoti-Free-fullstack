@@ -1,7 +1,7 @@
 import styles from "./CardAccueil.module.css"
 import BoutonCardAccueil from "@/composants/Boutons/BoutonCardAccueil/BoutonCardAccueil";
 
-export default function CardAccueil ({titre, paragraphe, urlImage}){
+export default function CardAccueil ({titre, paragraphe, urlImage, texteBouton}){
 
     return (
         <section className={styles["card-accueil"]}>
@@ -9,7 +9,7 @@ export default function CardAccueil ({titre, paragraphe, urlImage}){
             <div className={styles["partie-droite-card"]}>
                     <h3>{titre}</h3>
                     <p>{paragraphe}</p>
-                <BoutonCardAccueil texte = "Voir nos leurres"/>
+                <BoutonCardAccueil texte = {texteBouton}/>
             </div>
         </section>
     )

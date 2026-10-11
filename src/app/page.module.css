@@ -1,8 +1,36 @@
 .container-page-accueil {
-    display: flex;
-    flex-direction:column;
-    gap: 5px;
-    align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding-top: 24px;
+  padding-bottom: 24px;
 }
 
+.section-page-accueil {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background-image: url("/images/hero-peche.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+}
 
+.bloc-hero-accueil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--color-surface);
+  gap: 24px;
+  text-align: center;
+}
+
+.bloc-cards-accueil {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+}
