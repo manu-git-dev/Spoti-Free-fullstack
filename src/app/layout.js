@@ -3,6 +3,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import Header from "@/composants/Layout/Header/Header";
 import Footer from "@/composants/Layout/Footer/Footer";
+import PanierProvider from "@/context/PanierContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,9 +19,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={inter.variable}>
       <body>
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <PanierProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+        </PanierProvider>
       </body>
     </html>
   );

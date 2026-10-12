@@ -1,0 +1,19 @@
+.div-btn {
+    display: flex;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.bloc-prix-total {
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+    margin-right: 6px;
+}
+
+.bloc-frais-livraison {
+    display: flex;
+    flex-direction: row;
+    margin-left: 6px;
+    margin-top: 6px;
+}

@@ -2,6 +2,7 @@ import BoutonPrincipal from "@/composants/Boutons/BoutonPrincipal/BoutonPrincipa
 import styles from "./page.module.css";
 import { Container } from "react-bootstrap";
 import CardAccueil from "@/composants/Cards/CardAccueil/CardAccueil";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -10,7 +11,9 @@ export default function Home() {
         <section className={styles["section-page-accueil"]}>
           <div className={styles["bloc-hero-accueil"]}>
             <h1>Bienvenue sur Poiss'Caille, vente d'articles de pêche !</h1>
+            <Link href={"/catalogue"}>
             <BoutonPrincipal texte="Découvrir le catalogue" />
+            </Link>
           </div>
         </section>
         <div className={styles["bloc-cards-accueil"]}>

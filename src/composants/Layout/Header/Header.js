@@ -10,15 +10,11 @@ export default function Header() {
     <>
       <header className={styles["header"]}>
         <Container className={styles["container-header"]}>
-          <Logo />
+          <Link href="/"><Logo /></Link>
           <nav className={styles["nav-header"]}>
-            <Link href="/">
-            Accueil
-            </Link>
-            <Link href="/catalogue">
-              Catalogue
-            </Link>
-            <a>A propos</a>
+            <Link href="/">Accueil</Link>
+            <Link href="/catalogue">Catalogue</Link>
+            <Link href="">A propos</Link>
           </nav>
           <div className={styles["bloc-espace-client-panier"]}>
             <MenuEspaceClient />

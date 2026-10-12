@@ -1,0 +1,21 @@
+.lignes-panier {
+    display: flex;
+    padding: 5px;
+    width: 500px;
+    gap:20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.boutons {
+    height: 25px;
+    width: 30px;
+    border: none;
+    background-color: white;
+}
+
+.bouton-suppr {
+    border: none;
+    background-color: white;
+}
+

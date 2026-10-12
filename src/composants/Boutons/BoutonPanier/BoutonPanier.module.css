@@ -17,5 +17,7 @@
 .bouton-panier:hover {
   background-color: var(--color-accent-secondary-hover);
   text-decoration: underline;
+  color:var(--color-surface);
   text-underline-offset: 3px;
 }
+
